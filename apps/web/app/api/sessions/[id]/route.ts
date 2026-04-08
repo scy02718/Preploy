@@ -1,31 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { interviewSessions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 
 // GET /api/sessions/[id] — get a single session
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const userId = request.headers.get("x-user-id");
-  if (!userId) {
+  const session = await auth();
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [session] = await db
+  const [found] = await db
     .select()
     .from(interviewSessions)
     .where(
-      and(eq(interviewSessions.id, id), eq(interviewSessions.userId, userId))
+      and(
+        eq(interviewSessions.id, id),
+        eq(interviewSessions.userId, session.user.id)
+      )
     );
 
-  if (!session) {
+  if (!found) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  return NextResponse.json(session);
+  return NextResponse.json(found);
 }
 
 // PATCH /api/sessions/[id] — update a session
@@ -34,8 +38,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const userId = request.headers.get("x-user-id");
-  if (!userId) {
+  const session = await auth();
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -56,20 +60,26 @@ export async function PATCH(
   }
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    return NextResponse.json(
+      { error: "No valid fields to update" },
+      { status: 400 }
+    );
   }
 
-  const [session] = await db
+  const [updated] = await db
     .update(interviewSessions)
     .set(updates)
     .where(
-      and(eq(interviewSessions.id, id), eq(interviewSessions.userId, userId))
+      and(
+        eq(interviewSessions.id, id),
+        eq(interviewSessions.userId, session.user.id)
+      )
     )
     .returning();
 
-  if (!session) {
+  if (!updated) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  return NextResponse.json(session);
+  return NextResponse.json(updated);
 }

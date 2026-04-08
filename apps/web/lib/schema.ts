@@ -7,6 +7,7 @@ import {
   jsonb,
   integer,
   real,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -36,7 +37,8 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name"),
-  avatarUrl: text("avatar_url"),
+  emailVerified: timestamp("email_verified", { withTimezone: true }),
+  image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -45,6 +47,28 @@ export const users = pgTable("users", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const accounts = pgTable(
+  "accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.provider, table.providerAccountId] }),
+  ]
+);
 
 export const interviewSessions = pgTable("interview_sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -103,7 +127,15 @@ export const sessionFeedback = pgTable("session_feedback", {
 // ---- Relations ----
 
 export const usersRelations = relations(users, ({ many }) => ({
+  accounts: many(accounts),
   sessions: many(interviewSessions),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
 }));
 
 export const interviewSessionsRelations = relations(

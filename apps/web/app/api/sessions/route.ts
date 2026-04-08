@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { interviewSessions } from "@/lib/schema";
 import { desc, eq } from "drizzle-orm";
 
-// GET /api/sessions — list sessions for a user
-export async function GET(request: NextRequest) {
-  const userId = request.headers.get("x-user-id");
-  if (!userId) {
+// GET /api/sessions — list sessions for the authenticated user
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const sessions = await db
     .select()
     .from(interviewSessions)
-    .where(eq(interviewSessions.userId, userId))
+    .where(eq(interviewSessions.userId, session.user.id))
     .orderBy(desc(interviewSessions.createdAt));
 
   return NextResponse.json(sessions);
@@ -21,8 +22,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/sessions — create a new session
 export async function POST(request: NextRequest) {
-  const userId = request.headers.get("x-user-id");
-  if (!userId) {
+  const session = await auth();
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -36,14 +37,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const [session] = await db
+  const [created] = await db
     .insert(interviewSessions)
     .values({
-      userId,
+      userId: session.user.id,
       type,
       config: config ?? {},
     })
     .returning();
 
-  return NextResponse.json(session, { status: 201 });
+  return NextResponse.json(created, { status: 201 });
 }

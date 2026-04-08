@@ -1,3 +1,4 @@
+import { signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -12,9 +13,16 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" size="lg">
-            Sign in with Google
-          </Button>
+          <form
+            action={async () => {
+              "use server";
+              await signIn("google", { redirectTo: "/dashboard" });
+            }}
+          >
+            <Button className="w-full" size="lg" type="submit">
+              Sign in with Google
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

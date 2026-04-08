@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { buttonVariants } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
@@ -23,6 +26,8 @@ const navItems = [
 
 export function Header() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
+  const user = session?.user;
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
@@ -63,17 +68,40 @@ export function Header() {
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* User menu (placeholder) */}
-        <DropdownMenu>
-          <DropdownMenuTrigger className="rounded-full">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">U</AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Sign In</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* User menu */}
+        {status === "loading" ? (
+          <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+        ) : user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="rounded-full">
+              <Avatar className="h-8 w-8">
+                {user.image && (
+                  <AvatarImage src={user.image} alt={user.name ?? ""} />
+                )}
+                <AvatarFallback className="text-xs">
+                  {user.name?.charAt(0).toUpperCase() ?? "U"}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <div className="px-2 py-1.5">
+                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Link
+            href="/login"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Sign In
+          </Link>
+        )}
       </div>
     </header>
   );
