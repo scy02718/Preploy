@@ -1,4 +1,12 @@
 {
+  "hooks": {
+    "Notification": [
+      {
+        "type": "command",
+        "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "WebSearch"
