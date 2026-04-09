@@ -110,6 +110,13 @@ export default function BehavioralSessionPage() {
     }
 
     await endSession();
+
+    // Fire-and-forget: trigger feedback generation in background
+    // The feedback page will poll for the result
+    fetch(`/api/sessions/${sessionId}/feedback`, { method: "POST" }).catch(
+      (err) => console.error("Failed to trigger feedback generation:", err)
+    );
+
     router.push(`/dashboard/sessions/${sessionId}/feedback`);
   }, [voice, lipSync, sessionId, endSession, router]);
 
