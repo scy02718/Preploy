@@ -294,7 +294,7 @@ export function useRealtimeVoice(
                   type: "server_vad",
                   threshold: 0.5,
                   prefix_padding_ms: 300,
-                  silence_duration_ms: 10000,
+                  silence_duration_ms: 500,
                 },
               },
               output: {

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import health
+from app.routers import analysis, health
 
 app = FastAPI(
     title="Interview Assistant API",
@@ -19,3 +19,4 @@ app.add_middleware(
 )
 
 app.include_router(health.router, tags=["health"])
+app.include_router(analysis.router, prefix="/api", tags=["analysis"])
