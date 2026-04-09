@@ -153,10 +153,7 @@ export function BehavioralSetupForm() {
             <Label>Interview Style</Label>
             <Slider
               value={[config.interview_style * 100]}
-              onValueChange={(val) => {
-                const v = Array.isArray(val) ? val[0] : val;
-                setConfig({ interview_style: v / 100 });
-              }}
+              onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
               min={0}
               max={100}
               step={1}
@@ -171,10 +168,7 @@ export function BehavioralSetupForm() {
             <Label>Difficulty</Label>
             <Slider
               value={[config.difficulty * 100]}
-              onValueChange={(val) => {
-                const v = Array.isArray(val) ? val[0] : val;
-                setConfig({ difficulty: v / 100 });
-              }}
+              onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
               min={0}
               max={100}
               step={1}

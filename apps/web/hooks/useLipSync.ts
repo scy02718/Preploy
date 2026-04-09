@@ -175,11 +175,14 @@ export function useLipSync() {
   }, []);
 
   // Connect an existing AudioContext and AnalyserNode (for piping from playback)
+  // When using this method, the caller owns the AudioContext — we won't close it on disconnect
+  const ownsContextRef = useRef(true);
   const connectAnalyser = useCallback(
     (audioContext: AudioContext, analyser: AnalyserNode) => {
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
       frequencyDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+      ownsContextRef.current = false; // caller owns it
       setIsActive(true);
     },
     []
@@ -196,10 +199,12 @@ export function useLipSync() {
     sourceRef.current = null;
     analyserRef.current = null;
     frequencyDataRef.current = null;
-    if (audioContextRef.current) {
+    // Only close context if we created it (connectAudioBuffer/connectMediaStream)
+    if (ownsContextRef.current && audioContextRef.current) {
       audioContextRef.current.close();
-      audioContextRef.current = null;
     }
+    audioContextRef.current = null;
+    ownsContextRef.current = true;
     setIsActive(false);
   }, []);
 

@@ -55,7 +55,12 @@ export async function PATCH(
   const updates: Record<string, unknown> = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
-      updates[field] = body[field];
+      // Convert ISO strings to Date objects for timestamp columns
+      if ((field === "startedAt" || field === "endedAt") && typeof body[field] === "string") {
+        updates[field] = new Date(body[field]);
+      } else {
+        updates[field] = body[field];
+      }
     }
   }
 

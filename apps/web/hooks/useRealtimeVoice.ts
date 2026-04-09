@@ -24,6 +24,10 @@ interface UseRealtimeVoiceReturn {
   mute: () => void;
   unmute: () => void;
   error: string | null;
+  /** AudioContext used for AI audio playback — use for lip-sync integration */
+  playbackContext: AudioContext | null;
+  /** AnalyserNode on the playback path — feed into useLipSync.connectAnalyser() */
+  playbackAnalyser: AnalyserNode | null;
 }
 
 export function useRealtimeVoice(
@@ -37,7 +41,9 @@ export function useRealtimeVoice(
   const [isConnected, setIsConnected] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const isSpeakingRef = useRef(false);
   const [isMuted, setIsMuted] = useState(false);
+  const isMutedRef = useRef(false);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,52 +52,83 @@ export function useRealtimeVoice(
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const playbackContextRef = useRef<AudioContext | null>(null);
+  const playbackAnalyserRef = useRef<AnalyserNode | null>(null);
   const audioQueueRef = useRef<ArrayBuffer[]>([]);
-  const isPlayingRef = useRef(false);
   const currentAssistantTextRef = useRef("");
   const currentUserTextRef = useRef("");
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 3;
   const shouldReconnectRef = useRef(false);
 
-  // Play queued audio chunks sequentially
-  const playNextChunk = useCallback(async () => {
-    if (isPlayingRef.current || audioQueueRef.current.length === 0) {
-      if (audioQueueRef.current.length === 0) {
-        setIsSpeaking(false);
-      }
-      return;
-    }
+  // Schedule-based audio playback — avoids race conditions by scheduling
+  // chunks at precise times on the AudioContext timeline
+  const nextPlayTimeRef = useRef(0);
+  const scheduleDrainRef = useRef(false);
+  const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    isPlayingRef.current = true;
-    setIsSpeaking(true);
-
-    const chunk = audioQueueRef.current.shift()!;
-
+  const ensurePlaybackContext = useCallback(() => {
     if (!playbackContextRef.current) {
       playbackContextRef.current = new AudioContext({ sampleRate: 24000 });
+      const analyser = playbackContextRef.current.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.8;
+      analyser.connect(playbackContextRef.current.destination);
+      playbackAnalyserRef.current = analyser;
+      nextPlayTimeRef.current = 0;
     }
-    const ctx = playbackContextRef.current;
-
-    // chunk is PCM16 at 24kHz mono
-    const int16 = new Int16Array(chunk);
-    const float32 = new Float32Array(int16.length);
-    for (let i = 0; i < int16.length; i++) {
-      float32[i] = int16[i] / 32768;
-    }
-
-    const audioBuffer = ctx.createBuffer(1, float32.length, 24000);
-    audioBuffer.getChannelData(0).set(float32);
-
-    const source = ctx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(ctx.destination);
-    source.onended = () => {
-      isPlayingRef.current = false;
-      playNextChunk();
-    };
-    source.start();
+    return playbackContextRef.current;
   }, []);
+
+  // Drain the queue: schedule all buffered chunks back-to-back
+  const drainQueue = useCallback(() => {
+    if (scheduleDrainRef.current) return; // already draining
+    scheduleDrainRef.current = true;
+
+    const ctx = ensurePlaybackContext();
+    const analyser = playbackAnalyserRef.current;
+
+    let lastEndTime = nextPlayTimeRef.current;
+
+    while (audioQueueRef.current.length > 0) {
+      const chunk = audioQueueRef.current.shift()!;
+
+      const int16 = new Int16Array(chunk);
+      const float32 = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) {
+        float32[i] = int16[i] / 32768;
+      }
+
+      const audioBuffer = ctx.createBuffer(1, float32.length, 24000);
+      audioBuffer.getChannelData(0).set(float32);
+
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      if (analyser) {
+        source.connect(analyser);
+      } else {
+        source.connect(ctx.destination);
+      }
+
+      // Schedule at the next available time (no overlap possible)
+      const startAt = Math.max(lastEndTime, ctx.currentTime);
+      source.start(startAt);
+      lastEndTime = startAt + audioBuffer.duration;
+    }
+
+    nextPlayTimeRef.current = lastEndTime;
+    scheduleDrainRef.current = false;
+
+    // Mark speaking and set a timeout to clear it when playback finishes
+    isSpeakingRef.current = true; setIsSpeaking(true);
+    if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+    const remainingMs = Math.max(0, (lastEndTime - ctx.currentTime) * 1000);
+    speakingTimeoutRef.current = setTimeout(() => {
+      // Only clear speaking if no new audio has been queued
+      if (audioQueueRef.current.length === 0) {
+        isSpeakingRef.current = false; setIsSpeaking(false);
+      }
+    }, remainingMs + 100);
+  }, [ensurePlaybackContext]);
 
   // Handle incoming WebSocket messages
   const handleMessage = useCallback(
@@ -119,7 +156,7 @@ export function useRealtimeVoice(
               bytes[i] = binaryString.charCodeAt(i);
             }
             audioQueueRef.current.push(bytes.buffer);
-            playNextChunk();
+            drainQueue();
             break;
           }
 
@@ -178,10 +215,15 @@ export function useRealtimeVoice(
         console.error("Failed to parse WebSocket message:", err);
       }
     },
-    [playNextChunk]
+    [drainQueue]
   );
 
   const connect = useCallback(async () => {
+    // Prevent double-connect (React Strict Mode runs effects twice)
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+      return;
+    }
+
     setError(null);
     shouldReconnectRef.current = true;
     reconnectAttemptsRef.current = 0;
@@ -285,7 +327,8 @@ export function useRealtimeVoice(
           if (
             e.data.type === "audio" &&
             ws.readyState === WebSocket.OPEN &&
-            !isMuted
+            !isMutedRef.current &&
+            !isSpeakingRef.current
           ) {
             // Convert ArrayBuffer to base64
             const bytes = new Uint8Array(e.data.audio);
@@ -321,7 +364,7 @@ export function useRealtimeVoice(
     ws.onclose = () => {
       setIsConnected(false);
       setIsListening(false);
-      setIsSpeaking(false);
+      isSpeakingRef.current = false; setIsSpeaking(false);
 
       // Auto-reconnect with exponential backoff
       if (
@@ -340,7 +383,7 @@ export function useRealtimeVoice(
         }, delay);
       }
     };
-  }, [systemPrompt, voice, isMuted, handleMessage]);
+  }, [systemPrompt, voice, handleMessage]);
 
   const disconnect = useCallback(() => {
     shouldReconnectRef.current = false;
@@ -366,14 +409,20 @@ export function useRealtimeVoice(
       playbackContextRef.current.close();
       playbackContextRef.current = null;
     }
+    playbackAnalyserRef.current = null;
 
     workletNodeRef.current = null;
     audioQueueRef.current = [];
-    isPlayingRef.current = false;
+    nextPlayTimeRef.current = 0;
+    scheduleDrainRef.current = false;
+    if (speakingTimeoutRef.current) {
+      clearTimeout(speakingTimeoutRef.current);
+      speakingTimeoutRef.current = null;
+    }
 
     setIsConnected(false);
     setIsListening(false);
-    setIsSpeaking(false);
+    isSpeakingRef.current = false; setIsSpeaking(false);
   }, []);
 
   // Keep audio context alive when tab loses focus
@@ -401,8 +450,14 @@ export function useRealtimeVoice(
     };
   }, [disconnect]);
 
-  const mute = useCallback(() => setIsMuted(true), []);
-  const unmute = useCallback(() => setIsMuted(false), []);
+  const mute = useCallback(() => {
+    isMutedRef.current = true;
+    setIsMuted(true);
+  }, []);
+  const unmute = useCallback(() => {
+    isMutedRef.current = false;
+    setIsMuted(false);
+  }, []);
 
   return {
     isConnected,
@@ -415,5 +470,7 @@ export function useRealtimeVoice(
     mute,
     unmute,
     error,
+    playbackContext: playbackContextRef.current,
+    playbackAnalyser: playbackAnalyserRef.current,
   };
 }
