@@ -7,6 +7,12 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["**/*.integration.test.{ts,tsx}", "node_modules"],
+    coverage: {
+      provider: "v8",
+      include: ["lib/prompts.ts", "lib/validations.ts", "lib/utils.ts"],
+      exclude: ["**/*.test.*", "**/*.integration.test.*"],
+      reporter: ["text", "text-summary"],
+    },
   },
   resolve: {
     alias: {

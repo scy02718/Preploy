@@ -48,7 +48,3 @@ coverage/
 # Misc
 *.tsbuildinfo
 next-env.d.ts
-
-# Dev
-CLAUDE.md
-Tasks.md

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": ".venv/bin/uvicorn app.main:app --reload --port 8000",
     "lint": ".venv/bin/ruff check .",
-    "test": ".venv/bin/pytest"
+    "test": ".venv/bin/pytest",
+    "test:coverage": ".venv/bin/pytest --cov=app --cov-report=term-missing"
   }
 }
