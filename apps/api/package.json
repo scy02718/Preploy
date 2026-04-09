@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": ".venv/bin/uvicorn app.main:app --reload --port 8000",
-    "lint": ".venv/bin/ruff check ."
+    "lint": ".venv/bin/ruff check .",
+    "test": ".venv/bin/pytest"
   }
 }
