@@ -108,6 +108,9 @@ export function useRealtimeVoice(
             console.log("Session updated");
             break;
 
+          // GA event names
+          case "response.output_audio.delta":
+          // Beta fallback
           case "response.audio.delta": {
             // Decode base64 audio and queue for playback
             const binaryString = atob(msg.delta);
@@ -120,10 +123,16 @@ export function useRealtimeVoice(
             break;
           }
 
+          // GA event names
+          case "response.output_audio_transcript.delta":
+          // Beta fallback
           case "response.audio_transcript.delta":
             currentAssistantTextRef.current += msg.delta;
             break;
 
+          // GA event names
+          case "response.output_audio_transcript.done":
+          // Beta fallback
           case "response.audio_transcript.done":
             if (currentAssistantTextRef.current.trim()) {
               setTranscript((prev) => [
