@@ -1,32 +1,17 @@
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
+"use client";
+
+import { BehavioralSetupForm } from "@/components/interview/BehavioralSetupForm";
 
 export default function BehavioralSetupPage() {
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold mb-2">Behavioral Interview Setup</h1>
-      <p className="text-muted-foreground mb-8">
-        Configure your mock behavioral interview before starting.
+    <div className="mx-auto max-w-2xl px-4 py-8">
+      <h1 className="mb-2 text-2xl font-bold">Behavioral Interview Setup</h1>
+      <p className="mb-8 text-muted-foreground">
+        Configure your mock interview. The AI interviewer will adapt based on
+        these settings.
       </p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Session Configuration</CardTitle>
-          <CardDescription>
-            Company details, expected questions, and interview style will be
-            configurable here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            href="/interview/behavioral/session"
-            className={buttonVariants()}
-          >
-            Start Interview
-          </Link>
-        </CardContent>
-      </Card>
+      <BehavioralSetupForm />
     </div>
   );
 }
