@@ -1,9 +1,9 @@
 export const SUPPORTED_LANGUAGES = [
-  { id: "python", label: "Python", judge0Id: 71 },
-  { id: "javascript", label: "JavaScript", judge0Id: 63 },
-  { id: "java", label: "Java", judge0Id: 62 },
-  { id: "cpp", label: "C++", judge0Id: 54 },
-  { id: "go", label: "Go", judge0Id: 60 },
+  { id: "python", label: "Python" },
+  { id: "javascript", label: "JavaScript" },
+  { id: "java", label: "Java" },
+  { id: "cpp", label: "C++" },
+  { id: "go", label: "Go" },
 ] as const;
 
 export const FOCUS_AREAS = [
@@ -24,10 +24,6 @@ export const FOCUS_AREAS = [
   "sorting",
   "recursion",
 ] as const;
-
-export const MAX_CODE_EXECUTION_TIME_MS = 10_000;
-export const MAX_CODE_MEMORY_KB = 256_000;
-export const MAX_EXECUTIONS_PER_MINUTE = 10;
 
 export const BEHAVIORAL_SESSION_DURATION_MIN = 30;
 export const TECHNICAL_SESSION_DURATION_MIN = 45;
