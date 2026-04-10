@@ -25,7 +25,7 @@
 
 ### Tasks
 
-- [ ] **14.1** Generalize `stores/interviewStore.ts` to support both behavioral and technical interviews:
+- [x] **14.1** Generalize `stores/interviewStore.ts` to support both behavioral and technical interviews:
   - Change `config` type from `BehavioralSessionConfig` to `SessionConfig` (the union type from shared)
   - Add a `type` field: `"behavioral" | "technical"`
   - In `createSession()`, use `get().type` instead of hardcoding `"behavioral"`
@@ -34,7 +34,7 @@
   - Ensure `reset()` clears the type back to no selection
   - **Do not break existing behavioral flow** — verify the behavioral setup + session pages still work after this change
 
-- [ ] **14.2** Create `components/interview/TechnicalSetupForm.tsx` — a form with:
+- [x] **14.2** Create `components/interview/TechnicalSetupForm.tsx` — a form with:
   - **Interview type** — radio group or select with options: "LeetCode-style", "System Design", "Frontend", "Backend". Maps to `TechnicalInterviewType` enum values.
   - **Focus areas** — multi-select checkboxes from `FOCUS_AREAS` constant. At least 1 must be selected. Display in a 2-column or 3-column grid. Each chip/checkbox shows the area name formatted nicely (e.g., "dynamic_programming" → "Dynamic Programming").
   - **Programming language** — dropdown from `SUPPORTED_LANGUAGES` constant. Default: "python".
@@ -43,33 +43,33 @@
   - Disable submit if no focus areas selected
   - Use shadcn/ui components (RadioGroup, Checkbox, Select, Button, Card, Label)
 
-- [ ] **14.3** Replace the placeholder `app/interview/technical/setup/page.tsx` with the real setup page:
+- [x] **14.3** Replace the placeholder `app/interview/technical/setup/page.tsx` with the real setup page:
   - Render `TechnicalSetupForm` inside a centered layout (max-w-2xl)
   - Page title: "Technical Interview Setup"
   - Subtitle: "Configure your mock coding interview. The AI will generate a problem and analyze your approach."
 
-- [ ] **14.4** Add Zod validation for technical config in `POST /api/sessions` route:
+- [x] **14.4** Add Zod validation for technical config in `POST /api/sessions` route:
   - The `technicalConfigSchema` already exists in `lib/validations.ts`. Verify it's correctly applied in the route handler for `type: "technical"` sessions.
   - Test that: `focus_areas` must have at least 1 item, `interview_type` must be one of the 4 valid values, `language` must be a non-empty string, `difficulty` must be "easy"/"medium"/"hard".
 
-- [ ] **14.5** Write unit tests for the technical config validation in `lib/validations.test.ts`:
+- [x] **14.5** Write unit tests for the technical config validation in `lib/validations.test.ts`:
   - Valid technical config passes
   - Empty `focus_areas` array fails
   - Invalid `interview_type` fails
   - Invalid `difficulty` fails
   - At least 5 test cases
 
-- [ ] **14.6** Verify: can fill out the technical setup form, submit it, see a session created in Supabase with correct config JSONB (type="technical", config has interview_type, focus_areas, language, difficulty), and get redirected to the session page
+- [x] **14.6** Verify: can fill out the technical setup form, submit it, see a session created in Supabase with correct config JSONB (type="technical", config has interview_type, focus_areas, language, difficulty), and get redirected to the session page
 
 ### Acceptance Criteria
 
-- [ ] Setup form renders with all fields: interview type, focus areas, language, difficulty
-- [ ] Focus areas displayed as checkboxes, at least 1 required to submit
-- [ ] Form submission creates a `type: "technical"` session in the DB with correct config
-- [ ] Invalid config (e.g., no focus areas) shows a clear error
-- [ ] After submission, user is redirected to `/interview/technical/session`
-- [ ] Existing behavioral setup + session flow still works (no regression)
-- [ ] 5+ new validation test cases pass
+- [x] Setup form renders with all fields: interview type, focus areas, language, difficulty
+- [x] Focus areas displayed as checkboxes, at least 1 required to submit
+- [x] Form submission creates a `type: "technical"` session in the DB with correct config
+- [x] Invalid config (e.g., no focus areas) shows a clear error
+- [x] After submission, user is redirected to `/interview/technical/session`
+- [x] Existing behavioral setup + session flow still works (no regression)
+- [x] 5+ new validation test cases pass
 
 ---
 

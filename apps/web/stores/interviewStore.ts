@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type {
   BehavioralSessionConfig,
+  TechnicalSessionConfig,
+  SessionConfig,
+  InterviewType,
   SessionStatus,
   TranscriptEntry,
 } from "@interview-assistant/shared";
@@ -8,7 +11,8 @@ import type {
 interface InterviewState {
   // Session data
   sessionId: string | null;
-  config: BehavioralSessionConfig;
+  type: InterviewType | null;
+  config: SessionConfig;
   status: SessionStatus;
   transcript: TranscriptEntry[];
   error: string | null;
@@ -17,7 +21,8 @@ interface InterviewState {
   startedAt: Date | null;
 
   // Actions
-  setConfig: (partial: Partial<BehavioralSessionConfig>) => void;
+  setType: (type: InterviewType) => void;
+  setConfig: (partial: Partial<SessionConfig>) => void;
   createSession: () => Promise<string | null>;
   startSession: () => Promise<void>;
   endSession: () => Promise<void>;
@@ -25,33 +30,50 @@ interface InterviewState {
   reset: () => void;
 }
 
-const DEFAULT_CONFIG: BehavioralSessionConfig = {
+const DEFAULT_BEHAVIORAL_CONFIG: BehavioralSessionConfig = {
   interview_style: 0.5,
   difficulty: 0.5,
 };
 
+const DEFAULT_TECHNICAL_CONFIG: TechnicalSessionConfig = {
+  interview_type: "leetcode",
+  focus_areas: [],
+  language: "python",
+  difficulty: "medium",
+};
+
 export const useInterviewStore = create<InterviewState>((set, get) => ({
   sessionId: null,
-  config: { ...DEFAULT_CONFIG },
+  type: null,
+  config: { ...DEFAULT_BEHAVIORAL_CONFIG },
   status: "configuring",
   transcript: [],
   error: null,
   startedAt: null,
 
+  setType: (type) => {
+    const config =
+      type === "behavioral"
+        ? { ...DEFAULT_BEHAVIORAL_CONFIG }
+        : { ...DEFAULT_TECHNICAL_CONFIG };
+    set({ type, config });
+  },
+
   setConfig: (partial) =>
     set((state) => ({
-      config: { ...state.config, ...partial },
+      config: { ...state.config, ...partial } as SessionConfig,
     })),
 
   createSession: async () => {
-    const { config } = get();
+    const { config, type } = get();
+    const sessionType = type ?? "behavioral";
     set({ error: null });
 
     try {
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "behavioral", config }),
+        body: JSON.stringify({ type: sessionType, config }),
       });
 
       if (!res.ok) {
@@ -144,7 +166,8 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   reset: () =>
     set({
       sessionId: null,
-      config: { ...DEFAULT_CONFIG },
+      type: null,
+      config: { ...DEFAULT_BEHAVIORAL_CONFIG },
       status: "configuring",
       transcript: [],
       error: null,

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { behavioralConfigSchema, createSessionSchema } from "./validations";
+import {
+  behavioralConfigSchema,
+  technicalConfigSchema,
+  createSessionSchema,
+} from "./validations";
 
 describe("behavioralConfigSchema", () => {
   it("accepts a valid config with all fields", () => {
@@ -83,6 +87,91 @@ describe("behavioralConfigSchema", () => {
       difficulty: 1,
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("technicalConfigSchema", () => {
+  it("accepts a valid technical config", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: ["arrays", "trees"],
+      language: "python",
+      difficulty: "medium",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts all valid interview types", () => {
+    for (const type of ["leetcode", "system_design", "frontend", "backend"]) {
+      const result = technicalConfigSchema.safeParse({
+        interview_type: type,
+        focus_areas: ["arrays"],
+        language: "javascript",
+        difficulty: "easy",
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects empty focus_areas array", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: [],
+      language: "python",
+      difficulty: "medium",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing focus_areas", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      language: "python",
+      difficulty: "medium",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid interview_type", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "invalid_type",
+      focus_areas: ["arrays"],
+      language: "python",
+      difficulty: "medium",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid difficulty", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: ["arrays"],
+      language: "python",
+      difficulty: "impossible",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty language string", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: ["arrays"],
+      language: "",
+      difficulty: "hard",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts all valid difficulty levels", () => {
+    for (const diff of ["easy", "medium", "hard"]) {
+      const result = technicalConfigSchema.safeParse({
+        interview_type: "leetcode",
+        focus_areas: ["dynamic_programming"],
+        language: "java",
+        difficulty: diff,
+      });
+      expect(result.success).toBe(true);
+    }
   });
 });
 

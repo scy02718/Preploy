@@ -6,6 +6,7 @@ import { useInterviewStore } from "@/stores/interviewStore";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
 import { useLipSync } from "@/hooks/useLipSync";
 import { buildBehavioralSystemPrompt } from "@/lib/prompts";
+import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 import { VideoCallLayout } from "@/components/interview/VideoCallLayout";
 import { SessionControls } from "@/components/interview/SessionControls";
 import { AvatarModelRef } from "@/components/avatar/AvatarModel";
@@ -28,7 +29,7 @@ export default function BehavioralSessionPage() {
 
   // Build system prompt from config
   const systemPrompt = useMemo(
-    () => buildBehavioralSystemPrompt(config),
+    () => buildBehavioralSystemPrompt(config as BehavioralSessionConfig),
     [config]
   );
 

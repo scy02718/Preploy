@@ -14,7 +14,7 @@ export const behavioralConfigSchema = z.object({
 export const technicalConfigSchema = z.object({
   interview_type: z.enum(["leetcode", "system_design", "frontend", "backend"]),
   focus_areas: z.array(z.string()).min(1),
-  language: z.string(),
+  language: z.string().min(1),
   difficulty: z.enum(["easy", "medium", "hard"]),
 });
 

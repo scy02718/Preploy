@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,15 +9,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
+import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 
 export function BehavioralSetupForm() {
   const router = useRouter();
-  const { config, setConfig, createSession } = useInterviewStore();
+  const { config, setConfig, setType, createSession } = useInterviewStore();
   const [questionInput, setQuestionInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const questions = config.expected_questions ?? [];
+  useEffect(() => {
+    setType("behavioral");
+  }, [setType]);
+
+  const behavioralConfig = config as BehavioralSessionConfig;
+  const questions = behavioralConfig.expected_questions ?? [];
 
   const addQuestion = () => {
     const trimmed = questionInput.trim();
@@ -62,7 +68,7 @@ export function BehavioralSetupForm() {
             <Input
               id="company"
               placeholder="e.g., Google, Meta, Startup XYZ"
-              value={config.company_name ?? ""}
+              value={behavioralConfig.company_name ?? ""}
               onChange={(e) => setConfig({ company_name: e.target.value })}
               maxLength={200}
             />
@@ -73,13 +79,13 @@ export function BehavioralSetupForm() {
             <Textarea
               id="jd"
               placeholder="Paste the job description here... The AI interviewer will tailor questions to this role."
-              value={config.job_description ?? ""}
+              value={behavioralConfig.job_description ?? ""}
               onChange={(e) => setConfig({ job_description: e.target.value })}
               maxLength={5000}
               rows={5}
             />
             <p className="text-xs text-muted-foreground">
-              {(config.job_description ?? "").length}/5000 characters
+              {(behavioralConfig.job_description ?? "").length}/5000 characters
             </p>
           </div>
         </CardContent>
@@ -152,7 +158,7 @@ export function BehavioralSetupForm() {
           <div className="space-y-3">
             <Label>Interview Style</Label>
             <Slider
-              value={[config.interview_style * 100]}
+              value={[behavioralConfig.interview_style * 100]}
               onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
               min={0}
               max={100}
@@ -167,7 +173,7 @@ export function BehavioralSetupForm() {
           <div className="space-y-3">
             <Label>Difficulty</Label>
             <Slider
-              value={[config.difficulty * 100]}
+              value={[behavioralConfig.difficulty * 100]}
               onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
               min={0}
               max={100}
