@@ -9,7 +9,7 @@ export default defineConfig({
     exclude: ["**/*.integration.test.{ts,tsx}", "node_modules"],
     coverage: {
       provider: "v8",
-      include: ["lib/prompts.ts", "lib/validations.ts", "lib/utils.ts", "lib/transcription.ts"],
+      include: ["lib/prompts.ts", "lib/validations.ts", "lib/utils.ts", "lib/transcription.ts", "lib/code-templates.ts"],
       exclude: ["**/*.test.*", "**/*.integration.test.*"],
       reporter: ["text", "text-summary"],
     },

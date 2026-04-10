@@ -144,7 +144,7 @@
 
 ### Tasks
 
-- [ ] **16.1** Create `hooks/useCodeSnapshots.ts` — a React hook that:
+- [x] **16.1** Create `hooks/useCodeSnapshots.ts` — a React hook that:
   - Exposes: `{ captureSnapshot, getSnapshots, code, setCode, language, setLanguage, resetCode }`
   - Maintains the current `code` (string) and `language` (string) state
   - `captureSnapshot(eventType: CodeEventType)`: pushes a new snapshot to an internal array with `{ code, language, timestamp_ms (relative to session start), event_type }`
@@ -153,12 +153,12 @@
   - `getSnapshots()`: returns the full array of snapshots captured so far
   - Accept `sessionStartTime: number` (epoch ms) as a parameter so timestamps are relative to session start
 
-- [ ] **16.2** Create `app/api/sessions/[id]/snapshots/route.ts` — API route to persist code snapshots:
+- [x] **16.2** Create `app/api/sessions/[id]/snapshots/route.ts` — API route to persist code snapshots:
   - `POST`: receives `{ snapshots: CodeSnapshot[] }`, validates auth and session ownership, inserts all snapshots into the `code_snapshots` table
   - `GET`: returns all code snapshots for a session, ordered by `timestamp_ms`
   - Use the existing `codeSnapshots` schema table
 
-- [ ] **16.3** Define language-specific boilerplate templates in `lib/code-templates.ts`:
+- [x] **16.3** Define language-specific boilerplate templates in `lib/code-templates.ts`:
   - Export a `getBoilerplate(language: string): string` function
   - Python: `"def solution():\n    pass\n"`
   - JavaScript: `"function solution() {\n  \n}\n"`
@@ -167,29 +167,29 @@
   - Go: `"package main\n\nfunc solution() {\n    \n}\n"`
   - Return empty string for unknown languages
 
-- [ ] **16.4** Write unit tests for `lib/code-templates.ts`:
+- [x] **16.4** Write unit tests for `lib/code-templates.ts`:
   - Each supported language returns non-empty boilerplate
   - Unknown language returns empty string
   - Python boilerplate contains "def solution"
   - 5+ test cases
 
-- [ ] **16.5** Write integration tests for the snapshots API route (`app/api/sessions/[id]/snapshots/route.integration.test.ts`):
+- [x] **16.5** Write integration tests for the snapshots API route (`app/api/sessions/[id]/snapshots/route.integration.test.ts`):
   - Unauthenticated POST returns 401
   - Authenticated POST with valid snapshots returns 201 and data is in DB
   - GET returns snapshots ordered by timestamp_ms
   - 3+ test cases
 
-- [ ] **16.6** Verify: code changes in the editor create debounced snapshots, `getSnapshots()` returns the correct timeline, and snapshots can be persisted via POST then retrieved via GET
+- [x] **16.6** Verify: code changes in the editor create debounced snapshots, `getSnapshots()` returns the correct timeline, and snapshots can be persisted via POST then retrieved via GET
 
 ### Acceptance Criteria
 
-- [ ] Code changes are captured as timestamped snapshots after 2s debounce
-- [ ] Snapshots include: code, language, timestamp_ms, event_type
-- [ ] Language switch and code reset both trigger snapshots
-- [ ] POST API persists snapshots to `code_snapshots` table
-- [ ] GET API returns snapshots in chronological order
-- [ ] 5+ unit tests for boilerplate templates pass
-- [ ] 3+ integration tests for snapshots API pass
+- [x] Code changes are captured as timestamped snapshots after 2s debounce
+- [x] Snapshots include: code, language, timestamp_ms, event_type
+- [x] Language switch and code reset both trigger snapshots
+- [x] POST API persists snapshots to `code_snapshots` table
+- [x] GET API returns snapshots in chronological order
+- [x] 5+ unit tests for boilerplate templates pass
+- [x] 3+ integration tests for snapshots API pass
 
 ---
 
