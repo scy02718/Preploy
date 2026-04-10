@@ -16,8 +16,9 @@ When implementing a new feature or modifying existing logic, always write tests 
 
 - **Web unit tests**: Place `*.test.ts` / `*.test.tsx` next to the source file being tested (e.g., `lib/prompts.test.ts`).
 - **Web integration tests**: Place `*.integration.test.ts` next to the route handler (e.g., `app/api/sessions/route.integration.test.ts`). These run against a real Docker Postgres test DB.
-  - Mock only `@/lib/auth` (for auth simulation).
-  - Mock `@/lib/db` to point at `getTestDb()` from `tests/setup-db.ts` — this redirects all DB calls to the Docker test DB.
+  - **Never mock the database.** All DB interactions must run against the real Docker test DB. This is the whole point of integration tests — mocked DB queries can't catch real SQL/schema issues.
+  - Mock `@/lib/auth` (for auth simulation) and external APIs (OpenAI, etc.) — these are the only things that should be mocked.
+  - Mock `@/lib/db` to point at `getTestDb()` from `tests/setup-db.ts` — this redirects all DB calls to the Docker test DB (this is **not** mocking the DB; it's pointing to the test instance).
   - Use `beforeAll` to seed test data (e.g., test users), `beforeEach` to clean tables between tests, `afterAll` to cleanup/teardown.
 - **Python tests**: Place `test_*.py` in `apps/api/tests/`. Mock external API calls (OpenAI) with `unittest.mock.patch`; test everything else for real.
 

@@ -1,24 +1,33 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { POST } from "./route";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeAll,
+  beforeEach,
+  afterAll,
+} from "vitest";
+import {
+  cleanupTestDb,
+  teardownTestDb,
+  getTestDb,
+} from "../../../tests/setup-db";
+import { users, interviewSessions } from "@/lib/schema";
 
-// Mock auth
+// Mock auth — only external auth is mocked
+const mockAuth = vi.fn();
 vi.mock("@/lib/auth", () => ({
-  auth: vi.fn(),
+  auth: () => mockAuth(),
 }));
 
-// Mock db — mock the chained select().from().where() pattern
-const mockWhere = vi.fn();
+// Point db import to the real test database
 vi.mock("@/lib/db", () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        where: mockWhere,
-      }),
-    }),
+  get db() {
+    return getTestDb();
   },
 }));
 
-// Mock OpenAI
+// Mock OpenAI — external API, must be mocked
 const mockTranscriptionCreate = vi.fn();
 vi.mock("openai", () => {
   return {
@@ -32,18 +41,25 @@ vi.mock("openai", () => {
   };
 });
 
-// Mock schema to avoid drizzle import issues
-vi.mock("@/lib/schema", () => ({
-  interviewSessions: { id: "id", userId: "userId" },
-}));
+import { POST } from "./route";
 
-import { auth } from "@/lib/auth";
+const TEST_USER = {
+  id: "00000000-0000-0000-0000-000000000001",
+  email: "test@example.com",
+  name: "Test User",
+};
 
-const mockAuth = vi.mocked(auth);
+const OTHER_USER = {
+  id: "00000000-0000-0000-0000-000000000002",
+  email: "other@example.com",
+  name: "Other User",
+};
+
+let testSessionId: string;
 
 /**
- * Build a mock NextRequest whose `.formData()` returns a fake FormData.
- * This avoids jsdom/undici Blob incompatibility issues.
+ * Build a mock request whose `.formData()` returns a fake FormData.
+ * This avoids jsdom/undici Blob incompatibility issues with multipart requests.
  */
 function buildMockRequest(fields: Record<string, unknown>) {
   const map = new Map(Object.entries(fields));
@@ -58,54 +74,91 @@ function fakeFile(size = 100) {
   return new File(["x".repeat(size)], "audio.webm", { type: "audio/webm" });
 }
 
-describe("POST /api/transcribe", () => {
-  beforeEach(() => {
+describe("POST /api/transcribe (integration)", () => {
+  beforeAll(async () => {
+    const db = getTestDb();
+    await db.insert(users).values(TEST_USER).onConflictDoNothing();
+    await db.insert(users).values(OTHER_USER).onConflictDoNothing();
+  });
+
+  beforeEach(async () => {
     vi.clearAllMocks();
     process.env.OPENAI_API_KEY = "sk-test-key";
+
+    const db = getTestDb();
+    await db.delete(interviewSessions);
+
+    // Create a fresh session owned by TEST_USER
+    const [session] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: TEST_USER.id,
+        type: "technical",
+        config: { interview_type: "leetcode", focus_areas: ["arrays"] },
+      })
+      .returning();
+    testSessionId = session.id;
+  });
+
+  afterAll(async () => {
+    await cleanupTestDb();
+    await teardownTestDb();
   });
 
   it("returns 401 when not authenticated", async () => {
-    mockAuth.mockResolvedValue(null as never);
+    mockAuth.mockResolvedValue(null);
 
     const response = await POST(buildMockRequest({
       audio: fakeFile(),
-      session_id: "session-1",
+      session_id: testSessionId,
     }));
     expect(response.status).toBe(401);
   });
 
   it("returns 400 when audio file is missing", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as never);
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    const response = await POST(buildMockRequest({ session_id: "session-1" }));
+    const response = await POST(buildMockRequest({
+      session_id: testSessionId,
+    }));
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error).toMatch(/audio/i);
   });
 
   it("returns 400 when session_id is missing", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as never);
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    const response = await POST(buildMockRequest({ audio: fakeFile() }));
+    const response = await POST(buildMockRequest({
+      audio: fakeFile(),
+    }));
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error).toMatch(/session_id/i);
   });
 
-  it("returns 404 when session not found", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as never);
-    mockWhere.mockResolvedValue([]);
+  it("returns 404 when session not found (real DB lookup)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
     const response = await POST(buildMockRequest({
       audio: fakeFile(),
-      session_id: "nonexistent",
+      session_id: "00000000-0000-0000-0000-000000000099",
+    }));
+    expect(response.status).toBe(404);
+  });
+
+  it("returns 404 when session owned by another user (real DB lookup)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: OTHER_USER.id } });
+
+    const response = await POST(buildMockRequest({
+      audio: fakeFile(),
+      session_id: testSessionId,
     }));
     expect(response.status).toBe(404);
   });
 
   it("returns transcript entries on successful transcription", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as never);
-    mockWhere.mockResolvedValue([{ id: "session-1", userId: "user-1" }]);
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     mockTranscriptionCreate.mockResolvedValue({
       text: "I think we should use a hash map",
       words: [
@@ -122,7 +175,7 @@ describe("POST /api/transcribe", () => {
 
     const response = await POST(buildMockRequest({
       audio: fakeFile(),
-      session_id: "session-1",
+      session_id: testSessionId,
     }));
     expect(response.status).toBe(200);
 
@@ -134,8 +187,7 @@ describe("POST /api/transcribe", () => {
   });
 
   it("handles transcription with pauses creating multiple segments", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as never);
-    mockWhere.mockResolvedValue([{ id: "session-1", userId: "user-1" }]);
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     mockTranscriptionCreate.mockResolvedValue({
       text: "first part second part",
       words: [
@@ -148,7 +200,7 @@ describe("POST /api/transcribe", () => {
 
     const response = await POST(buildMockRequest({
       audio: fakeFile(),
-      session_id: "session-1",
+      session_id: testSessionId,
     }));
     expect(response.status).toBe(200);
 
