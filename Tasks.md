@@ -79,7 +79,7 @@
 
 ### Tasks
 
-- [ ] **15.1** Create `hooks/useAudioRecorder.ts` — a React hook for recording mic audio during the session:
+- [x] **15.1** Create `hooks/useAudioRecorder.ts` — a React hook for recording mic audio during the session:
   - Exposes: `{ startRecording, stopRecording, isRecording, audioLevel }`
   - `startRecording()`:
     1. Call `navigator.mediaDevices.getUserMedia({ audio: true })`
@@ -96,7 +96,7 @@
   - `isRecording`: boolean state indicating whether recording is active
   - `audioLevel`: number (0-1) representing current mic input volume, updated at ~30fps
 
-- [ ] **15.2** Create `app/api/transcribe/route.ts` — a server-side route that transcribes an audio file:
+- [x] **15.2** Create `app/api/transcribe/route.ts` — a server-side route that transcribes an audio file:
   - `POST`: accepts `multipart/form-data` with an `audio` file field and a `session_id` field
   - Auth check: return 401 if not authenticated
   - Verify session ownership (session belongs to the authenticated user)
@@ -106,9 +106,9 @@
   - Return `{ entries: TranscriptEntry[] }` as JSON
   - Handle errors: file too large (limit to 25MB, OpenAI's max), unsupported format, API failure
 
-- [ ] **15.3** Add `OPENAI_API_KEY` usage note in `.env.example` if not already present (it should already be there from Phase 2 for the Realtime API). No new API keys needed — same OpenAI key.
+- [x] **15.3** Add `OPENAI_API_KEY` usage note in `.env.example` if not already present (it should already be there from Phase 2 for the Realtime API). No new API keys needed — same OpenAI key.
 
-- [ ] **15.4** Write unit tests for the word-to-segment grouping logic:
+- [x] **15.4** Write unit tests for the word-to-segment grouping logic:
   - Extract the grouping function into a testable pure function in `lib/transcription.ts`: `groupWordsIntoSegments(words: { word: string, start: number, end: number }[]): TranscriptEntry[]`
   - Test: single word returns one segment
   - Test: continuous speech (all words < 1s apart) returns one segment
@@ -117,24 +117,24 @@
   - Test: timestamps are converted to milliseconds correctly
   - 5+ test cases
 
-- [ ] **15.5** Write integration tests for `POST /api/transcribe` route:
+- [x] **15.5** Write integration tests for `POST /api/transcribe` route:
   - Unauthenticated returns 401
   - Missing audio file returns 400
   - Mock the OpenAI transcription API — valid audio returns TranscriptEntry array
   - 3+ test cases
 
-- [ ] **15.6** Verify: can record audio during a session, stop recording to get a Blob, POST it to `/api/transcribe`, and receive back timestamped TranscriptEntry objects. The mic indicator shows audio levels during recording.
+- [x] **15.6** Verify: can record audio during a session, stop recording to get a Blob, POST it to `/api/transcribe`, and receive back timestamped TranscriptEntry objects. The mic indicator shows audio levels during recording.
 
 ### Acceptance Criteria
 
-- [ ] `useAudioRecorder` captures mic audio as a Blob and exposes real-time audio levels
-- [ ] `stopRecording()` cleanly releases the mic and returns the audio Blob
-- [ ] `POST /api/transcribe` accepts audio, calls `gpt-4o-mini-transcribe`, returns `TranscriptEntry[]` with millisecond timestamps
-- [ ] Words are grouped into sentence-like segments (split on >1s pauses)
-- [ ] 401 returned for unauthenticated requests
-- [ ] Audio level (0-1) updates at ~30fps for the mic indicator
-- [ ] 5+ unit tests for word grouping pass
-- [ ] 3+ integration tests for transcribe route pass
+- [x] `useAudioRecorder` captures mic audio as a Blob and exposes real-time audio levels
+- [x] `stopRecording()` cleanly releases the mic and returns the audio Blob
+- [x] `POST /api/transcribe` accepts audio, calls `gpt-4o-mini-transcribe`, returns `TranscriptEntry[]` with millisecond timestamps
+- [x] Words are grouped into sentence-like segments (split on >1s pauses)
+- [x] 401 returned for unauthenticated requests
+- [x] Audio level (0-1) updates at ~30fps for the mic indicator
+- [x] 5+ unit tests for word grouping pass
+- [x] 3+ integration tests for transcribe route pass
 
 ---
 
