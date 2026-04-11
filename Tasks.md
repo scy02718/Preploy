@@ -251,19 +251,19 @@
 
 ### Tasks
 
-- [ ] **18.1** Create `components/interview/TechnicalSessionLayout.tsx` — the main session layout:
+- [x] **18.1** Create `components/interview/TechnicalSessionLayout.tsx` — the main session layout:
   - **Left panel (40%):** Problem description rendered with the existing `ProblemDescription` component. Scrollable. Shows a loading skeleton while the problem is being generated.
   - **Right panel (60%):** `EditorToolbar` at the top (language selector + reset button), `CodeEditor` below filling the remaining height.
   - **Bottom bar:** Session controls — timer (MM:SS), mic status indicator (pulsing red dot when active), "End Session" button with confirmation dialog.
   - The layout should be a full-viewport height (minus header), no scrolling on the outer container, each panel scrolls independently.
 
-- [ ] **18.2** Create `components/interview/MicIndicator.tsx` — a small component showing mic recording status:
+- [x] **18.2** Create `components/interview/MicIndicator.tsx` — a small component showing mic recording status:
   - Red pulsing dot + "Recording..." when mic is active (`isRecording` from `useAudioRecorder`)
   - The pulsing dot's scale/opacity should react to `audioLevel` (louder speech = bigger pulse) — gives the user real-time visual feedback that their voice is being captured
   - Gray dot + "Mic off" when not recording
   - No live transcript text — the user's focus should be on the code editor
 
-- [ ] **18.3** Replace the placeholder `app/interview/technical/session/page.tsx` with the real session page:
+- [x] **18.3** Replace the placeholder `app/interview/technical/session/page.tsx` with the real session page:
   - Read `sessionId`, `config`, and `type` from `interviewStore` — if missing or type !== "technical", redirect to `/interview/technical/setup`
   - On mount:
     1. Call `interviewStore.startSession()` to mark session as in_progress
@@ -286,26 +286,26 @@
     7. Fire-and-forget: trigger feedback generation via `POST /api/sessions/[id]/feedback`
     8. Navigate to `/dashboard/sessions/[id]/feedback`
 
-- [ ] **18.4** Set up the code editor with proper defaults:
+- [x] **18.4** Set up the code editor with proper defaults:
   - Initialize code with language-specific boilerplate from `lib/code-templates.ts`
   - When user changes language via `EditorToolbar`, update the editor language and capture a snapshot
   - When user clicks "Reset", reset to boilerplate and capture a snapshot
   - Wire `onChange` to `useCodeSnapshots.setCode()` (which handles debounced capture)
 
-- [ ] **18.5** Verify: full flow works — setup → session page loads → problem appears → user can code + speak → timer runs → can end session → transcript + snapshots saved to DB → redirected to feedback page
+- [x] **18.5** Verify: full flow works — setup → session page loads → problem appears → user can code + speak → timer runs → can end session → transcript + snapshots saved to DB → redirected to feedback page
 
 ### Acceptance Criteria
 
-- [ ] Session page shows problem on left, code editor on right
-- [ ] Problem is generated from config and renders while editor is ready
-- [ ] Mic records continuously with pulsing audio-level indicator
-- [ ] Code changes are captured as debounced snapshots
-- [ ] Language switching updates the editor and captures a snapshot
-- [ ] Timer displays elapsed time from session start
-- [ ] "End Session" stops recording, transcribes audio, saves transcript + snapshots, triggers feedback, navigates to feedback page
-- [ ] Brief "Processing..." state shown during post-session transcription
-- [ ] If user navigates to session without config, redirected to setup
-- [ ] No double-start in React Strict Mode
+- [x] Session page shows problem on left, code editor on right
+- [x] Problem is generated from config and renders while editor is ready
+- [x] Mic records continuously with pulsing audio-level indicator
+- [x] Code changes are captured as debounced snapshots
+- [x] Language switching updates the editor and captures a snapshot
+- [x] Timer displays elapsed time from session start
+- [x] "End Session" stops recording, transcribes audio, saves transcript + snapshots, triggers feedback, navigates to feedback page
+- [x] Brief "Processing..." state shown during post-session transcription
+- [x] If user navigates to session without config, redirected to setup
+- [x] No double-start in React Strict Mode
 
 ---
 
