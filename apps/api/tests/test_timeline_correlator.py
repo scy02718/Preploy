@@ -26,6 +26,20 @@ class TestBuildTimeline:
         assert len(result) == 1
         assert result[0].event_type == "code_change"
 
+    def test_code_change_events_include_code(self):
+        snapshots = [
+            CodeSnapshot(code="def foo(): pass", language="python", timestamp_ms=500, event_type="edit"),
+        ]
+        result = build_timeline([], snapshots)
+        assert result[0].code == "def foo(): pass"
+
+    def test_speech_events_have_no_code(self):
+        transcript = [
+            TranscriptEntry(speaker="user", text="Hello", timestamp_ms=0),
+        ]
+        result = build_timeline(transcript, [])
+        assert result[0].code is None
+
     def test_events_are_sorted_by_timestamp(self):
         transcript = [
             TranscriptEntry(speaker="user", text="Let me think about this.", timestamp_ms=5000),
@@ -38,17 +52,25 @@ class TestBuildTimeline:
         timestamps = [e.timestamp_ms for e in result]
         assert timestamps == sorted(timestamps)
 
-    def test_speech_summary_truncated_to_100_chars(self):
-        long_text = "a" * 200
-        transcript = [TranscriptEntry(speaker="user", text=long_text, timestamp_ms=0)]
+    def test_speech_summary_truncated_with_ellipsis(self):
+        long_text = "word " * 40  # 200 chars
+        transcript = [TranscriptEntry(speaker="user", text=long_text.strip(), timestamp_ms=0)]
         result = build_timeline(transcript, [])
-        assert len(result[0].summary) == 100
+        assert len(result[0].summary) <= 100
+        assert result[0].summary.endswith("...")
+
+    def test_long_speech_stores_full_text(self):
+        long_text = "word " * 40
+        transcript = [TranscriptEntry(speaker="user", text=long_text.strip(), timestamp_ms=0)]
+        result = build_timeline(transcript, [])
+        assert result[0].full_text == long_text.strip()
 
     def test_speech_summary_short_text_not_truncated(self):
         short_text = "Hello world"
         transcript = [TranscriptEntry(speaker="user", text=short_text, timestamp_ms=0)]
         result = build_timeline(transcript, [])
         assert result[0].summary == short_text
+        assert result[0].full_text is None
 
     def test_code_change_summary_includes_language(self):
         snapshots = [

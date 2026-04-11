@@ -12,12 +12,20 @@ def build_timeline(
     events: list[TimelineEvent] = []
 
     for entry in transcript:
-        summary = entry.text[:100]
+        text = entry.text
+        # Truncate summary cleanly at word boundary
+        if len(text) > 100:
+            summary = text[:97].rsplit(" ", 1)[0] + "..."
+            full_text = text
+        else:
+            summary = text
+            full_text = None  # No need to duplicate short text
         events.append(
             TimelineEvent(
                 timestamp_ms=entry.timestamp_ms,
                 event_type="speech",
                 summary=summary,
+                full_text=full_text,
             )
         )
 
@@ -33,6 +41,7 @@ def build_timeline(
                 timestamp_ms=snapshot.timestamp_ms,
                 event_type="code_change",
                 summary=summary,
+                code=snapshot.code,
             )
         )
 

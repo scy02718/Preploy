@@ -60,6 +60,8 @@ class TimelineEvent(BaseModel):
     timestamp_ms: int
     event_type: Literal["speech", "code_change"]
     summary: str
+    code: str | None = None
+    full_text: str | None = None
 
 
 class TechnicalFeedbackResponse(BaseModel):

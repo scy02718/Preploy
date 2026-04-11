@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 export interface TimelineEvent {
   timestamp_ms: number;
   event_type: "speech" | "code_change";
   summary: string;
+  code?: string | null;
+  full_text?: string | null;
 }
 
 interface TimelineViewProps {
@@ -20,7 +24,21 @@ function formatTime(ms: number): string {
 }
 
 export function TimelineView({ events }: TimelineViewProps) {
+  const [expandedSet, setExpandedSet] = useState<Set<number>>(new Set());
+
   if (events.length === 0) return null;
+
+  function toggleExpanded(index: number) {
+    setExpandedSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }
 
   return (
     <Card>
@@ -28,9 +46,14 @@ export function TimelineView({ events }: TimelineViewProps) {
         <CardTitle className="text-base">Session Timeline</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[400px] overflow-y-auto space-y-0">
+        <div className="max-h-[500px] overflow-y-auto space-y-0">
           {events.map((event, i) => {
             const isSpeech = event.event_type === "speech";
+            const hasCode = !isSpeech && !!event.code;
+            const hasFullText = isSpeech && !!event.full_text;
+            const isExpandable = hasCode || hasFullText;
+            const isExpanded = expandedSet.has(i);
+
             return (
               <div key={i} className="flex gap-3 py-2">
                 {/* Timestamp */}
@@ -52,20 +75,49 @@ export function TimelineView({ events }: TimelineViewProps) {
                   )}
                 </div>
 
-                {/* Icon + summary */}
-                <div className="flex items-start gap-2 pb-2 min-w-0">
-                  <span className="shrink-0 text-sm pt-0.5">
-                    {isSpeech ? "\uD83D\uDCAC" : "\uD83D\uDCBB"}
-                  </span>
-                  <span
-                    className={`text-sm ${
-                      isSpeech
-                        ? "text-blue-700 dark:text-blue-300"
-                        : "text-green-700 dark:text-green-300"
-                    }`}
-                  >
-                    {event.summary}
-                  </span>
+                {/* Content */}
+                <div className="flex-1 min-w-0 pb-2">
+                  <div className="flex items-start gap-2">
+                    <span className="shrink-0 text-sm pt-0.5">
+                      {isSpeech ? "\uD83D\uDCAC" : "\uD83D\uDCBB"}
+                    </span>
+                    <span
+                      className={`text-sm ${
+                        isSpeech
+                          ? "text-blue-700 dark:text-blue-300"
+                          : "text-green-700 dark:text-green-300"
+                      }`}
+                    >
+                      {event.summary}
+                    </span>
+                    {isExpandable && (
+                      <button
+                        onClick={() => toggleExpanded(i)}
+                        className="ml-auto shrink-0 flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                        {hasCode ? "Code" : "More"}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Expandable code block */}
+                  {hasCode && isExpanded && (
+                    <pre className="mt-2 max-h-60 overflow-auto rounded-md border bg-muted/50 p-3 text-xs font-mono leading-relaxed">
+                      <code>{event.code}</code>
+                    </pre>
+                  )}
+
+                  {/* Expandable full speech text */}
+                  {hasFullText && isExpanded && (
+                    <p className="mt-2 rounded-md border bg-muted/30 p-3 text-sm leading-relaxed text-foreground/80">
+                      {event.full_text}
+                    </p>
+                  )}
                 </div>
               </div>
             );

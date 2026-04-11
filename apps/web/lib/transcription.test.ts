@@ -74,14 +74,23 @@ describe("groupWordsIntoSegments", () => {
     expect(result[0].timestamp_ms).toBe(1234);
   });
 
-  it("does not split on exactly 1 second pause", () => {
+  it("does not split on exactly 0.5 second pause (default threshold)", () => {
     const result = groupWordsIntoSegments([
       { word: "hello", start: 0.0, end: 0.5 },
-      // exactly 1.0s gap (not > 1.0)
-      { word: "world", start: 1.5, end: 1.8 },
+      // exactly 0.5s gap (not > 0.5)
+      { word: "world", start: 1.0, end: 1.3 },
     ]);
     expect(result).toHaveLength(1);
     expect(result[0].text).toBe("hello world");
+  });
+
+  it("splits on pause longer than default 0.5s threshold", () => {
+    const result = groupWordsIntoSegments([
+      { word: "hello", start: 0.0, end: 0.5 },
+      // 0.6s gap — exceeds 0.5s default
+      { word: "world", start: 1.1, end: 1.4 },
+    ]);
+    expect(result).toHaveLength(2);
   });
 
   it("respects custom pause threshold", () => {
@@ -90,10 +99,10 @@ describe("groupWordsIntoSegments", () => {
       // 0.6s gap
       { word: "speech", start: 0.8, end: 1.0 },
     ];
-    // Default 1.0s threshold: single segment
-    expect(groupWordsIntoSegments(words)).toHaveLength(1);
-    // Custom 0.5s threshold: two segments
-    expect(groupWordsIntoSegments(words, 0.5)).toHaveLength(2);
+    // Default 0.5s threshold: two segments (0.6 > 0.5)
+    expect(groupWordsIntoSegments(words)).toHaveLength(2);
+    // Custom 1.0s threshold: single segment (0.6 < 1.0)
+    expect(groupWordsIntoSegments(words, 1.0)).toHaveLength(1);
   });
 
   it("all entries have speaker set to user", () => {

@@ -16,7 +16,7 @@ interface WordTimestamp {
  */
 export function groupWordsIntoSegments(
   words: WordTimestamp[],
-  pauseThresholdSec = 1.0
+  pauseThresholdSec = 0.5
 ): TranscriptEntry[] {
   if (words.length === 0) return [];
 
