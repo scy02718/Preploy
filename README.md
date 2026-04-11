@@ -61,8 +61,10 @@ Fill in your `.env`:
 ### 3. Run database migrations
 
 ```bash
-cd apps/web && npx drizzle-kit push
+cd apps/web && npm run db:migrate
 ```
+
+> **For schema changes:** Edit `lib/schema.ts`, then run `npm run db:generate` to create a versioned SQL migration file. Commit the generated file in `drizzle/`. See CLAUDE.md for the full workflow.
 
 ### 4. Set up the 3D avatar (optional, for behavioral interviews)
 

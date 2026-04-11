@@ -57,6 +57,22 @@ cd apps/web && npm run test:integration # Integration tests (requires Docker tes
 
 If any of these fail, fix the issue before committing. CI will reject the push otherwise.
 
+### Database schema changes
+
+When modifying `lib/schema.ts`, always use versioned migrations:
+
+```bash
+cd apps/web
+npm run db:generate   # Generate SQL migration file from schema diff
+# Review the generated SQL in drizzle/
+npm run db:migrate    # Apply migration to your local database
+```
+
+- **Never use `db:push` in production.** It modifies the schema directly without an audit trail.
+- `db:push` is acceptable for local development iteration, but always generate a migration before committing.
+- Commit the generated SQL files in `drizzle/` — they are the source of truth for the schema.
+- Integration tests automatically apply migrations via `tests/global-setup.ts`.
+
 ### Key principles
 
 After finishing a feature, run `turbo test` to ensure nothing is broken. If adding a new API route or modifying an existing one, add or update the corresponding integration test. If adding pure logic, add a unit test.

@@ -181,27 +181,27 @@
 
 ### Tasks
 
-- [ ] **29.1** Generate initial migration from current schema:
+- [x] **29.1** Generate initial migration from current schema:
   - Run `npx drizzle-kit generate` to create SQL migration files
   - Commit the `drizzle/` migrations folder
 
-- [ ] **29.2** Add a `migrate` script to `apps/web/package.json`:
+- [x] **29.2** Add a `migrate` script to `apps/web/package.json`:
   - `"migrate": "drizzle-kit migrate"`
   - Document the new workflow in README
 
-- [ ] **29.3** Update CI to run migrations against the test DB before integration tests:
+- [x] **29.3** Update CI to run migrations against the test DB before integration tests:
   - The `tests/global-setup.ts` already handles this, but verify it uses the migration files
 
-- [ ] **29.4** Update CLAUDE.md: "When modifying `lib/schema.ts`, always run `npx drizzle-kit generate` to create a migration file. Never use `drizzle-kit push` in production."
+- [x] **29.4** Update CLAUDE.md: "When modifying `lib/schema.ts`, always run `npx drizzle-kit generate` to create a migration file. Never use `drizzle-kit push` in production."
 
-- [ ] **29.5** Update README: replace `drizzle-kit push` instructions with the migration workflow
+- [x] **29.5** Update README: replace `drizzle-kit push` instructions with the migration workflow
 
 ### Acceptance Criteria
 
-- [ ] Migration SQL files committed to `drizzle/` directory
-- [ ] Schema changes produce new migration files via `drizzle-kit generate`
-- [ ] CI integration tests use migration files (not push)
-- [ ] README and CLAUDE.md updated with new workflow
+- [x] Migration SQL files committed to `drizzle/` directory (initial migration already existed)
+- [x] Schema changes produce new migration files via `npm run db:generate`
+- [x] CI integration tests use migration files (`tests/global-setup.ts` calls `migrate()`)
+- [x] README and CLAUDE.md updated with new workflow
 
 ---
 
