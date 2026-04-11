@@ -40,5 +40,6 @@ describe("Header", () => {
     expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Behavioral").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Technical").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Coaching").length).toBeGreaterThanOrEqual(1);
   });
 });

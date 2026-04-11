@@ -22,6 +22,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/interview/behavioral/setup", label: "Behavioral" },
   { href: "/interview/technical/setup", label: "Technical" },
+  { href: "/coaching", label: "Coaching" },
 ];
 
 export function Header() {

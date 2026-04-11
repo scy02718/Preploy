@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Code,
+  GraduationCap,
   History,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/interview/behavioral/setup", label: "Behavioral Interview", icon: MessageSquare },
   { href: "/interview/technical/setup", label: "Technical Interview", icon: Code },
+  { href: "/coaching", label: "Coaching", icon: GraduationCap },
 ];
 
 interface SessionItem {

@@ -285,41 +285,41 @@
 
 ### Tasks
 
-- [ ] **32.1** Create `app/coaching/page.tsx` — main coaching page:
+- [x] **32.1** Create `app/coaching/page.tsx` — main coaching page:
   - Tabbed layout: Behavioral | LeetCode | System Design | Communication
   - Each tab renders a content section with techniques, examples, and tips
   - Add "Coaching" link to the sidebar navigation
 
-- [ ] **32.2** Behavioral coaching content:
+- [x] **32.2** Behavioral coaching content:
   - STAR method explanation with examples
   - Common behavioral question categories (leadership, conflict, failure, teamwork)
   - Tips: be specific, use metrics, practice storytelling
   - "Practice this" button linking to behavioral setup with relevant config
 
-- [ ] **32.3** LeetCode coaching content:
+- [x] **32.3** LeetCode coaching content:
   - Problem-solving framework: understand → plan → implement → verify
   - Common patterns: two pointers, sliding window, BFS/DFS, dynamic programming
   - Tips: think aloud, discuss complexity, handle edge cases
   - "Practice this" button linking to technical setup with relevant focus areas
 
-- [ ] **32.4** System Design coaching content:
+- [x] **32.4** System Design coaching content:
   - Framework: requirements → high-level design → deep dive → trade-offs
   - Key concepts: scalability, databases, caching, load balancing
   - Tips: ask clarifying questions, estimate scale, discuss alternatives
 
-- [ ] **32.5** Communication tips content:
+- [x] **32.5** Communication tips content:
   - General tips applicable to all interview types
   - Body language, pacing, confidence, asking good questions
   - Especially relevant for the facial emotion and gaze tracking features (Story 36-37)
 
-- [ ] **32.6** Component tests for coaching page (renders tabs, switching works)
+- [x] **32.6** Component tests for coaching page (renders tabs, switching works)
 
 ### Acceptance Criteria
 
-- [ ] Coaching page accessible from sidebar
-- [ ] Four content tabs with substantive interview guidance
-- [ ] "Practice this" buttons link to the correct setup page
-- [ ] Mobile-friendly layout
+- [x] Coaching page accessible from sidebar and header nav
+- [x] Four content tabs with substantive interview guidance
+- [x] "Practice this" buttons link to the correct setup page
+- [x] Mobile-friendly layout (responsive grids with md: breakpoints)
 
 ---
 
