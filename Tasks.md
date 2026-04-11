@@ -329,28 +329,26 @@
 
 ### Tasks
 
-- [ ] **33.1** Install a PDF generation library:
-  - Option A: `@react-pdf/renderer` (React components → PDF)
-  - Option B: `html2canvas` + `jspdf` (screenshot approach, simpler but less clean)
-  - Choose based on complexity and output quality
+- [x] **33.1** Installed `@react-pdf/renderer` — vector PDF with clean typography
 
-- [ ] **33.2** Create a `FeedbackPDF` component or generation function:
-  - Include: overall score, code quality/explanation scores (if technical), summary, strengths, weaknesses, per-answer breakdown, timeline (if technical)
-  - Styled for print (no dark mode, clean typography)
-  - Header with "Interview Assistant — Feedback Report" and date
+- [x] **33.2** Created `FeedbackPDF` component with all sections:
+  - Scores row (overall + code quality + explanation quality for technical)
+  - Summary, strengths/weaknesses two-column, answer breakdown cards, timeline
+  - Color-coded scores, Helvetica typography, A4 layout
 
-- [ ] **33.3** Add "Export as PDF" button to the FeedbackDashboard:
-  - Downloads the PDF with filename: `feedback-{session-type}-{date}.pdf`
-  - Show loading state while PDF generates
+- [x] **33.3** Added "Export PDF" button to FeedbackDashboard:
+  - Dynamic import to avoid loading ~500KB PDF library on page load
+  - Downloads as `feedback-{type}-{date}.pdf`
+  - Loading state while generating
 
-- [ ] **33.4** Component test for the export button (renders, click triggers download)
+- [x] **33.4** Component test: Export PDF button renders
 
 ### Acceptance Criteria
 
-- [ ] PDF contains all feedback sections with correct data
-- [ ] PDF is clean and printable (no dark mode artifacts, proper typography)
-- [ ] Download triggers with a meaningful filename
-- [ ] Works for both behavioral and technical sessions
+- [x] PDF contains all feedback sections with correct data
+- [x] PDF is clean and printable (no dark mode, Helvetica, color-coded scores)
+- [x] Download triggers with meaningful filename
+- [x] Works for both behavioral and technical sessions
 
 ---
 

@@ -114,4 +114,11 @@ describe("FeedbackDashboard", () => {
     const links = container.querySelectorAll('a[href="/interview/technical/setup"]');
     expect(links.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("renders Export PDF button", () => {
+    render(
+      <FeedbackDashboard feedback={BEHAVIORAL_FEEDBACK} sessionId="test-id" />
+    );
+    expect(screen.getAllByText("Export PDF").length).toBeGreaterThanOrEqual(1);
+  });
 });
