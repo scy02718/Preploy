@@ -1,110 +1,94 @@
 # Interview Assistant
 
-AI-powered mock interview practice with real-time feedback.
+AI-powered mock interview practice with real-time feedback. Practice behavioral and technical interviews, get scored by AI, and track your improvement over time.
+
+**Two interview modes:**
+- **Behavioral** — Video-call style with a 3D AI interviewer avatar, real-time voice conversation, and STAR-method feedback
+- **Technical** — Split-panel coding session with Monaco editor, problem generation, mic recording for verbal explanations, and code + speech analysis
+
+## Project Structure
+
+Turborepo monorepo with three workspaces:
+
+```
+apps/
+  web/          Next.js 16 frontend + API routes (Drizzle ORM, Supabase Postgres)
+  api/          FastAPI Python service (GPT-powered feedback analysis)
+packages/
+  shared/       Shared TypeScript types, constants, and schemas
+```
 
 ## Prerequisites
 
-- Node.js 20+
-- Python 3.12+
+- **Node.js 20+** and **npm**
+- **Python 3.12+**
+- **Docker** (for local integration tests)
 - A [Supabase](https://supabase.com) account (free tier works)
+- An [OpenAI](https://platform.openai.com) API key
+- Google OAuth credentials (for login via NextAuth)
 
-## Supabase Setup
+## Setup
 
-1. Go to [supabase.com/dashboard](https://supabase.com/dashboard) and create a new project
-2. Note the project URL and anon key from **Settings > API**
-3. Get the database connection string from **Settings > Database > Connection string > URI** (use the `Transaction` pooler mode for serverless)
-4. Copy `.env.example` to `.env` and fill in:
-   ```
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
-   SUPABASE_DB_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
-   ```
-5. Run migrations: `cd apps/web && npx drizzle-kit push`
-
-## 3D Avatar Setup
-
-The behavioral interview uses a 3D avatar with lip-sync. You need a GLB avatar file with **viseme blend shapes** (morph targets) and **ARKit blend shapes** for facial animations.
-
-### Option A: Avaturn (recommended)
-
-[Avaturn](https://avaturn.me/) creates realistic 3D avatars from a selfie with viseme and ARKit blend shapes included out of the box.
-
-1. **Create an account** at [avaturn.me](https://avaturn.me/) (free tier available)
-
-2. **Create your avatar:**
-   - Click **"Create Avatar"**
-   - Upload a selfie or use one of the preset options
-   - Customize appearance (face, hair, outfit, etc.)
-   - Choose **Half-body** for the interview video-call layout
-
-3. **Export as GLB:**
-   - Once your avatar is ready, click the **Export** / **Download** button
-   - Select **GLB** format
-   - Make sure **ARKit blend shapes** and **Visemes** are enabled in export settings
-   - Download the file
-
-4. **Place the file in the project:**
-   ```bash
-   mv ~/Downloads/avatar.glb apps/web/public/avatars/interviewer.glb
-   ```
-
-### Option B: Sketchfab (pre-made models)
-
-You can find free avatars with blend shapes on [Sketchfab](https://sketchfab.com/tags/blendshapes):
-
-1. Search for avatars tagged with **"blendshapes"** or **"viseme"**
-2. Filter by **Downloadable** and **Free**
-3. Download in **GLB** format
-4. Place as `apps/web/public/avatars/interviewer.glb`
-
-> Make sure the model includes Oculus/ARKit viseme morph targets (see table below).
-
-### Option C: Custom avatar (Blender)
-
-If you have a custom model, you can add viseme blend shapes in [Blender](https://www.blender.org/) using the [CATS Blender Plugin](https://github.com/teamneoneko/Cats-Blender-Plugin):
-
-1. Import your model into Blender
-2. Install CATS plugin → use **Viseme** panel to auto-generate viseme shape keys
-3. Export as GLB with morph targets enabled
-
-### Required morph targets
-
-The app uses these morph targets for lip-sync and idle animations:
-
-| Morph Target | Purpose |
-|---|---|
-| `viseme_sil` | Silence / mouth closed |
-| `viseme_aa` | "ah" sound |
-| `viseme_E` | "eh" sound |
-| `viseme_I` | "ee" sound |
-| `viseme_O` | "oh" sound |
-| `viseme_U` | "oo" sound |
-| `viseme_FF` | "f" / "v" sounds |
-| `viseme_TH` | "th" sound |
-| `viseme_PP` | "p" / "b" / "m" sounds |
-| `viseme_SS` | "s" / "z" sounds |
-| `viseme_CH` | "sh" / "ch" sounds |
-| `viseme_nn` | "n" / "ng" sounds |
-| `viseme_RR` | "r" sound |
-| `viseme_DD` | "d" / "t" sounds |
-| `viseme_kk` | "k" / "g" sounds |
-| `eyeBlinkLeft` | Left eye blink (idle animation) |
-| `eyeBlinkRight` | Right eye blink (idle animation) |
-| `mouthSmile` | Smile (idle animation) |
-
-### Verifying morph targets
-
-Inspect your GLB file at [gltf-viewer.donmccurdy.com](https://gltf-viewer.donmccurdy.com/) — drag your file in and check the **Morph Targets** section to confirm viseme blend shapes are present.
-
-The app expects the avatar at **`apps/web/public/avatars/interviewer.glb`**.
-
-## Getting Started
+### 1. Install dependencies
 
 ```bash
 npm install
 cd apps/api && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
+```
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Fill in your `.env`:
+
+| Variable | Where to get it |
+|----------|----------------|
+| `SUPABASE_URL` | Supabase dashboard → Settings → API |
+| `SUPABASE_ANON_KEY` | Supabase dashboard → Settings → API |
+| `SUPABASE_DB_URL` | Supabase dashboard → Settings → Database → Connection string (Transaction pooler) |
+| `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| `GOOGLE_CLIENT_ID` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth 2.0 Client |
+| `GOOGLE_CLIENT_SECRET` | Same as above |
+| `AUTH_SECRET` | Generate with `openssl rand -base64 32` |
+| `AUTH_URL` | `http://localhost:3000` for local dev |
+| `PYTHON_API_URL` | `http://localhost:8000` (default) |
+
+### 3. Run database migrations
+
+```bash
+cd apps/web && npx drizzle-kit push
+```
+
+### 4. Set up the 3D avatar (optional, for behavioral interviews)
+
+See [docs/avatar-setup.md](docs/avatar-setup.md) for instructions on creating and configuring a GLB avatar with lip-sync blend shapes.
+
+### 5. Start development
+
+```bash
 npm run dev   # starts Next.js on :3000 and FastAPI on :8000
 ```
+
+## CI Pipeline
+
+Every push to `main` and every pull request runs the full CI pipeline via GitHub Actions:
+
+```
+lint-typecheck → unit-tests         → build
+               → integration-tests  ↗
+```
+
+| Job | What it runs |
+|-----|-------------|
+| **lint-typecheck** | ESLint (web) + ruff (Python) + `tsc --noEmit` |
+| **unit-tests** | Vitest unit/component tests + pytest |
+| **integration-tests** | Integration tests against a real Postgres service container |
+| **build** | `next build` production build |
+
+No real API keys or secrets are needed — the pipeline uses dummy env vars from `.env.ci` and a Postgres container spun up automatically by GitHub Actions.
 
 ## Running Tests
 
