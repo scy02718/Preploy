@@ -43,7 +43,7 @@ export function FeedbackDashboard({
     : "/interview/behavioral/setup";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Interview Feedback</h1>
         <Link href={setupLink}>
@@ -51,34 +51,53 @@ export function FeedbackDashboard({
         </Link>
       </div>
 
-      <ScoreCard score={feedback.overallScore} summary={feedback.summary} />
-
+      {/* Scores row — ScoreCard + CodeQualityCard side-by-side on desktop */}
       {isTechnical &&
-        feedback.codeQualityScore != null &&
-        feedback.explanationQualityScore != null && (
+      feedback.codeQualityScore != null &&
+      feedback.explanationQualityScore != null ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <ScoreCard score={feedback.overallScore} summary={feedback.summary} />
           <CodeQualityCard
             codeQualityScore={feedback.codeQualityScore}
             explanationQualityScore={feedback.explanationQualityScore}
           />
-        )}
+        </div>
+      ) : (
+        <ScoreCard score={feedback.overallScore} summary={feedback.summary} />
+      )}
 
       <StrengthsWeaknesses
         strengths={feedback.strengths}
         weaknesses={feedback.weaknesses}
       />
 
-      {feedback.answerAnalyses.length > 0 && (
-        <AnswerBreakdown
-          analyses={feedback.answerAnalyses}
-          title={isTechnical ? "Performance Analysis" : "Per-Answer Breakdown"}
-        />
-      )}
-
+      {/* Breakdown + Timeline side-by-side for technical, full-width for behavioral */}
       {isTechnical &&
-        feedback.timelineAnalysis &&
-        feedback.timelineAnalysis.length > 0 && (
+      feedback.timelineAnalysis &&
+      feedback.timelineAnalysis.length > 0 &&
+      feedback.answerAnalyses.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <AnswerBreakdown
+            analyses={feedback.answerAnalyses}
+            title="Performance Analysis"
+          />
           <TimelineView events={feedback.timelineAnalysis} />
-        )}
+        </div>
+      ) : (
+        <>
+          {feedback.answerAnalyses.length > 0 && (
+            <AnswerBreakdown
+              analyses={feedback.answerAnalyses}
+              title={isTechnical ? "Performance Analysis" : "Per-Answer Breakdown"}
+            />
+          )}
+          {isTechnical &&
+            feedback.timelineAnalysis &&
+            feedback.timelineAnalysis.length > 0 && (
+              <TimelineView events={feedback.timelineAnalysis} />
+            )}
+        </>
+      )}
 
       <div className="flex gap-3 pt-4">
         <Link href={setupLink}>

@@ -10,13 +10,13 @@ export default function Home() {
         <h1 className="text-4xl font-bold tracking-tight mb-4">
           Interview Assistant
         </h1>
-        <p className="text-lg text-muted-foreground max-w-md">
+        <p className="text-lg text-muted-foreground max-w-lg">
           Practice mock interviews with AI and get detailed feedback to improve
           your performance.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl w-full">
         <Card className="hover:border-primary/50 transition-colors">
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">

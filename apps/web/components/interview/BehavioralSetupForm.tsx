@@ -57,135 +57,140 @@ export function BehavioralSetupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Company & Job Description */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Company Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="company">Company Name (optional)</Label>
-            <Input
-              id="company"
-              placeholder="e.g., Google, Meta, Startup XYZ"
-              value={behavioralConfig.company_name ?? ""}
-              onChange={(e) => setConfig({ company_name: e.target.value })}
-              maxLength={200}
-            />
-          </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Left column — Company Details + Expected Questions */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="company">Company Name (optional)</Label>
+                <Input
+                  id="company"
+                  placeholder="e.g., Google, Meta, Startup XYZ"
+                  value={behavioralConfig.company_name ?? ""}
+                  onChange={(e) => setConfig({ company_name: e.target.value })}
+                  maxLength={200}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="jd">Job Description (optional)</Label>
-            <Textarea
-              id="jd"
-              placeholder="Paste the job description here... The AI interviewer will tailor questions to this role."
-              value={behavioralConfig.job_description ?? ""}
-              onChange={(e) => setConfig({ job_description: e.target.value })}
-              maxLength={5000}
-              rows={5}
-            />
-            <p className="text-xs text-muted-foreground">
-              {(behavioralConfig.job_description ?? "").length}/5000 characters
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label htmlFor="jd">Job Description (optional)</Label>
+                <Textarea
+                  id="jd"
+                  placeholder="Paste the job description here... The AI interviewer will tailor questions to this role."
+                  value={behavioralConfig.job_description ?? ""}
+                  onChange={(e) => setConfig({ job_description: e.target.value })}
+                  maxLength={5000}
+                  rows={5}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {(behavioralConfig.job_description ?? "").length}/5000 characters
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Expected Questions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Expected Questions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Add questions you expect to be asked. The AI may use some of these
-            and also add its own.
-          </p>
+          <Card>
+            <CardHeader>
+              <CardTitle>Expected Questions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Add questions you expect to be asked. The AI may use some of these
+                and also add its own.
+              </p>
 
-          {questions.length > 0 && (
-            <ul className="space-y-2">
-              {questions.map((q, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
-                >
-                  <span className="flex-1">{q}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeQuestion(i)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label={`Remove question ${i + 1}`}
-                  >
-                    &times;
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+              {questions.length > 0 && (
+                <ul className="space-y-2">
+                  {questions.map((q, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                    >
+                      <span className="flex-1">{q}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeQuestion(i)}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={`Remove question ${i + 1}`}
+                      >
+                        &times;
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-          {questions.length < 10 && (
-            <div className="flex gap-2">
-              <Input
-                placeholder="e.g., Tell me about a time you led a team..."
-                value={questionInput}
-                onChange={(e) => setQuestionInput(e.target.value)}
-                maxLength={500}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addQuestion();
-                  }
-                }}
-              />
-              <Button type="button" variant="outline" onClick={addQuestion}>
-                Add
-              </Button>
-            </div>
-          )}
+              {questions.length < 10 && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g., Tell me about a time you led a team..."
+                    value={questionInput}
+                    onChange={(e) => setQuestionInput(e.target.value)}
+                    maxLength={500}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addQuestion();
+                      }
+                    }}
+                  />
+                  <Button type="button" variant="outline" onClick={addQuestion}>
+                    Add
+                  </Button>
+                </div>
+              )}
 
-          <p className="text-xs text-muted-foreground">
-            {questions.length}/10 questions
-          </p>
-        </CardContent>
-      </Card>
+              <p className="text-xs text-muted-foreground">
+                {questions.length}/10 questions
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Interview Style & Difficulty */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Interview Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <Label>Interview Style</Label>
-            <Slider
-              value={[behavioralConfig.interview_style * 100]}
-              onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
-              min={0}
-              max={100}
-              step={1}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Strict & Formal</span>
-              <span>Casual & Conversational</span>
-            </div>
-          </div>
+        {/* Right column — Interview Settings */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Interview Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <Label>Interview Style</Label>
+                <Slider
+                  value={[(behavioralConfig.interview_style ?? 0.5) * 100]}
+                  onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Strict & Formal</span>
+                  <span>Casual & Conversational</span>
+                </div>
+              </div>
 
-          <div className="space-y-3">
-            <Label>Difficulty</Label>
-            <Slider
-              value={[behavioralConfig.difficulty * 100]}
-              onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
-              min={0}
-              max={100}
-              step={1}
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Entry-level</span>
-              <span>Senior / Staff</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <div className="space-y-3">
+                <Label>Difficulty</Label>
+                <Slider
+                  value={[(behavioralConfig.difficulty ?? 0.5) * 100]}
+                  onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Entry-level</span>
+                  <span>Senior / Staff</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Error */}
       {error && (

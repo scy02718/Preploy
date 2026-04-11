@@ -89,118 +89,123 @@ export function TechnicalSetupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Interview Type */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Interview Type</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={techConfig.interview_type ?? "leetcode"}
-            onValueChange={(value) =>
-              setConfig({
-                interview_type: value as TechnicalInterviewType,
-                focus_areas: [],
-              })
-            }
-          >
-            <div className="grid grid-cols-2 gap-3">
-              {INTERVIEW_TYPES.map(({ value, label }) => (
-                <label
-                  key={value}
-                  className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
-                >
-                  <RadioGroupItem value={value} />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </RadioGroup>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Left column — Interview Type + Focus Areas */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Interview Type</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={techConfig.interview_type ?? "leetcode"}
+                onValueChange={(value) =>
+                  setConfig({
+                    interview_type: value as TechnicalInterviewType,
+                    focus_areas: [],
+                  })
+                }
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  {INTERVIEW_TYPES.map(({ value, label }) => (
+                    <label
+                      key={value}
+                      className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
+                    >
+                      <RadioGroupItem value={value} />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
 
-      {/* Focus Areas */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Focus Areas</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Select the topics you want to practice. At least one is required.
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {FOCUS_AREAS_BY_TYPE[techConfig.interview_type ?? "leetcode"].map((area) => {
-              const isChecked = (techConfig.focus_areas ?? []).includes(area);
-              return (
-                <label
-                  key={area}
-                  className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
-                >
-                  <Checkbox
-                    checked={isChecked}
-                    onCheckedChange={() => toggleFocusArea(area)}
-                  />
-                  {formatFocusArea(area)}
-                </label>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {(techConfig.focus_areas ?? []).length} selected
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Language & Difficulty */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label>Programming Language</Label>
-            <Select
-              value={techConfig.language ?? "python"}
-              onValueChange={(value) => {
-                if (value) setConfig({ language: value });
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_LANGUAGES.map(({ id, label }) => (
-                  <SelectItem key={id} value={id}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Difficulty</Label>
-            <RadioGroup
-              value={techConfig.difficulty ?? "medium"}
-              onValueChange={(value) =>
-                setConfig({ difficulty: value as Difficulty })
-              }
-            >
-              <div className="flex gap-3">
-                {DIFFICULTIES.map(({ value, label }) => (
-                  <label
-                    key={value}
-                    className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
-                  >
-                    <RadioGroupItem value={value} />
-                    {label}
-                  </label>
-                ))}
+          <Card>
+            <CardHeader>
+              <CardTitle>Focus Areas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Select the topics you want to practice. At least one is required.
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {FOCUS_AREAS_BY_TYPE[techConfig.interview_type ?? "leetcode"].map((area) => {
+                  const isChecked = (techConfig.focus_areas ?? []).includes(area);
+                  return (
+                    <label
+                      key={area}
+                      className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => toggleFocusArea(area)}
+                      />
+                      {formatFocusArea(area)}
+                    </label>
+                  );
+                })}
               </div>
-            </RadioGroup>
-          </div>
-        </CardContent>
-      </Card>
+              <p className="text-xs text-muted-foreground">
+                {(techConfig.focus_areas ?? []).length} selected
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right column — Language & Difficulty */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label>Programming Language</Label>
+                <Select
+                  value={techConfig.language ?? "python"}
+                  onValueChange={(value) => {
+                    if (value) setConfig({ language: value });
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_LANGUAGES.map(({ id, label }) => (
+                      <SelectItem key={id} value={id}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Difficulty</Label>
+                <RadioGroup
+                  value={techConfig.difficulty ?? "medium"}
+                  onValueChange={(value) =>
+                    setConfig({ difficulty: value as Difficulty })
+                  }
+                >
+                  <div className="flex gap-3">
+                    {DIFFICULTIES.map(({ value, label }) => (
+                      <label
+                        key={value}
+                        className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
+                      >
+                        <RadioGroupItem value={value} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </RadioGroup>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Error */}
       {error && (
