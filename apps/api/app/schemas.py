@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -35,3 +37,37 @@ class FeedbackResponse(BaseModel):
     strengths: list[str]
     weaknesses: list[str]
     answer_analyses: list[AnswerAnalysis]
+
+
+# ---- Technical interview schemas ----
+
+
+class CodeSnapshot(BaseModel):
+    code: str
+    language: str
+    timestamp_ms: int
+    event_type: str
+
+
+class TechnicalFeedbackRequest(BaseModel):
+    session_id: str
+    transcript: list[TranscriptEntry]
+    code_snapshots: list[CodeSnapshot]
+    config: dict
+
+
+class TimelineEvent(BaseModel):
+    timestamp_ms: int
+    event_type: Literal["speech", "code_change"]
+    summary: str
+
+
+class TechnicalFeedbackResponse(BaseModel):
+    overall_score: float = Field(ge=0, le=10)
+    summary: str
+    strengths: list[str]
+    weaknesses: list[str]
+    code_quality_score: float = Field(ge=0, le=10)
+    explanation_quality_score: float = Field(ge=0, le=10)
+    answer_analyses: list[AnswerAnalysis]
+    timeline_analysis: list[TimelineEvent]

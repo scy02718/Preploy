@@ -315,13 +315,13 @@
 
 ### Tasks
 
-- [ ] **19.1** Create `apps/api/app/schemas.py` additions — add Pydantic models for technical analysis:
+- [x] **19.1** Create `apps/api/app/schemas.py` additions — add Pydantic models for technical analysis:
   - `CodeSnapshot`: code (str), language (str), timestamp_ms (int), event_type (str)
   - `TechnicalFeedbackRequest`: session_id (str), transcript (list[TranscriptEntry]), code_snapshots (list[CodeSnapshot]), config (dict)
   - `TimelineEvent`: timestamp_ms (int), event_type ("speech" | "code_change"), summary (str)
   - `TechnicalFeedbackResponse`: overall_score (float 0-10), summary (str), strengths (list[str]), weaknesses (list[str]), code_quality_score (float 0-10), explanation_quality_score (float 0-10), answer_analyses (list[AnswerAnalysis]), timeline_analysis (list[TimelineEvent])
 
-- [ ] **19.2** Create `apps/api/app/services/code_analyzer.py`:
+- [x] **19.2** Create `apps/api/app/services/code_analyzer.py`:
   - `def build_technical_analysis_prompt(transcript, code_snapshots, config) -> str`
   - The prompt should include: the full transcript (labeled "Candidate" for user entries), the final code snapshot, a summary of code evolution (first snapshot → final snapshot, number of changes, languages used), and the session config (type, focus areas, difficulty)
   - Instruct GPT-5.4-mini to evaluate:
@@ -330,14 +330,14 @@
     - **Overall approach**: did they break the problem down? Did they consider alternatives? Did they discuss time/space complexity?
   - Output format: JSON matching `TechnicalFeedbackResponse`
 
-- [ ] **19.3** Create `apps/api/app/services/timeline_correlator.py`:
+- [x] **19.3** Create `apps/api/app/services/timeline_correlator.py`:
   - `def build_timeline(transcript, code_snapshots) -> list[TimelineEvent]`
   - Merge transcript entries and code snapshots into a single timeline sorted by `timestamp_ms`
   - For transcript entries: create `TimelineEvent` with type="speech", summary = first 100 chars of text
   - For code snapshots: create `TimelineEvent` with type="code_change", summary = "Changed code ({language})" or "Reset code" depending on event_type
   - This is a pure function — no AI calls, just data transformation
 
-- [ ] **19.4** Create the analysis function `apps/api/app/services/code_analyzer.py`:
+- [x] **19.4** Create the analysis function `apps/api/app/services/code_analyzer.py`:
   - `async def generate_technical_feedback(transcript, code_snapshots, config) -> TechnicalFeedbackResponse`
   - Build the prompt using `build_technical_analysis_prompt()`
   - Build the timeline using `build_timeline()`
@@ -345,41 +345,41 @@
   - Parse response, inject the timeline_analysis from `build_timeline()`, validate with Pydantic
   - Handle errors: empty transcript, empty code snapshots, API failures
 
-- [ ] **19.5** Add `POST /api/analysis/technical` endpoint in `apps/api/app/routers/analysis.py`:
+- [x] **19.5** Add `POST /api/analysis/technical` endpoint in `apps/api/app/routers/analysis.py`:
   - Accepts `TechnicalFeedbackRequest`, calls `generate_technical_feedback()`, returns `TechnicalFeedbackResponse`
   - 400 if transcript is empty, 500 if GPT fails
 
-- [ ] **19.6** Update `app/api/sessions/[id]/feedback/route.ts` in Next.js to support technical sessions:
+- [x] **19.6** Update `app/api/sessions/[id]/feedback/route.ts` in Next.js to support technical sessions:
   - In the POST handler, check the session type
   - If `type === "technical"`: also read code snapshots from `code_snapshots` table, call `POST /api/analysis/technical` instead of `/api/analysis/behavioral`
   - Save the richer feedback (with code_quality_score, explanation_quality_score, timeline_analysis) to `session_feedback` table
 
-- [ ] **19.7** Write unit tests for `timeline_correlator.py`:
+- [x] **19.7** Write unit tests for `timeline_correlator.py`:
   - Empty inputs return empty list
   - Transcript entries and code snapshots are merged and sorted by timestamp
   - Speech events have correct type and summary truncation
   - Code change events have correct type
   - 5+ test cases
 
-- [ ] **19.8** Write unit tests for `code_analyzer.py` prompt building and response parsing:
+- [x] **19.8** Write unit tests for `code_analyzer.py` prompt building and response parsing:
   - Valid inputs produce a prompt containing the code, transcript, and config
   - Mock GPT response parses into valid `TechnicalFeedbackResponse`
   - Empty transcript raises ValueError
   - Malformed GPT response raises RuntimeError
   - 5+ test cases
 
-- [ ] **19.9** Verify: after ending a technical session, feedback is generated with code_quality_score, explanation_quality_score, timeline_analysis, and the standard fields (overall_score, strengths, weaknesses)
+- [x] **19.9** Verify: after ending a technical session, feedback is generated with code_quality_score, explanation_quality_score, timeline_analysis, and the standard fields (overall_score, strengths, weaknesses)
 
 ### Acceptance Criteria
 
-- [ ] Technical feedback includes: overall_score, code_quality_score, explanation_quality_score, summary, strengths, weaknesses, timeline_analysis
-- [ ] Timeline correctly merges and sorts transcript + code snapshot events
-- [ ] Prompt includes code, transcript, and config for GPT analysis
-- [ ] Empty transcript returns 400 error
-- [ ] GPT failure returns 500 with descriptive error
-- [ ] Next.js feedback route correctly dispatches to technical vs behavioral analysis
-- [ ] 5+ timeline correlator tests pass
-- [ ] 5+ code analyzer tests pass
+- [x] Technical feedback includes: overall_score, code_quality_score, explanation_quality_score, summary, strengths, weaknesses, timeline_analysis
+- [x] Timeline correctly merges and sorts transcript + code snapshot events
+- [x] Prompt includes code, transcript, and config for GPT analysis
+- [x] Empty transcript returns 400 error
+- [x] GPT failure returns 500 with descriptive error
+- [x] Next.js feedback route correctly dispatches to technical vs behavioral analysis
+- [x] 5+ timeline correlator tests pass
+- [x] 5+ code analyzer tests pass
 
 ---
 

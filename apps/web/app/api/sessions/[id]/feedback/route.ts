@@ -4,9 +4,10 @@ import { db } from "@/lib/db";
 import {
   interviewSessions,
   transcripts,
+  codeSnapshots,
   sessionFeedback,
 } from "@/lib/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 
 const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000";
 
@@ -59,17 +60,48 @@ export async function POST(
     );
   }
 
-  // Call Python service
-  let feedbackData;
-  try {
-    const res = await fetch(`${PYTHON_API_URL}/api/analysis/behavioral`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  // For technical sessions, also fetch code snapshots
+  const isTechnical = found.type === "technical";
+  let snapshotRows: { code: string; language: string; timestampMs: number; eventType: string }[] = [];
+  if (isTechnical) {
+    snapshotRows = await db
+      .select({
+        code: codeSnapshots.code,
+        language: codeSnapshots.language,
+        timestampMs: codeSnapshots.timestampMs,
+        eventType: codeSnapshots.eventType,
+      })
+      .from(codeSnapshots)
+      .where(eq(codeSnapshots.sessionId, id))
+      .orderBy(asc(codeSnapshots.timestampMs));
+  }
+
+  // Call Python service (behavioral or technical)
+  const analysisEndpoint = isTechnical ? "analysis/technical" : "analysis/behavioral";
+  const analysisBody = isTechnical
+    ? {
+        session_id: id,
+        transcript: transcript.entries,
+        code_snapshots: snapshotRows.map((s) => ({
+          code: s.code,
+          language: s.language,
+          timestamp_ms: s.timestampMs,
+          event_type: s.eventType,
+        })),
+        config: found.config,
+      }
+    : {
         session_id: id,
         transcript: transcript.entries,
         config: found.config,
-      }),
+      };
+
+  let feedbackData;
+  try {
+    const res = await fetch(`${PYTHON_API_URL}/api/${analysisEndpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(analysisBody),
     });
 
     if (!res.ok) {
@@ -100,6 +132,11 @@ export async function POST(
       strengths: feedbackData.strengths,
       weaknesses: feedbackData.weaknesses,
       answerAnalyses: feedbackData.answer_analyses,
+      ...(isTechnical && {
+        codeQualityScore: feedbackData.code_quality_score,
+        explanationQualityScore: feedbackData.explanation_quality_score,
+        timelineAnalysis: feedbackData.timeline_analysis,
+      }),
     })
     .returning();
 
