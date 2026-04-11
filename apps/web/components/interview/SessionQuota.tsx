@@ -12,6 +12,7 @@ interface Quota {
 
 export function SessionQuota() {
   const [quota, setQuota] = useState<Quota | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchQuota() {
@@ -20,10 +21,20 @@ export function SessionQuota() {
         if (res.ok) setQuota(await res.json());
       } catch {
         // Non-critical
+      } finally {
+        setIsLoading(false);
       }
     }
     fetchQuota();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-md border border-border bg-muted/50 px-4 py-3">
+        <div className="h-4 w-48 animate-pulse rounded bg-muted" />
+      </div>
+    );
+  }
 
   if (!quota) return null;
 

@@ -420,122 +420,62 @@
 
 ---
 
-## Story 36: Facial Emotion Detection
+## ~~Story 36: Facial Emotion Detection~~ (Dropped)
 
-> **Motivation:** In behavioral interviews, positive facial expressions convey confidence and enthusiasm. A lightweight MediaPipe Face Landmarker model runs in-browser, detecting emotional state from facial landmarks throughout the session. The feedback page then includes an emotion timeline showing how the candidate's expression changed during the interview.
-
-### Tasks
-
-- [ ] **36.1** Install and configure MediaPipe Face Landmarker:
-  - Install `@mediapipe/tasks-vision`
-  - Create `hooks/useFaceAnalysis.ts` that initializes the Face Landmarker with blendshape output enabled
-  - Run detection on each video frame (throttled to ~10fps to save CPU)
-  - Expose: `{ isReady, emotions, startAnalysis, stopAnalysis }`
-
-- [ ] **36.2** Implement emotion classification from blendshapes:
-  - Create `lib/emotion-classifier.ts` — pure function
-  - Map MediaPipe blendshape scores to emotions:
-    - `mouthSmileLeft` + `mouthSmileRight` → "positive"
-    - `browDownLeft` + `browDownRight` + `mouthFrownLeft` → "tense"
-    - Low activations across all → "neutral"
-    - `eyeSquintLeft` + `jawOpen` → "engaged"
-  - Output: `{ emotion: string, confidence: number, timestamp_ms: number }`
-  - Write unit tests for the classifier (8+ test cases for different blendshape combos)
-
-- [ ] **36.3** Add Face Analysis settings widget to the behavioral setup page (right column):
-  - Toggle: "Enable Facial Emotion Tracking" (default on)
-  - Toggle: "Enable Eye Gaze Tracking" (default on)
-  - Brief description: "Your webcam will analyze facial expressions and eye contact during the interview"
-  - Store settings in session config (`face_analysis: { emotion: boolean, gaze: boolean }`)
-  - This fills the empty space in the right column of the two-column setup layout
-
-- [ ] **36.4** Capture emotion data during behavioral interview sessions:
-  - Wire `useFaceAnalysis` into the behavioral session page
-  - Accumulate emotion samples (one per second) in a ref
-  - On session end, save emotion data alongside transcript
-
-- [ ] **36.5** Add emotion data to the database and API:
-  - Add `emotion_timeline` JSONB column to `session_feedback` (or separate table)
-  - Update `POST /api/sessions/[id]/feedback` to accept and store emotion data
-  - Write integration test for emotion data persistence
-  - Generate migration file (`drizzle-kit generate`)
-
-- [ ] **36.6** Update the Python feedback analyzer to incorporate emotion data:
-  - Add `emotion_samples` to `TechnicalFeedbackRequest` schema (reuse for behavioral too)
-  - Update system prompt to reference emotion patterns: "The candidate appeared tense during questions about leadership but positive when discussing technical achievements"
-  - Write unit test for prompt including emotion data
-
-- [ ] **36.7** Create `components/feedback/EmotionTimeline.tsx`:
-  - Horizontal timeline showing emotion state over session duration
-  - Color-coded: green (positive), yellow (neutral), orange (tense), blue (engaged)
-  - Hover to see exact emotion + timestamp
-  - Summary stats: "Positive 60%, Neutral 25%, Tense 15%"
-
-- [ ] **36.8** Add EmotionTimeline to FeedbackDashboard (behavioral sessions only):
-  - Render between ScoreCard and StrengthsWeaknesses
-  - Only show when emotion data exists
-
-- [ ] **36.9** Component tests for EmotionTimeline
-
-### Acceptance Criteria
-
-- [ ] Face Landmarker runs in browser at ~10fps without noticeable performance impact
-- [ ] Emotion classification produces reasonable results from blendshape data
-- [ ] Emotion timeline renders on behavioral feedback page
-- [ ] Feedback AI references emotion patterns in its analysis
-- [ ] Emotion classifier has 8+ unit tests
-- [ ] New API fields have integration tests
-- [ ] DB migration file committed
+> Dropped — adds complexity without sufficient MVP value. MediaPipe WASM is ~8MB, introduces CSP complications, and the emotion classification from blendshapes was experimental. Can revisit post-launch if users request it.
 
 ---
 
-## Story 37: Eye Gaze Tracking
+## ~~Story 37: Eye Gaze Tracking~~ (Dropped)
 
-> **Motivation:** Consistent eye contact conveys confidence in interviews. Frequent gaze shifts indicate nervousness. MediaPipe's iris landmarks can track gaze direction in-browser, and the feedback page can show a gaze stability score and highlight moments of inconsistent eye contact.
+> Dropped — depends on Story 36 infrastructure. Same rationale.
+
+---
+
+## Story 36: Replace 3D Avatar with Pulsing Circle Visualizer
+
+> **Motivation:** The 3D avatar (Three.js + GLB model + lip sync) causes texture loading errors, requires heavy npm dependencies (~3MB bundle), and adds CSP complexity for CDN assets. Replace it with a simple pulsing circle that reacts to AI speech — cleaner, lighter, and more reliable.
 
 ### Tasks
 
-- [ ] **37.1** Extend `useFaceAnalysis` hook to extract gaze data:
-  - Use MediaPipe iris landmarks (indices 468-477) to compute gaze direction
-  - Calculate gaze vector: iris center position relative to eye corner landmarks
-  - Detect: "looking at camera" vs "looking away" (left/right/up/down)
-  - Expose: `{ gazeDirection, gazeStability }` alongside emotion data
+- [ ] **36.1** Rewrite `VideoCallLayout.tsx`:
+  - Remove all Three.js/avatar imports (AvatarCanvas, AvatarModel, LipSyncController, IdleAnimations, IdlePose)
+  - Replace the avatar panel with a pulsing circle visualizer: three concentric rings that scale with `aiAudioLevel`
+  - Simplify props: remove `avatarRef`, `getVisemeWeights`; add `aiAudioLevel: number`
+  - Keep `onWebcamReady` callback, `isSpeaking`, `isListening`, webcam panel
+  - Add `onWebcamReady` prop for future face analysis integration
 
-- [ ] **37.2** Implement gaze stability scoring:
-  - Create `lib/gaze-analyzer.ts` — pure function
-  - Input: array of gaze samples `{ direction: {x,y}, timestamp_ms }[]`
-  - Calculate: stability score (0-10) based on variance of gaze position
-  - Calculate: "looking at camera" percentage
-  - Detect: periods of rapid gaze shifts (nervousness indicator)
-  - Write unit tests (8+ cases: stable gaze, erratic gaze, looking away, etc.)
+- [ ] **36.2** Update the behavioral session page:
+  - Remove `useLipSync` hook usage and `avatarRef`
+  - Remove lip-sync connection `useEffect`
+  - Remove `lipSync.disconnect()` from end session handler
+  - Pass simplified props to VideoCallLayout
 
-- [ ] **37.3** Capture gaze data during behavioral sessions:
-  - Sample gaze direction alongside emotion data (same 1/second cadence)
-  - Store as part of the same emotion/gaze data blob
+- [ ] **36.3** Delete avatar components and dependencies:
+  - Delete `components/avatar/` directory (AvatarCanvas, AvatarModel, IdleAnimations, IdlePose, LipSyncController)
+  - Delete `hooks/useLipSync.ts`
+  - Delete `public/avatars/interviewer.glb`
+  - Delete `docs/avatar-setup.md`
+  - Remove `playbackContext`/`playbackAnalyser` exports from `useRealtimeVoice.ts`
 
-- [ ] **37.4** Add gaze data to database and feedback API:
-  - Extend the emotion_timeline JSONB to include gaze data per sample
-  - Update feedback analyzer prompt to reference gaze patterns
-  - Write integration test
+- [ ] **36.4** Uninstall Three.js npm packages:
+  - `npm uninstall three @react-three/fiber @react-three/drei @types/three`
 
-- [ ] **37.5** Create `components/feedback/GazeReport.tsx`:
-  - Gaze stability score (0-10) with color coding
-  - "Looking at camera" percentage
-  - Timeline highlighting periods of erratic gaze
-  - Tip: "You looked away frequently around 2:30-3:00 — this was during the leadership question"
+- [ ] **36.5** Clean up CSP and docs:
+  - Remove `raw.githack.com`, `rawcdn.githack.com`, `www.gstatic.com` from CSP (drei-only CDNs)
+  - Update README: remove avatar setup step, update behavioral description
+  - Remove `docs/avatar-setup.md` reference
 
-- [ ] **37.6** Add GazeReport to FeedbackDashboard (behavioral sessions only)
-
-- [ ] **37.7** Component tests for GazeReport
+- [ ] **36.6** Run full pre-commit checklist (lint, typecheck, test, integration)
 
 ### Acceptance Criteria
 
-- [ ] Gaze direction extracted from iris landmarks at ~10fps
-- [ ] Gaze stability score is reasonable (stable = high, erratic = low)
-- [ ] GazeReport renders on behavioral feedback page
-- [ ] Feedback AI references gaze patterns
-- [ ] Gaze analyzer has 8+ unit tests
-- [ ] New API fields have integration tests
+- [ ] No Three.js packages in `package.json`
+- [ ] No `components/avatar/` directory or `hooks/useLipSync.ts`
+- [ ] No GLB files in `public/`
+- [ ] Behavioral session renders pulsing circle instead of 3D avatar
+- [ ] No texture loading errors in console
+- [ ] All tests pass
 
 ---
 
@@ -584,7 +524,6 @@
 - [ ] PDF export for feedback reports
 - [ ] Practice streaks and achievement badges on dashboard
 - [ ] Profile page with name editing, plan management, and account disable
-- [ ] Facial emotion detection during behavioral interviews with feedback timeline
-- [ ] Eye gaze tracking during behavioral interviews with stability score
+- [ ] 3D avatar replaced with pulsing circle visualizer (no Three.js)
 - [ ] All new features have unit tests, integration tests, and component tests
 - [ ] CI pipeline passes all checks
