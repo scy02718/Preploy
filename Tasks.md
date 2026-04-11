@@ -540,6 +540,46 @@ The following features were implemented as bug fixes / housekeeping and are not 
 
 ---
 
+## Story 23: Integration Test Coverage for Untested API Routes
+
+> **Motivation:** An audit found that two core API routes — `feedback` and `transcript` — have zero integration tests. These routes handle the most critical data in the product (the user's feedback results and speech transcripts). Without tests, schema changes, query refactors, or auth bugs in these routes would go undetected. The CLAUDE.md testing checklist now mandates integration tests for every API change, but these two predate that rule.
+
+### Tasks
+
+- [x] **23.1** Write integration tests for `app/api/sessions/[id]/transcript/route.ts`:
+  - POST 401 when unauthenticated
+  - POST 404 when session belongs to another user
+  - POST 400 when entries is empty array
+  - POST 400 when entries is missing
+  - POST 201 persists transcript and returns data
+  - GET 401 when unauthenticated
+  - GET 404 when session belongs to another user
+  - GET 404 when transcript not yet saved
+  - GET 200 returns saved transcript entries
+
+- [x] **23.2** Write integration tests for `app/api/sessions/[id]/feedback/route.ts`:
+  - GET 401 when unauthenticated
+  - GET 404 when session belongs to another user
+  - GET 404 when feedback not yet generated
+  - GET 200 returns existing feedback
+  - POST 401 when unauthenticated
+  - POST 404 when session belongs to another user
+  - POST 400 when no transcript exists for the session
+  - POST 200 returns existing feedback if already generated (idempotency)
+  - POST 201 triggers behavioral analysis and persists feedback (mock Python API)
+  - POST 201 triggers technical analysis with code snapshots (mock Python API)
+  - POST 502 when Python analysis service is unreachable
+
+### Acceptance Criteria
+
+- [x] All transcript route branches covered by integration tests against real Docker Postgres
+- [x] All feedback route branches (behavioral + technical) covered by integration tests
+- [x] Only `@/lib/auth` and external services (Python API) are mocked — database is real
+- [x] `npm run test:integration` passes with all new tests
+- [x] Known integration test gaps section in CLAUDE.md is cleared
+
+---
+
 ## Definition of Done — Phase 3
 
 - [ ] Technical setup form creates a session with validated config in Supabase
