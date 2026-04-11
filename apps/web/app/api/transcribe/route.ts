@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import OpenAI from "openai";
 import { groupWordsIntoSegments } from "@/lib/transcription";
 import { createRequestLogger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/api-utils";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — OpenAI's limit
 
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimited = checkRateLimit(session.user.id);
+  if (rateLimited) return rateLimited;
 
   const formData = await request.formData();
   const audioFile = formData.get("audio");

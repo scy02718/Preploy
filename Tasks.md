@@ -211,32 +211,32 @@
 
 ### Tasks
 
-- [ ] **30.1** Add Content Security Policy (CSP) headers:
+- [x] **30.1** Add Content Security Policy (CSP) headers:
   - Configure in `next.config.ts` or middleware
   - Allow OpenAI API, Supabase, and self for scripts/styles
   - Block inline scripts where possible
 
-- [ ] **30.2** Add rate limiting on public API routes:
+- [x] **30.2** Add rate limiting on public API routes:
   - Simple in-memory rate limiter (token bucket) for `/api/sessions`, `/api/transcribe`, `/api/problems/generate`
   - 30 requests/minute per authenticated user
   - Return 429 Too Many Requests with Retry-After header
   - Write integration test for rate limit behavior
 
-- [ ] **30.3** Input sanitization audit:
+- [x] **30.3** Input sanitization audit:
   - Review all API routes for unsanitized user input passed to DB queries or external APIs
   - Drizzle ORM parameterizes queries (safe), but check any `sql` tagged template usage
   - Verify file upload size limits are enforced (already have 25MB on transcribe)
 
-- [ ] **30.4** Add CSRF protection review:
+- [x] **30.4** Add CSRF protection review:
   - NextAuth handles CSRF for auth routes
   - Verify all mutation routes (POST/PATCH/DELETE) require authentication
 
 ### Acceptance Criteria
 
-- [ ] CSP headers present on all responses
-- [ ] Rate limiting returns 429 after threshold
-- [ ] No SQL injection vectors identified
-- [ ] All mutation endpoints require authentication
+- [x] CSP headers present on all responses (+ X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
+- [x] Rate limiting returns 429 after 30 req/min threshold (7 unit tests)
+- [x] No SQL injection vectors identified (all queries via Drizzle ORM, one safe `count(*)` template)
+- [x] All mutation endpoints require authentication (verified all 8 POST/PATCH routes)
 
 ---
 

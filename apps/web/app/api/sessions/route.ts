@@ -8,6 +8,7 @@ import {
   behavioralConfigSchema,
   technicalConfigSchema,
 } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/api-utils";
 
 // GET /api/sessions — list sessions with pagination, type/score filters
 // Query params: page (1-based), limit, type, minScore, maxScore
@@ -92,6 +93,9 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimited = checkRateLimit(session.user.id);
+  if (rateLimited) return rateLimited;
 
   const body = await request.json();
 

@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { technicalConfigSchema, problemSchema } from "@/lib/validations";
 import { buildProblemGenerationPrompt } from "@/lib/prompts-technical";
 import { logger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/api-utils";
 
 // POST /api/problems/generate — generate a coding problem from config
 export async function POST(request: NextRequest) {
@@ -11,6 +12,9 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimited = checkRateLimit(session.user.id);
+  if (rateLimited) return rateLimited;
 
   const body = await request.json();
   const configResult = technicalConfigSchema.safeParse(body.config);
