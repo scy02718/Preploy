@@ -389,30 +389,55 @@
 
 ---
 
-## Story 35: Live Transcript Overlay
+## Story 35: Profile Page
 
-> **Motivation:** During both behavioral and technical interviews, users want optional visual feedback of what they're saying. The behavioral session already has a transcript toggle — extend this to technical sessions and polish the UX for both.
+> **Motivation:** Users need a place to manage their account — view and edit their name, update their profile picture, see their current plan, and disable their account if needed. This is foundational for any multi-user app and lays the groundwork for future billing integration.
 
 ### Tasks
 
-- [ ] **35.1** Add live transcript overlay to the technical session page:
-  - Floating panel (similar to behavioral session's existing overlay)
-  - Shows transcribed speech segments as they arrive
-  - Toggle button to show/hide
-  - Auto-scrolls to latest entry
+- [ ] **35.1** Create `app/profile/page.tsx` — user profile page:
+  - Two-column layout (like setup pages): Profile info on left, Account settings on right
+  - Add "Profile" link to the header user dropdown menu
+  - Protected route (add to middleware matcher)
 
-- [ ] **35.2** Polish the existing behavioral session transcript overlay:
-  - Match styling with technical session overlay
-  - Add speaker labels with color coding (Interviewer vs You)
-  - Smooth scroll behavior
+- [ ] **35.2** Profile info section (left column):
+  - Display current name, email (read-only), and profile picture
+  - Editable name field with save button
+  - Profile picture upload (store in Supabase Storage or just URL update)
+  - `PATCH /api/users/me` endpoint for updating name/image
+  - Write integration test for the endpoint
 
-- [ ] **35.3** Add a "Show Transcript" toggle to TechnicalSessionLayout bottom bar
+- [ ] **35.3** Plan & quota section (right column):
+  - Display current plan (Free/Pro/Max) with a badge
+  - Show daily quota usage (reuse `SessionQuota` component or similar)
+  - Plan selector (radio group) — allows changing plan
+    - For now: directly updates the `plan` column (no billing)
+    - Later: this becomes a link to Stripe checkout
+  - `PATCH /api/users/me` endpoint also handles plan changes
+  - Write integration test for plan change
+
+- [ ] **35.4** Account management section (right column, below plan):
+  - "Disable Account" button with confirmation dialog
+  - Disabled accounts can't create new sessions but can still view past feedback
+  - Add `disabled_at` nullable timestamp column to users table
+  - `POST /api/users/me/disable` endpoint
+  - Generate DB migration
+  - Write integration test
+
+- [ ] **35.5** Block session creation for disabled accounts:
+  - Check `disabled_at` in `POST /api/sessions` — return 403 if account is disabled
+  - Write integration test
+
+- [ ] **35.6** Component tests for the profile page (renders sections, plan selector)
 
 ### Acceptance Criteria
 
-- [ ] Technical session has optional live transcript overlay
-- [ ] Both interview types have consistent transcript overlay styling
-- [ ] Overlay is non-intrusive and doesn't cover the main content area
+- [ ] Profile page accessible from user dropdown in header
+- [ ] Users can edit their name and see it update immediately
+- [ ] Current plan displayed with option to change
+- [ ] Disable account prevents new session creation
+- [ ] All new endpoints have integration tests
+- [ ] DB migration committed for any schema changes
 
 ---
 
@@ -579,7 +604,7 @@
 - [ ] Coaching page with 4 content tabs
 - [ ] PDF export for feedback reports
 - [ ] Practice streaks and achievement badges on dashboard
-- [ ] Live transcript overlay in both interview types
+- [ ] Profile page with name editing, plan management, and account disable
 - [ ] Facial emotion detection during behavioral interviews with feedback timeline
 - [ ] Eye gaze tracking during behavioral interviews with stability score
 - [ ] All new features have unit tests, integration tests, and component tests
