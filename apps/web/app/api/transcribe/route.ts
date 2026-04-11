@@ -5,6 +5,7 @@ import { interviewSessions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import OpenAI from "openai";
 import { groupWordsIntoSegments } from "@/lib/transcription";
+import { createRequestLogger } from "@/lib/logger";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — OpenAI's limit
 
@@ -91,7 +92,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ entries });
   } catch (err) {
-    console.error("Transcription error:", err);
+    const log = createRequestLogger({ route: "POST /api/transcribe", sessionId });
+    log.error({ err }, "Transcription failed");
     return NextResponse.json(
       { error: "Transcription failed" },
       { status: 500 }

@@ -32,6 +32,20 @@ cd apps/web && npm run test:coverage                # Unit tests with coverage
 cd apps/api && npm run test:coverage                # Python tests with coverage
 ```
 
+### Logging
+
+Use structured logging instead of `console.log`/`console.error` in all server-side code:
+
+- **API routes (Next.js)**: Use `logger` or `createRequestLogger()` from `@/lib/logger`. The `createRequestLogger` auto-generates a `requestId` for tracing.
+  ```ts
+  import { createRequestLogger } from "@/lib/logger";
+  const log = createRequestLogger({ route: "POST /api/example", userId });
+  log.info("Processing request");
+  log.error({ err }, "Something failed");
+  ```
+- **Python (FastAPI)**: Use `logging.getLogger(__name__)` — already configured with JSON output in production.
+- **Client-side code** (hooks, components, session pages): `console.error` is fine — Pino doesn't run in the browser.
+
 ### Key principles
 
 After finishing a feature, run `turbo test` to ensure nothing is broken. If adding a new API route or modifying an existing one, add or update the corresponding integration test. If adding pure logic, add a unit test.

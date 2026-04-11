@@ -110,33 +110,33 @@
 
 ### Tasks
 
-- [ ] **27.1** Install Pino for Next.js:
+- [x] **27.1** Install Pino for Next.js:
   - `npm install pino pino-pretty` in `apps/web`
   - Create `lib/logger.ts` that exports a configured Pino instance
   - Pretty-print in development, JSON in production
 
-- [ ] **27.2** Install structlog or Python logging for FastAPI:
+- [x] **27.2** Install structlog or Python logging for FastAPI:
   - Configure Python's `logging` module with JSON formatter for production
   - Keep human-readable format for development
 
-- [ ] **27.3** Replace all `console.log`/`console.error` in API routes with `logger.info`/`logger.error`:
+- [x] **27.3** Replace all `console.log`/`console.error` in API routes with `logger.info`/`logger.error`:
   - Add request context (session ID, user ID) where available
   - Grep for all `console.` calls and replace
 
-- [ ] **27.4** Add request ID middleware:
+- [x] **27.4** Add request ID middleware:
   - Generate a UUID per request in Next.js middleware
   - Pass it through to log calls for cross-service tracing
 
-- [ ] **27.5** Write unit test for logger configuration (correct level, format)
+- [x] **27.5** Write unit test for logger configuration (correct level, format)
 
-- [ ] **27.6** Update CLAUDE.md: "Use `logger` from `@/lib/logger` instead of `console.log` in all API routes and server-side code"
+- [x] **27.6** Update CLAUDE.md: "Use `logger` from `@/lib/logger` instead of `console.log` in all API routes and server-side code"
 
 ### Acceptance Criteria
 
-- [ ] No `console.log` or `console.error` in API route handlers
-- [ ] All logs are structured JSON in production, pretty-printed in development
-- [ ] Request IDs appear in logs for traceability
-- [ ] CLAUDE.md updated with logging guidelines
+- [x] No `console.log` or `console.error` in API route handlers
+- [x] All logs are structured JSON in production, pretty-printed in development
+- [x] Request IDs appear in logs for traceability
+- [x] CLAUDE.md updated with logging guidelines
 
 ---
 

@@ -2,7 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.logging_config import setup_logging
 from app.routers import analysis, health
+
+setup_logging()
 
 app = FastAPI(
     title="Interview Assistant API",

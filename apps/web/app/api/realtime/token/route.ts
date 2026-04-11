@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 // POST /api/realtime/token — get an ephemeral token for OpenAI Realtime API
 export async function POST() {
@@ -31,7 +32,7 @@ export async function POST() {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("OpenAI session error:", error);
+      logger.error({ error }, "OpenAI realtime session creation failed");
       return NextResponse.json(
         { error: "Failed to create realtime session" },
         { status: response.status }
@@ -41,7 +42,7 @@ export async function POST() {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Token endpoint error:", error);
+    logger.error({ err: error }, "Realtime token endpoint error");
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

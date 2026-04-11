@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import OpenAI from "openai";
 import { technicalConfigSchema, problemSchema } from "@/lib/validations";
 import { buildProblemGenerationPrompt } from "@/lib/prompts-technical";
+import { logger } from "@/lib/logger";
 
 // POST /api/problems/generate — generate a coding problem from config
 export async function POST(request: NextRequest) {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       if (attempt === 0) continue;
 
-      console.error("Problem generation error:", err);
+      logger.error({ err }, "Problem generation failed");
       return NextResponse.json(
         { error: "Failed to generate problem" },
         { status: 500 }
