@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { interviewSessions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import OpenAI from "openai";
-import { groupWordsIntoSegments } from "@/lib/transcription";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — OpenAI's limit
 
@@ -72,14 +71,16 @@ export async function POST(request: NextRequest) {
     const transcription = await openai.audio.transcriptions.create({
       model: "gpt-4o-mini-transcribe",
       file: audioFile,
-      response_format: "verbose_json",
-      timestamp_granularities: ["word"],
+      response_format: "json",
     });
 
-    const words =
-      (transcription as unknown as { words?: { word: string; start: number; end: number }[] }).words ?? [];
+    const text = transcription.text?.trim() ?? "";
 
-    const entries = groupWordsIntoSegments(words);
+    // gpt-4o-mini-transcribe with "json" format returns { text } only (no word timestamps).
+    // Build a single transcript entry from the full text.
+    const entries = text.length > 0
+      ? [{ speaker: "user" as const, text, timestamp_ms: 0 }]
+      : [];
 
     return NextResponse.json({ entries });
   } catch (err) {

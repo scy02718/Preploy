@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FeedbackDashboard } from "@/components/feedback/FeedbackDashboard";
+import type { TimelineEvent } from "@/components/feedback/TimelineView";
 
 interface FeedbackData {
   overallScore: number;
@@ -16,15 +17,39 @@ interface FeedbackData {
     feedback: string;
     suggestions: string[];
   }[];
+  codeQualityScore?: number;
+  explanationQualityScore?: number;
+  timelineAnalysis?: TimelineEvent[];
 }
 
 export default function FeedbackPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
+  const [sessionType, setSessionType] = useState<
+    "behavioral" | "technical"
+  >("behavioral");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Fetch session type once
+  useEffect(() => {
+    async function fetchSession() {
+      try {
+        const res = await fetch(`/api/sessions/${params.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.type === "technical") {
+            setSessionType("technical");
+          }
+        }
+      } catch {
+        // Non-critical — default to behavioral
+      }
+    }
+    fetchSession();
+  }, [params.id]);
 
   const fetchFeedback = useCallback(async () => {
     try {
@@ -54,6 +79,14 @@ export default function FeedbackPage() {
         strengths: data.strengths ?? [],
         weaknesses: data.weaknesses ?? [],
         answerAnalyses: data.answerAnalyses ?? data.answer_analyses ?? [],
+        codeQualityScore:
+          data.codeQualityScore ?? data.code_quality_score ?? undefined,
+        explanationQualityScore:
+          data.explanationQualityScore ??
+          data.explanation_quality_score ??
+          undefined,
+        timelineAnalysis:
+          data.timelineAnalysis ?? data.timeline_analysis ?? undefined,
       });
       setIsLoading(false);
       return true;
@@ -117,5 +150,11 @@ export default function FeedbackPage() {
 
   if (!feedback) return null;
 
-  return <FeedbackDashboard feedback={feedback} sessionId={params.id} />;
+  return (
+    <FeedbackDashboard
+      feedback={feedback}
+      sessionId={params.id}
+      sessionType={sessionType}
+    />
+  );
 }

@@ -85,3 +85,54 @@ If the row is incomplete, delete it and regenerate. Alternatively, use an `ON CO
 - Calling `POST /feedback` on a session with an incomplete feedback row regenerates and overwrites it
 - Calling `POST /feedback` on a session with a complete row still returns immediately (no redundant GPT call)
 - Add an integration test covering the incomplete-row scenario
+
+---
+
+## [UX] Feedback page flickers on technical sessions due to race condition
+
+**Identified in:** Story 20 review
+**File:** `apps/web/app/dashboard/sessions/[id]/feedback/page.tsx`
+
+### Problem
+
+The feedback page fires two independent `useEffect` hooks on mount: one fetches the session type (`GET /api/sessions/:id`), the other polls for feedback (`GET /api/sessions/:id/feedback`). If feedback arrives before the session type fetch, `FeedbackDashboard` first renders with `sessionType="behavioral"` (the default), then re-renders with `"technical"` when the session fetch completes. The user sees the CodeQualityCard and TimelineView pop in after a frame.
+
+### What to do
+
+Fetch both session metadata and feedback in a single flow. Either:
+
+1. **Combine into one call**: Have `GET /api/sessions/:id/feedback` also return the session `type` field (add it to the response or join it in the query). Then the page only needs one polling endpoint.
+2. **Sequential fetch**: Fetch the session type first, then start the feedback poll. Use a single `useEffect` that does `await fetchSession(); startPolling();`. This adds one round-trip of latency but eliminates the flicker.
+
+Option 1 is cleaner if you're willing to change the API response shape.
+
+### Acceptance criteria
+
+- On a technical session feedback page, CodeQualityCard and TimelineView render on the first paint (no pop-in)
+- Behavioral sessions are unaffected
+
+---
+
+## [UX] Feedback page heading doesn't distinguish interview type
+
+**Identified in:** Story 20 review
+**File:** `apps/web/components/feedback/FeedbackDashboard.tsx`
+
+### Problem
+
+The heading says "Interview Feedback" for both behavioral and technical sessions. When a user has done multiple session types, the feedback page doesn't immediately orient them to which kind they're looking at.
+
+### What to do
+
+Use the `sessionType` prop (already available) to set the heading:
+
+```tsx
+<h1 className="text-2xl font-bold">
+  {isTechnical ? "Technical Interview Feedback" : "Behavioral Interview Feedback"}
+</h1>
+```
+
+### Acceptance criteria
+
+- Technical feedback page heading says "Technical Interview Feedback"
+- Behavioral feedback page heading says "Behavioral Interview Feedback"

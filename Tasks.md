@@ -389,38 +389,38 @@
 
 ### Tasks
 
-- [ ] **20.1** Create `components/feedback/CodeQualityCard.tsx`:
+- [x] **20.1** Create `components/feedback/CodeQualityCard.tsx`:
   - Display two scores side by side: "Code Quality" and "Explanation Quality"
   - Each shows a score (0-10) with the same color-coding as `ScoreCard` (0-3 red, 4-6 yellow, 7-8 green, 9-10 blue)
   - Below each score, a one-line label: code quality = "Correctness, efficiency, readability" | explanation quality = "Clarity, problem decomposition, trade-offs"
 
-- [ ] **20.2** Create `components/feedback/TimelineView.tsx`:
+- [x] **20.2** Create `components/feedback/TimelineView.tsx`:
   - Render a vertical timeline of events, sorted chronologically
   - Each event shows: timestamp (formatted as MM:SS), an icon (speech bubble for "speech", code bracket icon for "code_change"), and the summary text
   - Speech events styled in one color (e.g., blue-ish), code change events in another (e.g., green-ish)
   - Scrollable if the timeline is long, max height ~400px
 
-- [ ] **20.3** Update `components/feedback/FeedbackDashboard.tsx` to support technical feedback:
+- [x] **20.3** Update `components/feedback/FeedbackDashboard.tsx` to support technical feedback:
   - Accept an optional `sessionType: "behavioral" | "technical"` prop
   - If technical: render `CodeQualityCard` between ScoreCard and StrengthsWeaknesses
   - If technical and `timeline_analysis` exists: render `TimelineView` after AnswerBreakdown
   - "Start New Interview" links should go to `/interview/technical/setup` for technical sessions (not behavioral)
   - The `AnswerBreakdown` section should still work — the AI will produce answer_analyses for technical questions too (e.g., "How did you approach the problem?", "Did you discuss complexity?")
 
-- [ ] **20.4** Update `app/dashboard/sessions/[id]/feedback/page.tsx` to pass session type:
+- [x] **20.4** Update `app/dashboard/sessions/[id]/feedback/page.tsx` to pass session type:
   - Fetch the session itself (not just feedback) to determine the type
   - Pass `sessionType` to `FeedbackDashboard`
   - Map the additional technical fields from the API response: `code_quality_score`, `explanation_quality_score`, `timeline_analysis`
 
-- [ ] **20.5** Verify: after completing a technical interview, the feedback page shows: overall score, code quality score, explanation quality score, strengths, weaknesses, timeline, and per-answer breakdown
+- [x] **20.5** Verify: after completing a technical interview, the feedback page shows: overall score, code quality score, explanation quality score, strengths, weaknesses, timeline, and per-answer breakdown
 
 ### Acceptance Criteria
 
-- [ ] Technical feedback page shows code quality and explanation quality scores with color coding
-- [ ] Timeline view renders speech and code change events chronologically with timestamps
-- [ ] "Start New Interview" links to the correct setup page based on session type
-- [ ] Behavioral feedback page is unchanged (no regression)
-- [ ] Full technical flow: setup → session → feedback page renders all sections
+- [x] Technical feedback page shows code quality and explanation quality scores with color coding
+- [x] Timeline view renders speech and code change events chronologically with timestamps
+- [x] "Start New Interview" links to the correct setup page based on session type
+- [x] Behavioral feedback page is unchanged (no regression)
+- [x] Full technical flow: setup → session → feedback page renders all sections
 
 ---
 

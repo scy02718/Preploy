@@ -1,17 +1,11 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { getScoreColor } from "@/lib/utils";
 
 interface ScoreCardProps {
   score: number;
   summary: string;
-}
-
-function getScoreColor(score: number) {
-  if (score >= 9) return { bg: "bg-blue-500/10", text: "text-blue-600", border: "border-blue-500/30", label: "Excellent" };
-  if (score >= 7) return { bg: "bg-green-500/10", text: "text-green-600", border: "border-green-500/30", label: "Good" };
-  if (score >= 4) return { bg: "bg-yellow-500/10", text: "text-yellow-600", border: "border-yellow-500/30", label: "Average" };
-  return { bg: "bg-red-500/10", text: "text-red-600", border: "border-red-500/30", label: "Needs Work" };
 }
 
 export function ScoreCard({ score, summary }: ScoreCardProps) {
