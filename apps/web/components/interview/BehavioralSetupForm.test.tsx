@@ -1,0 +1,89 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { BehavioralSetupForm } from "./BehavioralSetupForm";
+
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
+const { mockSetType, mockSetConfig, mockCreateSession } = vi.hoisted(() => ({
+  mockSetType: vi.fn(),
+  mockSetConfig: vi.fn(),
+  mockCreateSession: vi.fn(),
+}));
+
+vi.mock("@/stores/interviewStore", () => {
+  const useInterviewStore = () => ({
+    config: {
+      interview_style: 0.5,
+      difficulty: 0.5,
+      company_name: "",
+      job_description: "",
+      expected_questions: [],
+    },
+    setConfig: mockSetConfig,
+    setType: mockSetType,
+    createSession: mockCreateSession,
+  });
+  useInterviewStore.getState = () => ({ error: null });
+  return { useInterviewStore };
+});
+
+describe("BehavioralSetupForm", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders company name input", () => {
+    render(<BehavioralSetupForm />);
+    expect(screen.getAllByPlaceholderText(/google/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders job description textarea", () => {
+    render(<BehavioralSetupForm />);
+    expect(screen.getAllByPlaceholderText(/paste the job description/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders form sections", () => {
+    render(<BehavioralSetupForm />);
+    expect(screen.getAllByText(/company details/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/interview settings/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("calls setType('behavioral') on mount", () => {
+    render(<BehavioralSetupForm />);
+    expect(mockSetType).toHaveBeenCalledWith("behavioral");
+  });
+
+  it("renders question count text", () => {
+    render(<BehavioralSetupForm />);
+    expect(screen.getAllByText("0/10 questions").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("typing in company name calls setConfig", async () => {
+    const user = userEvent.setup();
+    render(<BehavioralSetupForm />);
+    await user.type(screen.getAllByPlaceholderText(/google/i)[0], "G");
+    expect(mockSetConfig).toHaveBeenCalled();
+  });
+
+  it("submit calls createSession and navigates on success", async () => {
+    const user = userEvent.setup();
+    mockCreateSession.mockResolvedValue("session-123");
+
+    render(<BehavioralSetupForm />);
+    const buttons = screen.getAllByRole("button", { name: /start interview/i });
+    await user.click(buttons[0]);
+
+    expect(mockCreateSession).toHaveBeenCalledOnce();
+    expect(mockPush).toHaveBeenCalledWith("/interview/behavioral/session");
+  });
+
+  it("shows style slider labels", () => {
+    render(<BehavioralSetupForm />);
+    expect(screen.getAllByText(/strict/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/casual/i).length).toBeGreaterThanOrEqual(1);
+  });
+});

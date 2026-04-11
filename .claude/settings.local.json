@@ -4,7 +4,8 @@
       "WebSearch",
       "Bash(npx turbo:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npx vitest:*)"
     ],
     "deny": []
   },

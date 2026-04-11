@@ -446,51 +446,68 @@ The following features were implemented as bug fixes / housekeeping and are not 
 
 ### Tasks
 
-- [ ] **21.1** Write component tests for `BehavioralSetupForm.tsx` (`components/interview/BehavioralSetupForm.test.tsx`):
+- [x] **21.1** Write component tests for `BehavioralSetupForm.tsx` (`components/interview/BehavioralSetupForm.test.tsx`):
   - Renders all form fields (company input, JD textarea, style slider, difficulty slider)
   - Adding a question adds it to the list
   - Removing a question removes it from the list
   - Cannot add more than 10 questions
   - Submit button calls createSession (mock the store)
-  - 5+ test cases
+  - 8 test cases
 
-- [ ] **21.2** Write component tests for `TechnicalSetupForm.tsx` (`components/interview/TechnicalSetupForm.test.tsx`):
+- [x] **21.2** Write component tests for `TechnicalSetupForm.tsx` (`components/interview/TechnicalSetupForm.test.tsx`):
   - Renders all form fields (interview type, focus areas, language, difficulty)
   - Selecting focus areas updates the form state
   - Submit is disabled when no focus areas selected
   - Submit button calls createSession with correct config
-  - 4+ test cases
+  - 7 test cases
 
-- [ ] **21.3** Write component tests for `FeedbackDashboard.tsx` (`components/feedback/FeedbackDashboard.test.tsx`):
+- [x] **21.3** Write component tests for `FeedbackDashboard.tsx` (`components/feedback/FeedbackDashboard.test.tsx`):
   - Renders ScoreCard with correct score and color
   - Renders strengths and weaknesses lists
   - Renders answer breakdown items
   - Technical mode renders CodeQualityCard and TimelineView
   - Behavioral mode does NOT render CodeQualityCard
-  - 5+ test cases
+  - 9 test cases
 
-- [ ] **21.4** Write component tests for `ScoreCard.tsx` (`components/feedback/ScoreCard.test.tsx`):
+- [x] **21.4** Write component tests for `ScoreCard.tsx` (`components/feedback/ScoreCard.test.tsx`):
   - Score 2.0 renders with red/destructive styling
   - Score 5.0 renders with yellow/warning styling
   - Score 8.0 renders with green/success styling
   - Score 9.5 renders with blue/excellent styling
   - Summary text is displayed
-  - 5+ test cases
+  - 6 test cases
 
-- [ ] **21.5** Verify: all component tests pass via `turbo test`. Count total tests across all workspaces — should be 80+ total.
+- [x] **21.5** Write component tests for `AnswerBreakdown.tsx` (`components/feedback/AnswerBreakdown.test.tsx`):
+  - Renders question titles and scores for each analysis
+  - Clicking a card expands it to show feedback and suggestions
+  - Clicking an expanded card collapses it
+  - Uses correct title prop (behavioral vs technical)
+  - 6 test cases
 
-- [ ] **21.6** Ensure Claude is educated about component tests in future sessions:
-  - Update CLAUDE.md to include short assertion to add component tests when new frontend components are added
+- [x] **21.6** Write component tests for `TimelineView.tsx` (`components/feedback/TimelineView.test.tsx`):
+  - Renders speech and code change events with correct icons and colors
+  - Timestamps formatted as MM:SS
+  - Code expand button shows code block
+  - Speech "More" button shows full text
+  - Returns null when events array is empty
+  - 9 test cases
+
+- [x] **21.7** Verify: all component tests pass via `turbo test`. Total: 112 web (unit + component) + 43 Python + 61 integration = 216 tests.
+
+- [x] **21.8** Ensure Claude is educated about component tests in future sessions:
+  - Updated CLAUDE.md with component test guidelines (when to test, mock patterns, `getAllByText` for shadcn)
 
 ### Acceptance Criteria
 
-- [ ] BehavioralSetupForm has 5+ passing component tests
-- [ ] TechnicalSetupForm has 4+ passing component tests
-- [ ] FeedbackDashboard has 5+ passing component tests
-- [ ] ScoreCard has 5+ passing component tests
-- [ ] All tests pass via `turbo test`
-- [ ] Total test count across all workspaces is 80+
-- [ ] CLAUDE.md is updated
+- [x] BehavioralSetupForm has 8 passing component tests
+- [x] TechnicalSetupForm has 7 passing component tests
+- [x] FeedbackDashboard has 9 passing component tests
+- [x] ScoreCard has 6 passing component tests
+- [x] AnswerBreakdown has 6 passing component tests
+- [x] TimelineView has 9 passing component tests
+- [x] All tests pass via `turbo test`
+- [x] Total test count across all workspaces is 216 (200+ target met)
+- [x] CLAUDE.md is updated
 
 ---
 

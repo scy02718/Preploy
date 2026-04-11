@@ -10,7 +10,8 @@ When implementing a new feature or modifying existing logic, always write tests 
 
 - **Pure logic** (`lib/`, `services/`, `stores/`, utils): **80%+ line coverage**. These are the highest-value tests.
 - **API routes**: Write integration tests for any new or modified route handler.
-- **Hooks and components**: Skip test coverage — these are browser-runtime code better covered by E2E tests later.
+- **Interactive components** (setup forms, feedback dashboard, expandable cards): Write component tests for components with meaningful user interaction (state changes, conditional rendering, expand/collapse). Place `*.test.tsx` next to the component. Mock Zustand stores and `next/navigation` using `vi.hoisted()` + `vi.mock()`. Use `getAllByText` instead of `getByText` since shadcn components may render elements multiple times in jsdom.
+- **Skip testing**: Purely presentational components (shadcn wrappers, badges), Three.js/avatar components, and components that primarily fetch data (better covered by E2E later).
 
 ### Where to put tests
 
