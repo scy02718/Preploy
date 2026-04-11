@@ -112,10 +112,12 @@ export default function BehavioralSessionPage() {
 
     await endSession();
 
-    // Fire-and-forget: trigger feedback generation in background
-    // The feedback page will poll for the result
+    // Fire-and-forget: trigger feedback generation + badge check in background
     fetch(`/api/sessions/${sessionId}/feedback`, { method: "POST" }).catch(
       (err) => console.error("Failed to trigger feedback generation:", err)
+    );
+    fetch("/api/users/badges", { method: "POST" }).catch(
+      (err) => console.error("Failed to check badges:", err)
     );
 
     router.push(`/dashboard/sessions/${sessionId}/feedback`);

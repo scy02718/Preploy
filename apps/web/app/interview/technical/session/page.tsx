@@ -165,10 +165,13 @@ export default function TechnicalSessionPage() {
       setProcessingStep("Finalizing session...");
       await endSession();
 
-      // 6. Trigger feedback generation (fire-and-forget)
+      // 6. Trigger feedback generation + badge check (fire-and-forget)
       setProcessingStep("Redirecting to feedback...");
       fetch(`/api/sessions/${sessionId}/feedback`, { method: "POST" }).catch(
         (err) => console.error("Failed to trigger feedback:", err)
+      );
+      fetch("/api/users/badges", { method: "POST" }).catch(
+        (err) => console.error("Failed to check badges:", err)
       );
 
       // 7. Navigate to feedback page

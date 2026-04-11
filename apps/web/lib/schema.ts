@@ -8,6 +8,7 @@ import {
   integer,
   real,
   primaryKey,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -131,11 +132,29 @@ export const sessionFeedback = pgTable("session_feedback", {
     .defaultNow(),
 });
 
+export const userAchievements = pgTable(
+  "user_achievements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    badgeId: text("badge_id").notNull(),
+    earnedAt: timestamp("earned_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_badge_unique").on(table.userId, table.badgeId),
+  ]
+);
+
 // ---- Relations ----
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(interviewSessions),
+  achievements: many(userAchievements),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -184,6 +203,16 @@ export const sessionFeedbackRelations = relations(
     session: one(interviewSessions, {
       fields: [sessionFeedback.sessionId],
       references: [interviewSessions.id],
+    }),
+  })
+);
+
+export const userAchievementsRelations = relations(
+  userAchievements,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userAchievements.userId],
+      references: [users.id],
     }),
   })
 );

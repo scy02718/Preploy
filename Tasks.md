@@ -358,34 +358,36 @@
 
 ### Tasks
 
-- [ ] **34.1** Add streak tracking to the database:
-  - Add `user_streaks` table: `user_id`, `current_streak`, `longest_streak`, `last_practice_date`
-  - Or track via session dates (no new table — query `interview_sessions` for consecutive days)
-  - Create a `GET /api/users/stats` endpoint returning streak + total sessions + avg score
-  - Write integration test for the stats endpoint
+- [x] **34.1** Streak tracking via computed query on `interview_sessions` dates (no new streak table needed):
+  - Pure `calculateStreaks()` + `buildHeatmap()` functions in `lib/streaks.ts` (12 unit tests)
+  - `GET /api/users/stats` endpoint returning streaks, heatmap, scores, badges
+  - Integration tests for stats endpoint (4 tests)
 
-- [ ] **34.2** Add streak display to the dashboard:
-  - Streak counter with fire icon (current streak in days)
-  - "Longest streak: X days" subtitle
-  - Visual calendar heatmap showing practice days (last 30 days)
+- [x] **34.2** Streak display on dashboard:
+  - `StreakCard` component with fire icon, current/longest streak numbers, 30-day heatmap (green intensity by count)
+  - Component tests (4 tests)
 
-- [ ] **34.3** Add achievement badges:
-  - Define 5-8 achievements: "First Interview", "3-Day Streak", "7-Day Streak", "Score 8+", "10 Sessions", "Both Types" (did both behavioral + technical)
-  - Store earned badges in DB (new `user_achievements` table or JSONB on user)
-  - Display badges on dashboard
-  - Check and award badges after each session completion
+- [x] **34.3** Achievement badges with `user_achievements` table:
+  - Separate table with `UNIQUE(user_id, badge_id)` index — scalable for querying/analytics
+  - 7 badge definitions in `lib/badges.ts`: First Steps, On a Roll (3d), Week Warrior (7d), High Achiever (8+), Dedicated (10 sessions), Well-Rounded (both types), Interview Pro (25 sessions)
+  - `BadgeGrid` component showing earned (highlighted) and locked (dimmed) badges
+  - `checkNewBadges()` pure function in `lib/badge-checker.ts` (11 unit tests)
+  - Component tests (4 tests)
 
-- [ ] **34.4** Add a `POST /api/sessions/:id/complete` hook or extend `PATCH` to trigger streak/badge updates on session completion
-  - Write integration tests for streak calculation and badge awarding
+- [x] **34.4** Badge awarding via `POST /api/users/badges` endpoint:
+  - Called fire-and-forget from both behavioral and technical session end flows
+  - Gathers stats, checks for new badges, inserts awarded badges
+  - Integration tests (4 tests)
 
-- [ ] **34.5** Component tests for streak display and badges
+- [x] **34.5** Component tests for StreakCard (4) and BadgeGrid (4)
 
 ### Acceptance Criteria
 
-- [ ] Dashboard shows current streak and longest streak
-- [ ] Streak increments when user practices on consecutive days
-- [ ] Achievements are earned and displayed
-- [ ] All new API endpoints have integration tests
+- [x] Dashboard shows current streak and longest streak with heatmap
+- [x] Streak increments when user practices on consecutive days (12 unit tests verify)
+- [x] Achievements earned and displayed (7 badges, awarded on session completion)
+- [x] All new API endpoints have integration tests (8 total)
+- [x] DB migration committed (`0002_user_achievements.sql`)
 
 ---
 

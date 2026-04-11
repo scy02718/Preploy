@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getScoreColor } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { StreakCard } from "@/components/dashboard/StreakCard";
+import { BadgeGrid } from "@/components/dashboard/BadgeGrid";
 
 interface SessionRow {
   id: string;
@@ -77,15 +79,27 @@ export default function DashboardPage() {
     limit: number;
     remaining: number;
   } | null>(null);
+  const [userStats, setUserStats] = useState<{
+    currentStreak: number;
+    longestStreak: number;
+    heatmap: { date: string; count: number }[];
+    badges: { badgeId: string; earnedAt: string }[];
+  } | null>(null);
 
   // Fetch stats + quota once on mount
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Fetch quota
-        const quotaRes = await fetch("/api/sessions/quota");
+        // Fetch quota + user stats in parallel
+        const [quotaRes, statsRes] = await Promise.all([
+          fetch("/api/sessions/quota"),
+          fetch("/api/users/stats"),
+        ]);
         if (quotaRes.ok) {
           setQuota(await quotaRes.json());
+        }
+        if (statsRes.ok) {
+          setUserStats(await statsRes.json());
         }
 
         const res = await fetch("/api/sessions?limit=50&page=1");
@@ -205,6 +219,61 @@ export default function DashboardPage() {
           </CardHeader>
         </Card>
       </div>
+
+      {/* Streak + Badges row */}
+      {userStats ? (
+        <div className="grid grid-cols-1 gap-4 mb-8 md:grid-cols-2">
+          <StreakCard
+            currentStreak={userStats.currentStreak}
+            longestStreak={userStats.longestStreak}
+            heatmap={userStats.heatmap}
+          />
+          <BadgeGrid earnedBadges={userStats.badges} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 mb-8 md:grid-cols-2">
+          {/* Streak skeleton */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-6">
+                <div className="space-y-1">
+                  <div className="h-8 w-12 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="space-y-1">
+                  <div className="h-8 w-12 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                </div>
+              </div>
+              <div className="flex gap-0.5 flex-wrap">
+                {Array.from({ length: 30 }).map((_, i) => (
+                  <div key={i} className="h-4 w-4 animate-pulse rounded-sm bg-muted" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          {/* Badges skeleton */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="h-5 w-28 animate-pulse rounded bg-muted" />
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center gap-1 rounded-lg border p-3">
+                    <div className="h-8 w-8 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+                    <div className="h-2 w-20 animate-pulse rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Filters + header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
