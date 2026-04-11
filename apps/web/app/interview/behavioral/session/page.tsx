@@ -4,17 +4,13 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
-import { useLipSync } from "@/hooks/useLipSync";
 import { buildBehavioralSystemPrompt } from "@/lib/prompts";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 import { VideoCallLayout } from "@/components/interview/VideoCallLayout";
 import { SessionControls } from "@/components/interview/SessionControls";
-import { AvatarModelRef } from "@/components/avatar/AvatarModel";
 
 export default function BehavioralSessionPage() {
   const router = useRouter();
-  const avatarRef = useRef<AvatarModelRef>(null);
-  const lipSyncConnectedRef = useRef(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +30,6 @@ export default function BehavioralSessionPage() {
   );
 
   const voice = useRealtimeVoice({ systemPrompt });
-  const lipSync = useLipSync();
 
   // Redirect to setup if no session
   useEffect(() => {
@@ -59,18 +54,6 @@ export default function BehavioralSessionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  // Connect lip-sync to voice playback analyser when available
-  useEffect(() => {
-    if (
-      voice.playbackContext &&
-      voice.playbackAnalyser &&
-      !lipSyncConnectedRef.current
-    ) {
-      lipSync.connectAnalyser(voice.playbackContext, voice.playbackAnalyser);
-      lipSyncConnectedRef.current = true;
-    }
-  }, [voice.playbackContext, voice.playbackAnalyser, lipSync]);
-
   // Sync voice transcript entries into the Zustand store
   useEffect(() => {
     const entries = voice.transcript;
@@ -93,8 +76,6 @@ export default function BehavioralSessionPage() {
   // End session handler
   const handleEndSession = useCallback(async () => {
     voice.disconnect();
-    lipSync.disconnect();
-    lipSyncConnectedRef.current = false;
 
     // Save transcript
     if (sessionId) {
@@ -121,7 +102,7 @@ export default function BehavioralSessionPage() {
     );
 
     router.push(`/dashboard/sessions/${sessionId}/feedback`);
-  }, [voice, lipSync, sessionId, endSession, router]);
+  }, [voice, sessionId, endSession, router]);
 
   // Don't render until we have a session
   if (!sessionId) return null;
@@ -130,11 +111,9 @@ export default function BehavioralSessionPage() {
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
       {/* Video call area */}
       <VideoCallLayout
-        avatarRef={avatarRef}
-        getVisemeWeights={lipSync.getVisemeWeights}
         isSpeaking={voice.isSpeaking}
         isListening={voice.isListening}
-        userName={undefined}
+        aiAudioLevel={voice.isSpeaking ? 0.5 : 0}
       />
 
       {/* Transcript overlay */}

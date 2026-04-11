@@ -1,27 +1,23 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { AvatarCanvas } from "@/components/avatar/AvatarCanvas";
-import { AvatarModel, AvatarModelRef } from "@/components/avatar/AvatarModel";
-import { LipSyncController } from "@/components/avatar/LipSyncController";
-import { IdleAnimations } from "@/components/avatar/IdleAnimations";
-import { IdlePose } from "@/components/avatar/IdlePose";
-import type { VisemeWeights } from "@/hooks/useLipSync";
 
 interface VideoCallLayoutProps {
-  avatarRef: React.RefObject<AvatarModelRef | null>;
-  getVisemeWeights: () => VisemeWeights;
   isSpeaking: boolean;
   isListening: boolean;
+  /** Audio level 0-1 for the AI voice visualizer */
+  aiAudioLevel?: number;
   userName?: string;
+  /** Optional callback to receive the webcam video element once it's ready */
+  onWebcamReady?: (video: HTMLVideoElement) => void;
 }
 
 export function VideoCallLayout({
-  avatarRef,
-  getVisemeWeights,
   isSpeaking,
   isListening,
+  aiAudioLevel = 0,
   userName = "You",
+  onWebcamReady,
 }: VideoCallLayoutProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [webcamError, setWebcamError] = useState<string | null>(null);
@@ -35,6 +31,7 @@ export function VideoCallLayout({
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          onWebcamReady?.(videoRef.current);
         }
       } catch {
         setWebcamError("Camera access denied");
@@ -48,21 +45,39 @@ export function VideoCallLayout({
         stream.getTracks().forEach((t) => t.stop());
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Pulsing scale based on audio level
+  const pulseScale = 1 + aiAudioLevel * 0.4;
+  const pulseOpacity = 0.3 + aiAudioLevel * 0.5;
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Left — AI Avatar */}
-      <div className="relative flex w-[60%] flex-col border-r bg-gradient-to-b from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-        <AvatarCanvas className="flex-1">
-          <AvatarModel ref={avatarRef} />
-          <IdlePose />
-          <LipSyncController
-            avatarRef={avatarRef}
-            getVisemeWeights={getVisemeWeights}
+      {/* Left — AI Interviewer visualizer */}
+      <div className="relative flex w-1/2 flex-col items-center justify-center border-r bg-gradient-to-b from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+        {/* Pulsing circle */}
+        <div className="relative flex items-center justify-center">
+          {/* Outer pulse ring */}
+          <div
+            className="absolute h-40 w-40 rounded-full bg-primary/20 transition-transform duration-150"
+            style={{
+              transform: `scale(${pulseScale})`,
+              opacity: pulseOpacity,
+            }}
           />
-          <IdleAnimations avatarRef={avatarRef} />
-        </AvatarCanvas>
+          {/* Middle ring */}
+          <div
+            className="absolute h-32 w-32 rounded-full bg-primary/30 transition-transform duration-150"
+            style={{
+              transform: `scale(${1 + aiAudioLevel * 0.2})`,
+            }}
+          />
+          {/* Inner circle */}
+          <div className="relative flex h-24 w-24 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+            <span className="text-3xl">AI</span>
+          </div>
+        </div>
 
         {/* Name label */}
         <div className="absolute bottom-3 left-3 flex items-center gap-2">
@@ -78,7 +93,7 @@ export function VideoCallLayout({
       </div>
 
       {/* Right — User webcam */}
-      <div className="relative flex w-[40%] flex-col bg-slate-900">
+      <div className="relative flex w-1/2 flex-col bg-slate-900">
         {webcamError ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
             {webcamError}

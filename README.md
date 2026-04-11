@@ -3,7 +3,7 @@
 AI-powered mock interview practice with real-time feedback. Practice behavioral and technical interviews, get scored by AI, and track your improvement over time.
 
 **Two interview modes:**
-- **Behavioral** — Video-call style with a 3D AI interviewer avatar, real-time voice conversation, and STAR-method feedback
+- **Behavioral** — Voice-to-voice mock interview with real-time AI conversation and STAR-method feedback
 - **Technical** — Split-panel coding session with Monaco editor, problem generation, mic recording for verbal explanations, and code + speech analysis
 
 ## Project Structure
@@ -66,11 +66,7 @@ cd apps/web && npm run db:migrate
 
 > **For schema changes:** Edit `lib/schema.ts`, then run `npm run db:generate` to create a versioned SQL migration file. Commit the generated file in `drizzle/`. See CLAUDE.md for the full workflow.
 
-### 4. Set up the 3D avatar (optional, for behavioral interviews)
-
-See [docs/avatar-setup.md](docs/avatar-setup.md) for instructions on creating and configuring a GLB avatar with lip-sync blend shapes.
-
-### 5. Start development
+### 4. Start development
 
 ```bash
 npm run dev   # starts Next.js on :3000 and FastAPI on :8000

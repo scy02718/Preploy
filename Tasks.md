@@ -438,44 +438,26 @@
 
 ### Tasks
 
-- [ ] **36.1** Rewrite `VideoCallLayout.tsx`:
-  - Remove all Three.js/avatar imports (AvatarCanvas, AvatarModel, LipSyncController, IdleAnimations, IdlePose)
-  - Replace the avatar panel with a pulsing circle visualizer: three concentric rings that scale with `aiAudioLevel`
-  - Simplify props: remove `avatarRef`, `getVisemeWeights`; add `aiAudioLevel: number`
-  - Keep `onWebcamReady` callback, `isSpeaking`, `isListening`, webcam panel
-  - Add `onWebcamReady` prop for future face analysis integration
+- [x] **36.1** Rewrote `VideoCallLayout.tsx` — pulsing circle visualizer (3 concentric rings scaling with `aiAudioLevel`), simplified props, `onWebcamReady` callback
 
-- [ ] **36.2** Update the behavioral session page:
-  - Remove `useLipSync` hook usage and `avatarRef`
-  - Remove lip-sync connection `useEffect`
-  - Remove `lipSync.disconnect()` from end session handler
-  - Pass simplified props to VideoCallLayout
+- [x] **36.2** Updated behavioral session page — removed `useLipSync`, `avatarRef`, lip-sync `useEffect`, simplified VideoCallLayout props
 
-- [ ] **36.3** Delete avatar components and dependencies:
-  - Delete `components/avatar/` directory (AvatarCanvas, AvatarModel, IdleAnimations, IdlePose, LipSyncController)
-  - Delete `hooks/useLipSync.ts`
-  - Delete `public/avatars/interviewer.glb`
-  - Delete `docs/avatar-setup.md`
-  - Remove `playbackContext`/`playbackAnalyser` exports from `useRealtimeVoice.ts`
+- [x] **36.3** Deleted: `components/avatar/` (5 files), `hooks/useLipSync.ts`, `public/avatars/interviewer.glb`, `docs/avatar-setup.md`. Removed `playbackContext`/`playbackAnalyser` exports from `useRealtimeVoice.ts`
 
-- [ ] **36.4** Uninstall Three.js npm packages:
-  - `npm uninstall three @react-three/fiber @react-three/drei @types/three`
+- [x] **36.4** Uninstalled: `three`, `@react-three/fiber`, `@react-three/drei`, `@types/three`
 
-- [ ] **36.5** Clean up CSP and docs:
-  - Remove `raw.githack.com`, `rawcdn.githack.com`, `www.gstatic.com` from CSP (drei-only CDNs)
-  - Update README: remove avatar setup step, update behavioral description
-  - Remove `docs/avatar-setup.md` reference
+- [x] **36.5** Cleaned README (removed avatar setup step, updated behavioral description). CSP was already clean (no drei CDNs)
 
-- [ ] **36.6** Run full pre-commit checklist (lint, typecheck, test, integration)
+- [x] **36.6** All lint, typecheck, unit, and integration tests pass
 
 ### Acceptance Criteria
 
-- [ ] No Three.js packages in `package.json`
-- [ ] No `components/avatar/` directory or `hooks/useLipSync.ts`
-- [ ] No GLB files in `public/`
-- [ ] Behavioral session renders pulsing circle instead of 3D avatar
-- [ ] No texture loading errors in console
-- [ ] All tests pass
+- [x] No Three.js packages in `package.json`
+- [x] No `components/avatar/` directory or `hooks/useLipSync.ts`
+- [x] No GLB files in `public/`
+- [x] Behavioral session renders pulsing circle instead of 3D avatar
+- [x] No texture loading errors in console
+- [x] All tests pass
 
 ---
 

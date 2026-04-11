@@ -24,10 +24,6 @@ interface UseRealtimeVoiceReturn {
   mute: () => void;
   unmute: () => void;
   error: string | null;
-  /** AudioContext used for AI audio playback — use for lip-sync integration */
-  playbackContext: AudioContext | null;
-  /** AnalyserNode on the playback path — feed into useLipSync.connectAnalyser() */
-  playbackAnalyser: AnalyserNode | null;
 }
 
 export function useRealtimeVoice(
@@ -470,7 +466,5 @@ export function useRealtimeVoice(
     mute,
     unmute,
     error,
-    playbackContext: playbackContextRef.current,
-    playbackAnalyser: playbackAnalyserRef.current,
   };
 }
