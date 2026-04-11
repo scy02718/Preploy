@@ -4,10 +4,11 @@ import { db } from "@/lib/db";
 import { interviewSessions } from "@/lib/schema";
 import { eq, and } from "drizzle-orm";
 import OpenAI from "openai";
+import { groupWordsIntoSegments } from "@/lib/transcription";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — OpenAI's limit
 
-// POST /api/transcribe — transcribe audio using gpt-4o-mini-transcribe
+// POST /api/transcribe — transcribe audio using whisper-1
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -68,19 +69,25 @@ export async function POST(request: NextRequest) {
   try {
     const openai = new OpenAI({ apiKey });
 
+    // Use whisper-1 which supports verbose_json + word-level timestamps.
+    // gpt-4o-mini-transcribe only supports "json"/"text" (no word timestamps).
     const transcription = await openai.audio.transcriptions.create({
-      model: "gpt-4o-mini-transcribe",
+      model: "whisper-1",
       file: audioFile,
-      response_format: "json",
+      response_format: "verbose_json",
+      timestamp_granularities: ["word"],
     });
 
-    const text = transcription.text?.trim() ?? "";
+    const words =
+      (transcription as unknown as { words?: { word: string; start: number; end: number }[] }).words ?? [];
 
-    // gpt-4o-mini-transcribe with "json" format returns { text } only (no word timestamps).
-    // Build a single transcript entry from the full text.
-    const entries = text.length > 0
-      ? [{ speaker: "user" as const, text, timestamp_ms: 0 }]
-      : [];
+    // Group words into segments split on >1s pauses for a natural timeline
+    const entries = groupWordsIntoSegments(words);
+
+    // Fallback: if whisper returned text but no words array, use the full text
+    if (entries.length === 0 && transcription.text?.trim()) {
+      entries.push({ speaker: "user", text: transcription.text.trim(), timestamp_ms: 0 });
+    }
 
     return NextResponse.json({ entries });
   } catch (err) {

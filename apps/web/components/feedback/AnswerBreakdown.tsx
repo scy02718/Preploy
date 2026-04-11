@@ -14,6 +14,7 @@ interface AnswerAnalysis {
 
 interface AnswerBreakdownProps {
   analyses: AnswerAnalysis[];
+  title?: string;
 }
 
 function scoreBadgeVariant(score: number) {
@@ -22,12 +23,12 @@ function scoreBadgeVariant(score: number) {
   return "destructive";
 }
 
-export function AnswerBreakdown({ analyses }: AnswerBreakdownProps) {
+export function AnswerBreakdown({ analyses, title = "Per-Answer Breakdown" }: AnswerBreakdownProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   return (
     <div className="space-y-3">
-      <h3 className="text-base font-semibold">Per-Answer Breakdown</h3>
+      <h3 className="text-base font-semibold">{title}</h3>
       {analyses.map((a, i) => {
         const isExpanded = expandedIndex === i;
         return (

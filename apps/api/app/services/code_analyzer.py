@@ -23,7 +23,7 @@ TECHNICAL_ANALYSIS_SYSTEM_PROMPT = """You are an expert technical interview coac
 
 You will receive:
 - A full transcript of the candidate's verbal explanations
-- The candidate's code evolution (first and final snapshots)
+- The candidate's code evolution (all snapshots from start to final submission)
 - Session configuration (problem type, focus areas, difficulty)
 
 Evaluate the candidate on two dimensions:
@@ -31,23 +31,30 @@ Evaluate the candidate on two dimensions:
 1. **Code Quality (0-10)**: correctness, efficiency, readability, edge case handling, time/space complexity awareness
 2. **Explanation Quality (0-10)**: clarity of thought process, problem decomposition, trade-off discussion, communication
 
-Also identify question-answer pairs from the verbal transcript (treat the candidate's explanations as answers to implicit interview prompts like "walk me through your approach", "what is the time complexity?", etc.).
+For the answer_analyses array, analyze distinct aspects of the candidate's performance rather than artificial Q&A pairs. Use these categories:
+- **Approach & Problem Decomposition**: How the candidate broke down the problem and chose their strategy
+- **Implementation**: Code correctness, structure, and coding style — reference specific lines or functions from the code snapshots
+- **Complexity Analysis**: Whether the candidate discussed time/space complexity and if their analysis was correct
+- **Edge Cases & Testing**: Whether edge cases were considered in code or discussion
+- **Communication**: How well the candidate explained their thinking throughout
+
+For each analysis, reference specific code from the snapshots (e.g., "The `for i in range(len(nums))` loop on line 3 could be replaced with...") and specific quotes from the transcript when relevant.
 
 Respond ONLY with valid JSON matching this exact structure:
 {
   "overall_score": <float 0-10>,
-  "summary": "<2-3 sentence overall assessment>",
-  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
-  "weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
+  "summary": "<2-3 sentence overall assessment referencing specific parts of the code>",
+  "strengths": ["<strength — cite code or transcript>", "<strength>", "<strength>"],
+  "weaknesses": ["<weakness — cite code or transcript>", "<weakness>", "<weakness>"],
   "code_quality_score": <float 0-10>,
   "explanation_quality_score": <float 0-10>,
   "answer_analyses": [
     {
-      "question": "<implicit or explicit question being addressed>",
-      "answer_summary": "<1-2 sentence summary>",
+      "question": "<aspect being evaluated, e.g. 'Approach & Problem Decomposition'>",
+      "answer_summary": "<1-2 sentence summary of what the candidate did, referencing code>",
       "score": <float 0-10>,
-      "feedback": "<specific feedback>",
-      "suggestions": ["<suggestion 1>", "<suggestion 2>"]
+      "feedback": "<specific feedback citing code lines and transcript quotes>",
+      "suggestions": ["<actionable suggestion>", "<actionable suggestion>"]
     }
   ]
 }"""
@@ -74,18 +81,21 @@ def build_technical_analysis_prompt(
         areas_str = ", ".join(str(a).replace("_", " ").title() for a in focus_areas)
         parts.append(f"Focus Areas: {areas_str}")
 
-    # Code evolution summary
+    # Code evolution — include all snapshots so GPT can reference the progression
     parts.append("\n--- CODE EVOLUTION ---")
     if code_snapshots:
-        # Sort by timestamp to ensure correct order regardless of caller ordering
         sorted_snapshots = sorted(code_snapshots, key=lambda s: s.timestamp_ms)
-        first = sorted_snapshots[0]
-        last = sorted_snapshots[-1]
-        parts.append(f"Language used: {last.language}")
+        parts.append(f"Language used: {sorted_snapshots[-1].language}")
         parts.append(f"Total snapshots: {len(sorted_snapshots)}")
-        if len(sorted_snapshots) > 1:
-            parts.append(f"\nInitial code ({first.language}):\n```\n{first.code}\n```")
-        parts.append(f"\nFinal code ({last.language}):\n```\n{last.code}\n```")
+
+        for idx, snap in enumerate(sorted_snapshots):
+            minutes = snap.timestamp_ms // 60000
+            seconds = (snap.timestamp_ms % 60000) // 1000
+            label = "FINAL SUBMISSION" if idx == len(sorted_snapshots) - 1 else f"Snapshot {idx + 1}"
+            parts.append(
+                f"\n[{label} at {minutes:02d}:{seconds:02d} — {snap.event_type}, {snap.language}]"
+                f"\n```{snap.language}\n{snap.code}\n```"
+            )
     else:
         parts.append("No code was written.")
     parts.append("--- END CODE ---")

@@ -95,6 +95,14 @@ class TestBuildTechnicalAnalysisPrompt:
         prompt = build_technical_analysis_prompt(SAMPLE_TRANSCRIPT, [], SAMPLE_CONFIG)
         assert "No code was written" in prompt
 
+    def test_all_snapshots_included_with_timestamps(self):
+        prompt = build_technical_analysis_prompt(SAMPLE_TRANSCRIPT, SAMPLE_SNAPSHOTS, SAMPLE_CONFIG)
+        assert "Snapshot 1" in prompt
+        assert "FINAL SUBMISSION" in prompt
+        # Both initial and final code should be present
+        assert "def solution(): pass" in prompt
+        assert "max(nums)" in prompt
+
     def test_system_design_config(self):
         config = {
             "interview_type": "system_design",

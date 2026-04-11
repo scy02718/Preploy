@@ -157,10 +157,20 @@ describe("POST /api/transcribe (integration)", () => {
     expect(response.status).toBe(404);
   });
 
-  it("returns transcript entry on successful transcription", async () => {
+  it("returns grouped transcript entries from word timestamps", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     mockTranscriptionCreate.mockResolvedValue({
       text: "I think we should use a hash map",
+      words: [
+        { word: "I", start: 0.0, end: 0.1 },
+        { word: "think", start: 0.15, end: 0.4 },
+        { word: "we", start: 0.45, end: 0.55 },
+        { word: "should", start: 0.6, end: 0.85 },
+        { word: "use", start: 0.9, end: 1.1 },
+        { word: "a", start: 1.15, end: 1.2 },
+        { word: "hash", start: 1.25, end: 1.5 },
+        { word: "map", start: 1.55, end: 1.8 },
+      ],
     });
 
     const response = await POST(buildMockRequest({
@@ -176,10 +186,16 @@ describe("POST /api/transcribe (integration)", () => {
     expect(body.entries[0].timestamp_ms).toBe(0);
   });
 
-  it("returns empty entries when transcription text is empty", async () => {
+  it("splits segments on pauses longer than 1 second", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     mockTranscriptionCreate.mockResolvedValue({
-      text: "  ",
+      text: "first part second part",
+      words: [
+        { word: "first", start: 0.0, end: 0.3 },
+        { word: "part", start: 0.35, end: 0.6 },
+        { word: "second", start: 2.6, end: 2.9 },
+        { word: "part", start: 2.95, end: 3.2 },
+      ],
     });
 
     const response = await POST(buildMockRequest({
@@ -189,6 +205,28 @@ describe("POST /api/transcribe (integration)", () => {
     expect(response.status).toBe(200);
 
     const body = await response.json();
-    expect(body.entries).toHaveLength(0);
+    expect(body.entries).toHaveLength(2);
+    expect(body.entries[0].text).toBe("first part");
+    expect(body.entries[0].timestamp_ms).toBe(0);
+    expect(body.entries[1].text).toBe("second part");
+    expect(body.entries[1].timestamp_ms).toBe(2600);
+  });
+
+  it("falls back to full text when no words array is returned", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    mockTranscriptionCreate.mockResolvedValue({
+      text: "Hello world",
+    });
+
+    const response = await POST(buildMockRequest({
+      audio: fakeFile(),
+      session_id: testSessionId,
+    }));
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body.entries).toHaveLength(1);
+    expect(body.entries[0].text).toBe("Hello world");
+    expect(body.entries[0].timestamp_ms).toBe(0);
   });
 });

@@ -69,7 +69,10 @@ export function FeedbackDashboard({
       />
 
       {feedback.answerAnalyses.length > 0 && (
-        <AnswerBreakdown analyses={feedback.answerAnalyses} />
+        <AnswerBreakdown
+          analyses={feedback.answerAnalyses}
+          title={isTechnical ? "Performance Analysis" : "Per-Answer Breakdown"}
+        />
       )}
 
       {isTechnical &&
