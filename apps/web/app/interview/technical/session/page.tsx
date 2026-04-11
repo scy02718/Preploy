@@ -27,6 +27,7 @@ export default function TechnicalSessionPage() {
   const [problemLoading, setProblemLoading] = useState(true);
   const [problemError, setProblemError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState("");
 
   const { startRecording, stopRecording, isRecording, audioLevel } =
     useAudioRecorder();
@@ -104,13 +105,16 @@ export default function TechnicalSessionPage() {
 
     try {
       // 1. Capture final code snapshot
+      setProcessingStep("Saving code...");
       captureSnapshot("submit");
 
       // 2. Stop recording and get audio blob
+      setProcessingStep("Stopping recording...");
       const audioBlob = await stopRecording();
 
       // 3. Transcribe audio
       if (audioBlob && audioBlob.size > 0) {
+        setProcessingStep("Transcribing audio...");
         try {
           const formData = new FormData();
           formData.append(
@@ -143,6 +147,7 @@ export default function TechnicalSessionPage() {
       }
 
       // 4. Save code snapshots
+      setProcessingStep("Saving code snapshots...");
       const snapshots = getSnapshots();
       if (snapshots.length > 0) {
         try {
@@ -157,9 +162,11 @@ export default function TechnicalSessionPage() {
       }
 
       // 5. End session in DB
+      setProcessingStep("Finalizing session...");
       await endSession();
 
       // 6. Trigger feedback generation (fire-and-forget)
+      setProcessingStep("Redirecting to feedback...");
       fetch(`/api/sessions/${sessionId}/feedback`, { method: "POST" }).catch(
         (err) => console.error("Failed to trigger feedback:", err)
       );
@@ -184,17 +191,32 @@ export default function TechnicalSessionPage() {
 
   // Problem panel content
   const problemPanel = problemLoading ? (
-    <div className="flex h-full flex-col gap-4 p-6">
-      <div className="h-6 w-48 animate-pulse rounded bg-muted" />
-      <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-      <div className="mt-4 space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => (
+    <div className="flex h-full flex-col p-6">
+      {/* Title + badge skeleton */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="h-6 w-48 animate-pulse rounded bg-muted" />
+        <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
+      </div>
+      {/* Description skeleton */}
+      <div className="mb-6 space-y-2">
+        {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
             className="h-4 animate-pulse rounded bg-muted"
-            style={{ width: `${80 - i * 8}%` }}
+            style={{ width: `${95 - i * 10}%` }}
           />
         ))}
+      </div>
+      {/* Example skeleton */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+        <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+        <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+        <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+      </div>
+      {/* Loading message */}
+      <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        Generating problem...
       </div>
     </div>
   ) : problemError ? (
@@ -231,6 +253,7 @@ export default function TechnicalSessionPage() {
       }
       onEndSession={handleEndSession}
       isProcessing={isProcessing}
+      processingStep={processingStep}
     />
   );
 }

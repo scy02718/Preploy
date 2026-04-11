@@ -14,6 +14,8 @@ interface TechnicalSessionLayoutProps {
   onEndSession: () => void;
   /** Whether the end-session flow is processing */
   isProcessing: boolean;
+  /** Current processing step label (e.g., "Transcribing audio...") */
+  processingStep?: string;
 }
 
 export function TechnicalSessionLayout({
@@ -22,6 +24,7 @@ export function TechnicalSessionLayout({
   micIndicator,
   onEndSession,
   isProcessing,
+  processingStep,
 }: TechnicalSessionLayoutProps) {
   const [elapsed, setElapsed] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -79,7 +82,12 @@ export function TechnicalSessionLayout({
         {/* End Session */}
         <div className="flex items-center gap-3">
           {isProcessing ? (
-            <span className="text-sm text-muted-foreground">Processing...</span>
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span className="text-sm text-muted-foreground">
+                {processingStep || "Processing..."}
+              </span>
+            </div>
           ) : showConfirm ? (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">

@@ -78,29 +78,29 @@
 
 ### Tasks
 
-- [ ] **26.1** Add skeleton screens for the dashboard page:
+- [x] **26.1** Add skeleton screens for the dashboard page:
   - Stats cards show pulsing placeholders while loading
   - Session list shows 3-5 skeleton rows
 
-- [ ] **26.2** Add skeleton screens for the feedback page:
+- [x] **26.2** Add skeleton screens for the feedback page:
   - Score card skeleton (circular placeholder + text lines)
   - Strengths/weaknesses skeleton (two column placeholder blocks)
   - Answer breakdown skeleton (3 collapsed card placeholders)
 
-- [ ] **26.3** Add smooth transitions for session state changes:
+- [x] **26.3** Add smooth transitions for session state changes:
   - Setup → "Creating session..." → Session page (fade transition)
   - Session → "Processing..." → Feedback (progress steps indicator)
 
-- [ ] **26.4** Add loading state for problem generation in technical session:
+- [x] **26.4** Add loading state for problem generation in technical session:
   - Show "Generating problem..." with animated dots in the problem panel
   - Editor is ready and usable while problem loads
 
 ### Acceptance Criteria
 
-- [ ] No blank white screens during data loading
-- [ ] Skeleton screens match the shape of actual content
-- [ ] Transitions between pages feel smooth, not jarring
-- [ ] Loading states have clear messaging ("Generating feedback...", etc.)
+- [x] No blank white screens during data loading
+- [x] Skeleton screens match the shape of actual content
+- [x] Transitions between pages feel smooth, not jarring
+- [x] Loading states have clear messaging ("Generating feedback...", "Transcribing audio...", etc.)
 
 ---
 
