@@ -23,6 +23,8 @@ export function BehavioralSetupForm() {
   }, [setType]);
 
   const behavioralConfig = config as BehavioralSessionConfig;
+  const interviewStyle = typeof behavioralConfig.interview_style === "number" ? behavioralConfig.interview_style : 0.5;
+  const difficulty = typeof behavioralConfig.difficulty === "number" ? behavioralConfig.difficulty : 0.5;
   const questions = behavioralConfig.expected_questions ?? [];
 
   const addQuestion = () => {
@@ -161,7 +163,7 @@ export function BehavioralSetupForm() {
               <div className="space-y-3">
                 <Label>Interview Style</Label>
                 <Slider
-                  value={[(behavioralConfig.interview_style ?? 0.5) * 100]}
+                  value={[interviewStyle * 100]}
                   onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
                   min={0}
                   max={100}
@@ -176,7 +178,7 @@ export function BehavioralSetupForm() {
               <div className="space-y-3">
                 <Label>Difficulty</Label>
                 <Slider
-                  value={[(behavioralConfig.difficulty ?? 0.5) * 100]}
+                  value={[difficulty * 100]}
                   onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
                   min={0}
                   max={100}

@@ -1,7 +1,7 @@
 """Structured logging configuration for the FastAPI service."""
 
-import logging
 import json
+import logging
 import os
 import sys
 from datetime import datetime, timezone

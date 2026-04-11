@@ -46,6 +46,17 @@ Use structured logging instead of `console.log`/`console.error` in all server-si
 - **Python (FastAPI)**: Use `logging.getLogger(__name__)` — already configured with JSON output in production.
 - **Client-side code** (hooks, components, session pages): `console.error` is fine — Pino doesn't run in the browser.
 
+### Pre-commit checklist
+
+Before marking any story or task as complete, run **all** of the following:
+
+```bash
+npx turbo lint typecheck test          # Lint (ESLint + ruff) + typecheck + unit/component tests
+cd apps/web && npm run test:integration # Integration tests (requires Docker test-db)
+```
+
+If any of these fail, fix the issue before committing. CI will reject the push otherwise.
+
 ### Key principles
 
 After finishing a feature, run `turbo test` to ensure nothing is broken. If adding a new API route or modifying an existing one, add or update the corresponding integration test. If adding pure logic, add a unit test.
