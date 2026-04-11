@@ -391,4 +391,25 @@ describe("API /api/sessions (integration)", () => {
     const res = await POST(makePostRequest({ type: "behavioral" }));
     expect(res.status).toBe(201);
   });
+
+  it("POST returns 403 when account is disabled", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    // Disable the account
+    const db = getTestDb();
+    const { users } = await import("@/lib/schema");
+    await db.update(users).set({ disabledAt: new Date() }).where(
+      (await import("drizzle-orm")).eq(users.id, TEST_USER.id)
+    );
+
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toMatch(/disabled/i);
+
+    // Reset
+    await db.update(users).set({ disabledAt: null }).where(
+      (await import("drizzle-orm")).eq(users.id, TEST_USER.id)
+    );
+  });
 });

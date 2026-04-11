@@ -105,6 +105,9 @@ export function Header() {
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => window.location.assign("/profile")}>
+                Profile
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
                 Sign Out
               </DropdownMenuItem>

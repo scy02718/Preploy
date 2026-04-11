@@ -100,9 +100,16 @@ export async function POST(request: NextRequest) {
 
   // Check daily session limit based on user's plan
   const [user] = await db
-    .select({ plan: users.plan })
+    .select({ plan: users.plan, disabledAt: users.disabledAt })
     .from(users)
     .where(eq(users.id, session.user.id));
+
+  if (user?.disabledAt) {
+    return NextResponse.json(
+      { error: "Your account has been disabled. You cannot create new sessions." },
+      { status: 403 }
+    );
+  }
 
   const plan = getPlanConfig(user?.plan);
   const todayStart = new Date();

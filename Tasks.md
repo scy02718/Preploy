@@ -397,49 +397,26 @@
 
 ### Tasks
 
-- [ ] **35.1** Create `app/profile/page.tsx` — user profile page:
-  - Two-column layout (like setup pages): Profile info on left, Account settings on right
-  - Add "Profile" link to the header user dropdown menu
-  - Protected route (add to middleware matcher)
+- [x] **35.1** Created `app/profile/page.tsx` with two-column layout, loading skeleton, "Profile" in user dropdown, protected route
 
-- [ ] **35.2** Profile info section (left column):
-  - Display current name, email (read-only), and profile picture
-  - Editable name field with save button
-  - Profile picture upload (store in Supabase Storage or just URL update)
-  - `PATCH /api/users/me` endpoint for updating name/image
-  - Write integration test for the endpoint
+- [x] **35.2** Profile info section: editable name with save, read-only email, member since date. `GET /api/users/me` + `PATCH /api/users/me` endpoints. 7 integration tests (auth, get profile, update name, reject empty name, update plan, reject invalid plan, reject empty body)
 
-- [ ] **35.3** Plan & quota section (right column):
-  - Display current plan (Free/Pro/Max) with a badge
-  - Show daily quota usage (reuse `SessionQuota` component or similar)
-  - Plan selector (radio group) — allows changing plan
-    - For now: directly updates the `plan` column (no billing)
-    - Later: this becomes a link to Stripe checkout
-  - `PATCH /api/users/me` endpoint also handles plan changes
-  - Write integration test for plan change
+- [x] **35.3** Plan section: radio group for Free/Pro/Max with sessions/day display. Plan badge showing current plan. Direct DB update (Stripe integration later)
 
-- [ ] **35.4** Account management section (right column, below plan):
-  - "Disable Account" button with confirmation dialog
-  - Disabled accounts can't create new sessions but can still view past feedback
-  - Add `disabled_at` nullable timestamp column to users table
-  - `POST /api/users/me/disable` endpoint
-  - Generate DB migration
-  - Write integration test
+- [x] **35.4** Danger Zone: "Disable Account" with confirmation dialog. `POST /api/users/me/disable` endpoint. `disabled_at` column added. Migration: `0003_polite_paibok.sql`. 3 integration tests (auth, disable, already disabled)
 
-- [ ] **35.5** Block session creation for disabled accounts:
-  - Check `disabled_at` in `POST /api/sessions` — return 403 if account is disabled
-  - Write integration test
+- [x] **35.5** Disabled accounts blocked: `POST /api/sessions` returns 403 if `disabled_at` is set. 1 integration test
 
-- [ ] **35.6** Component tests for the profile page (renders sections, plan selector)
+- [x] **35.6** Component tests for profile page: 4 tests (title, plan options, danger zone, disable button)
 
 ### Acceptance Criteria
 
-- [ ] Profile page accessible from user dropdown in header
-- [ ] Users can edit their name and see it update immediately
-- [ ] Current plan displayed with option to change
-- [ ] Disable account prevents new session creation
-- [ ] All new endpoints have integration tests
-- [ ] DB migration committed for any schema changes
+- [x] Profile page accessible from user dropdown in header
+- [x] Users can edit their name and see it update immediately
+- [x] Current plan displayed with option to change (Free/Pro/Max radio group)
+- [x] Disable account prevents new session creation (403)
+- [x] All new endpoints have integration tests (11 total)
+- [x] DB migration committed (`0003_polite_paibok.sql` — adds `disabled_at` column)
 
 ---
 

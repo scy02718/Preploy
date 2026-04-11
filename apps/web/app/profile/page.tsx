@@ -1,0 +1,326 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PLANS } from "@/lib/plans";
+import type { PlanId } from "@/lib/plans";
+
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  image: string | null;
+  plan: PlanId;
+  disabledAt: string | null;
+  createdAt: string;
+}
+
+const PLAN_OPTIONS = Object.values(PLANS);
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Editable fields
+  const [name, setName] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("free");
+
+  // UI state
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [isDisabling, setIsDisabling] = useState(false);
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch("/api/users/me");
+        if (res.ok) {
+          const data: UserProfile = await res.json();
+          setProfile(data);
+          setName(data.name ?? "");
+          setSelectedPlan(data.plan);
+        }
+      } catch {
+        // Silent
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProfile();
+  }, []);
+
+  const showMessage = useCallback((type: "success" | "error", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 3000);
+  }, []);
+
+  const handleSaveName = async () => {
+    if (!name.trim()) return;
+    setIsSavingName(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile((p) => (p ? { ...p, name: data.name } : p));
+        showMessage("success", "Name updated");
+      } else {
+        const err = await res.json();
+        showMessage("error", err.error || "Failed to update name");
+      }
+    } catch {
+      showMessage("error", "Failed to update name");
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleSavePlan = async () => {
+    if (selectedPlan === profile?.plan) return;
+    setIsSavingPlan(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: selectedPlan }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile((p) => (p ? { ...p, plan: data.plan } : p));
+        showMessage("success", `Plan changed to ${PLANS[data.plan as PlanId].name}`);
+      } else {
+        const err = await res.json();
+        showMessage("error", err.error || "Failed to change plan");
+      }
+    } catch {
+      showMessage("error", "Failed to change plan");
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
+  const handleDisableAccount = async () => {
+    setIsDisabling(true);
+    try {
+      const res = await fetch("/api/users/me/disable", { method: "POST" });
+      if (res.ok) {
+        setProfile((p) => (p ? { ...p, disabledAt: new Date().toISOString() } : p));
+        setShowDisableConfirm(false);
+        showMessage("success", "Account disabled. You can no longer create new sessions.");
+      } else {
+        const err = await res.json();
+        showMessage("error", err.error || "Failed to disable account");
+      }
+    } catch {
+      showMessage("error", "Failed to disable account");
+    } finally {
+      setIsDisabling(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+        <div className="h-8 w-32 animate-pulse rounded bg-muted" />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Card>
+            <CardContent className="space-y-4 p-6">
+              <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-10 w-full animate-pulse rounded bg-muted" />
+              <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-10 w-full animate-pulse rounded bg-muted" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="space-y-4 p-6">
+              <div className="h-5 w-20 animate-pulse rounded bg-muted" />
+              <div className="h-20 w-full animate-pulse rounded bg-muted" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
+
+  const isDisabled = !!profile.disabledAt;
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <h1 className="mb-2 text-2xl font-bold">Profile</h1>
+      <p className="mb-8 text-muted-foreground">
+        Manage your account settings and preferences.
+      </p>
+
+      {/* Toast message */}
+      {message && (
+        <div
+          className={`mb-6 rounded-md border px-4 py-3 text-sm ${
+            message.type === "success"
+              ? "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400"
+              : "border-destructive/50 bg-destructive/10 text-destructive"
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      {isDisabled && (
+        <div className="mb-6 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          Your account is disabled. You cannot create new sessions.
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Left column — Profile Info */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input value={profile.email} disabled />
+                <p className="text-xs text-muted-foreground">
+                  Email cannot be changed
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">Display Name</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={200}
+                    placeholder="Your name"
+                  />
+                  <Button
+                    onClick={handleSaveName}
+                    disabled={isSavingName || name.trim() === (profile.name ?? "")}
+                    variant="outline"
+                  >
+                    {isSavingName ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Member Since</Label>
+                <p className="text-sm text-muted-foreground">
+                  {new Date(profile.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right column — Plan + Account */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Plan</CardTitle>
+                <Badge variant="secondary">{PLANS[profile.plan].name}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <RadioGroup
+                value={selectedPlan}
+                onValueChange={(v) => setSelectedPlan(v as PlanId)}
+              >
+                {PLAN_OPTIONS.map((plan) => (
+                  <label
+                    key={plan.id}
+                    className="flex cursor-pointer items-center justify-between rounded-md border px-4 py-3 hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <RadioGroupItem value={plan.id} />
+                      <div>
+                        <p className="text-sm font-medium">{plan.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {plan.dailySessionLimit} sessions/day
+                        </p>
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </RadioGroup>
+
+              <Button
+                onClick={handleSavePlan}
+                disabled={isSavingPlan || selectedPlan === profile.plan}
+                className="w-full"
+              >
+                {isSavingPlan ? "Updating..." : "Update Plan"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isDisabled ? (
+                <p className="text-sm text-muted-foreground">
+                  Account disabled on{" "}
+                  {new Date(profile.disabledAt!).toLocaleDateString()}.
+                  Contact support to re-enable.
+                </p>
+              ) : showDisableConfirm ? (
+                <div className="space-y-3">
+                  <p className="text-sm">
+                    Are you sure? You won&apos;t be able to create new sessions.
+                    Your existing feedback will remain accessible.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      onClick={handleDisableAccount}
+                      disabled={isDisabling}
+                    >
+                      {isDisabling ? "Disabling..." : "Yes, disable my account"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowDisableConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDisableConfirm(true)}
+                >
+                  Disable Account
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
