@@ -18,6 +18,20 @@ export const technicalConfigSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard"]),
 });
 
+export const problemExampleSchema = z.object({
+  input: z.string(),
+  output: z.string(),
+  explanation: z.string().optional(),
+});
+
+export const problemSchema = z.object({
+  title: z.string().min(1),
+  difficulty: z.enum(["Easy", "Medium", "Hard"]),
+  description: z.string().min(1),
+  examples: z.array(problemExampleSchema),
+  constraints: z.array(z.string()),
+});
+
 export const createSessionSchema = z.object({
   type: z.enum(["behavioral", "technical"]),
   config: z.record(z.string(), z.unknown()).optional(),

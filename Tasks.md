@@ -199,14 +199,14 @@
 
 ### Tasks
 
-- [ ] **17.1** Create `lib/prompts-technical.ts` — export a `buildProblemGenerationPrompt(config: TechnicalSessionConfig): string` function:
+- [x] **17.1** Create `lib/prompts-technical.ts` — export a `buildProblemGenerationPrompt(config: TechnicalSessionConfig): string` function:
   - System prompt instructs GPT-5.4-mini to generate a single coding problem
   - The prompt must specify: interview type (leetcode-style, system design, frontend, backend), focus areas to test, difficulty level, and the target programming language (for examples)
   - The output format must match the `Problem` interface: `{ title, difficulty, description, examples: [{ input, output, explanation? }], constraints: string[] }`
   - Include instruction: "Respond ONLY with valid JSON matching the Problem schema."
   - For system design: generate a design question instead of a coding problem (description only, no input/output examples)
 
-- [ ] **17.2** Create `app/api/problems/generate/route.ts` — API route to generate a problem:
+- [x] **17.2** Create `app/api/problems/generate/route.ts` — API route to generate a problem:
   - `POST`: receives `{ config: TechnicalSessionConfig }`, validates auth
   - Calls OpenAI GPT-5.4-mini with the prompt from `buildProblemGenerationPrompt()`
   - Parses and validates the JSON response against a Zod schema matching the `Problem` interface
@@ -214,34 +214,34 @@
   - If GPT returns invalid JSON, retry once. If still invalid, return 500 with error.
   - Add rate limiting consideration: one problem per session (store the problem in session config or a dedicated field)
 
-- [ ] **17.3** Create a Zod schema for the `Problem` type in `lib/validations.ts`:
+- [x] **17.3** Create a Zod schema for the `Problem` type in `lib/validations.ts`:
   - `problemSchema`: title (string), difficulty ("Easy"/"Medium"/"Hard"), description (string), examples (array of { input: string, output: string, explanation?: string }), constraints (array of strings)
   - Export it for reuse in the route handler and tests
 
-- [ ] **17.4** Write unit tests for `lib/prompts-technical.ts`:
+- [x] **17.4** Write unit tests for `lib/prompts-technical.ts`:
   - Leetcode config includes "coding problem" and the focus areas
   - System design config includes "system design" and skips input/output examples instruction
   - Difficulty is reflected in the prompt ("Easy", "Medium", "Hard")
   - Language is mentioned in the prompt
   - 6+ test cases
 
-- [ ] **17.5** Write an integration test for `POST /api/problems/generate`:
+- [x] **17.5** Write an integration test for `POST /api/problems/generate`:
   - Mock the OpenAI API call (don't spend real tokens in tests)
   - Valid config + mocked GPT response returns a valid Problem
   - Unauthenticated returns 401
   - Malformed GPT response returns 500
   - 3+ test cases
 
-- [ ] **17.6** Verify: calling the API with a technical config returns a well-structured Problem that renders correctly in `ProblemDescription.tsx`
+- [x] **17.6** Verify: calling the API with a technical config returns a well-structured Problem that renders correctly in `ProblemDescription.tsx`
 
 ### Acceptance Criteria
 
-- [ ] Prompt builder produces different prompts for leetcode vs system design vs frontend vs backend
-- [ ] Prompt includes the focus areas, difficulty, and language from config
-- [ ] API route returns a valid `Problem` object that matches the existing `ProblemDescription` interface
-- [ ] Invalid GPT responses are retried once, then return 500
-- [ ] 6+ unit tests for prompt builder pass
-- [ ] 3+ integration/unit tests for the API route pass
+- [x] Prompt builder produces different prompts for leetcode vs system design vs frontend vs backend
+- [x] Prompt includes the focus areas, difficulty, and language from config
+- [x] API route returns a valid `Problem` object that matches the existing `ProblemDescription` interface
+- [x] Invalid GPT responses are retried once, then return 500
+- [x] 6+ unit tests for prompt builder pass
+- [x] 3+ integration/unit tests for the API route pass
 
 ---
 
