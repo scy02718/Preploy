@@ -40,7 +40,7 @@ async def analyze_behavioral_interview(request: FeedbackRequest) -> FeedbackResp
 async def analyze_technical_interview(
     request: TechnicalFeedbackRequest,
 ) -> TechnicalFeedbackResponse:
-    """Analyze a technical interview (transcript + code snapshots) and return structured feedback."""
+    """Analyze a technical interview and return structured feedback."""
     if not request.transcript:
         raise HTTPException(status_code=400, detail="Transcript is empty")
 

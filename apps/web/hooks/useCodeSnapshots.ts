@@ -39,8 +39,12 @@ export function useCodeSnapshots({
   const languageRef = useRef(language);
 
   // Keep refs in sync with state
-  codeRef.current = code;
-  languageRef.current = language;
+  useEffect(() => {
+    codeRef.current = code;
+  }, [code]);
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
 
   const captureSnapshot = useCallback(
     (eventType: CodeEventType) => {

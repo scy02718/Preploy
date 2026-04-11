@@ -14,7 +14,6 @@ from app.services.feedback_generator import (
     generate_behavioral_feedback,
 )
 
-
 # ---- Fixtures ----
 
 SAMPLE_TRANSCRIPT = [

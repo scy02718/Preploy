@@ -513,34 +513,26 @@ The following features were implemented as bug fixes / housekeeping and are not 
 
 ## Story 22: CI Pipeline (GitHub Actions)
 
-> **Motivation:** We now have enough tests to make CI meaningful. A CI pipeline that runs lint → typecheck → unit tests → build on every PR ensures we never merge broken code. This is the gate that protects the codebase quality as we move to Phase 4 (production readiness). Integration tests are excluded from CI (they need Docker) — those run locally.
+> **Motivation:** We now have enough tests to make CI meaningful. A CI pipeline that runs lint → typecheck → unit tests → integration tests → build on every PR ensures we never merge broken code. GitHub Actions supports Postgres service containers for free, so integration tests run in CI too — no Docker setup needed on the developer's machine for CI.
 
 ### Tasks
 
-- [ ] **22.1** Create `.github/workflows/ci.yml` — GitHub Actions workflow:
-  - Trigger: on `push` to `main` and on `pull_request` to `main`
-  - Environment: Ubuntu latest, Node.js 20, Python 3.12+
-  - Steps:
-    1. Checkout code
-    2. Install Node.js dependencies (`npm ci`)
-    3. Set up Python venv and install deps (`cd apps/api && python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"`)
-    4. Run `turbo lint` — ESLint for web, ruff for Python
-    5. Run `turbo test` — Vitest unit tests + pytest
-    6. Run typecheck: `cd apps/web && npx tsc --noEmit`
-    7. Run build: `turbo build` (skip if build requires env vars not available in CI — use `SKIP_ENV_VALIDATION=1` or similar)
-  - Cache: cache `node_modules`, `.turbo`, and Python `.venv` for faster runs
-  - Each step should fail-fast — if lint fails, don't bother running tests
+- [x] **22.1** Create `.github/workflows/ci.yml` — GitHub Actions workflow:
+  - 4 parallel/sequential jobs: lint-typecheck → unit-tests + integration-tests → build
+  - Postgres 16 service container for integration tests (free on GitHub Actions)
+  - Node.js 20, Python 3.12, npm caching
+  - `.env.ci` copied as `.env` for dummy env vars
 
-- [ ] **22.2** Add a `typecheck` script to `apps/web/package.json`: `"typecheck": "tsc --noEmit"`
-  - Add a `typecheck` task to `turbo.json`
+- [x] **22.2** Add a `typecheck` script to `apps/web/package.json`: `"typecheck": "tsc --noEmit"`
+  - Added `typecheck` task to `turbo.json`
 
-- [ ] **22.3** Add a `lint` script to `apps/api/package.json` if not already present (already has `"lint": ".venv/bin/ruff check ."`). Verify `turbo lint` runs both workspaces.
+- [x] **22.3** Verified `apps/api/package.json` already has `"lint": ".venv/bin/ruff check ."`.
+  - API lint/test run as direct commands in CI (venv-dependent scripts don't work through turbo)
 
-- [ ] **22.4** Handle env vars in CI:
-  - The build/typecheck may fail without `SUPABASE_DB_URL`, `OPENAI_API_KEY`, etc.
-  - Add a `.env.ci` file (committed to repo) with dummy values for type-checking only: `SUPABASE_DB_URL=postgresql://dummy`, `OPENAI_API_KEY=sk-dummy`, etc.
-  - Or use `process.env.SUPABASE_DB_URL!` with a fallback in `lib/db.ts` for CI
-  - Whichever approach, the CI pipeline must not require real secrets for lint/typecheck/unit-tests
+- [x] **22.4** Handle env vars in CI:
+  - Added `.env.ci` with dummy values for all required env vars
+  - CI copies `.env.ci` → `apps/web/.env` before each step
+  - No real secrets needed for lint, typecheck, unit tests, or integration tests
 
 - [ ] **22.5** Verify: push a branch and open a PR — CI runs all checks. Intentionally break a test to confirm CI fails and blocks merge.
 
@@ -548,12 +540,13 @@ The following features were implemented as bug fixes / housekeeping and are not 
 
 ### Acceptance Criteria
 
-- [ ] CI workflow runs on push to main and PRs to main
-- [ ] Pipeline runs: lint → typecheck → test → build (in that order)
-- [ ] CI passes on the current codebase with no failures
-- [ ] CI does not require real API keys or database connections
-- [ ] Failing tests cause CI to fail (verified by intentionally breaking a test)
-- [ ] README documents the CI pipeline and how to check status
+- [x] CI workflow runs on push to main and PRs to main
+- [x] Pipeline runs: lint → typecheck → test (unit + integration) → build
+- [ ] CI passes on the current codebase (verify after first push)
+- [x] CI does not require real API keys or database connections
+- [x] Integration tests run against real Postgres in CI (service container, free tier)
+- [ ] Failing tests cause CI to fail (verify by intentionally breaking a test)
+- [ ] README documents the CI pipeline
 
 ---
 

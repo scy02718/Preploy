@@ -20,25 +20,6 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const rafIdRef = useRef<number | null>(null);
 
-  const updateAudioLevel = useCallback(() => {
-    if (!analyserRef.current) return;
-
-    const dataArray = new Uint8Array(analyserRef.current.fftSize);
-    analyserRef.current.getByteTimeDomainData(dataArray);
-
-    // Calculate RMS level (0-1)
-    let sum = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      const normalized = (dataArray[i] - 128) / 128;
-      sum += normalized * normalized;
-    }
-    const rms = Math.sqrt(sum / dataArray.length);
-    // Amplify for better visual response, clamp to 0-1
-    setAudioLevel(Math.min(1, rms * 3));
-
-    rafIdRef.current = requestAnimationFrame(updateAudioLevel);
-  }, []);
-
   const startRecording = useCallback(async () => {
     chunksRef.current = [];
 
@@ -54,8 +35,21 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     source.connect(analyser);
     analyserRef.current = analyser;
 
-    // Start level monitoring
-    rafIdRef.current = requestAnimationFrame(updateAudioLevel);
+    // Start rAF loop for audio level monitoring
+    function updateLevel() {
+      if (!analyserRef.current) return;
+      const dataArray = new Uint8Array(analyserRef.current.fftSize);
+      analyserRef.current.getByteTimeDomainData(dataArray);
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const normalized = (dataArray[i] - 128) / 128;
+        sum += normalized * normalized;
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+      setAudioLevel(Math.min(1, rms * 3));
+      rafIdRef.current = requestAnimationFrame(updateLevel);
+    }
+    rafIdRef.current = requestAnimationFrame(updateLevel);
 
     // Set up MediaRecorder
     const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -73,7 +67,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
     mediaRecorder.start(1000); // 1-second chunks
     setIsRecording(true);
-  }, [updateAudioLevel]);
+  }, []);
 
   const stopRecording = useCallback(async (): Promise<Blob | null> => {
     // Stop level monitoring

@@ -60,7 +60,7 @@ export function useLipSync() {
   // Track which pose we're on and when to switch
   const poseIndexRef = useRef(0);
   const poseSwitchTimerRef = useRef(0);
-  const lastTimeRef = useRef(performance.now());
+  const lastTimeRef = useRef(0);
 
   // Get current viseme weights based on audio energy + pose cycling
   const getVisemeWeights = useCallback((): VisemeWeights => {

@@ -28,17 +28,25 @@ You will receive:
 
 Evaluate the candidate on two dimensions:
 
-1. **Code Quality (0-10)**: correctness, efficiency, readability, edge case handling, time/space complexity awareness
-2. **Explanation Quality (0-10)**: clarity of thought process, problem decomposition, trade-off discussion, communication
+1. **Code Quality (0-10)**: correctness, efficiency, readability,
+   edge case handling, time/space complexity awareness
+2. **Explanation Quality (0-10)**: clarity of thought process,
+   problem decomposition, trade-off discussion, communication
 
-For the answer_analyses array, analyze distinct aspects of the candidate's performance rather than artificial Q&A pairs. Use these categories:
-- **Approach & Problem Decomposition**: How the candidate broke down the problem and chose their strategy
-- **Implementation**: Code correctness, structure, and coding style — reference specific lines or functions from the code snapshots
-- **Complexity Analysis**: Whether the candidate discussed time/space complexity and if their analysis was correct
+Analyze distinct aspects of the candidate's performance.
+Use these categories for the answer_analyses array:
+- **Approach & Problem Decomposition**: How the candidate broke
+  down the problem and chose their strategy
+- **Implementation**: Code correctness, structure, and style —
+  reference specific lines or functions from the code snapshots
+- **Complexity Analysis**: Whether the candidate discussed
+  time/space complexity and if their analysis was correct
 - **Edge Cases & Testing**: Whether edge cases were considered in code or discussion
 - **Communication**: How well the candidate explained their thinking throughout
 
-For each analysis, reference specific code from the snapshots (e.g., "The `for i in range(len(nums))` loop on line 3 could be replaced with...") and specific quotes from the transcript when relevant.
+For each analysis, reference specific code from the snapshots
+(e.g., "The loop on line 3 could use enumerate instead") and
+specific quotes from the transcript when relevant.
 
 Respond ONLY with valid JSON matching this exact structure:
 {
@@ -91,7 +99,8 @@ def build_technical_analysis_prompt(
         for idx, snap in enumerate(sorted_snapshots):
             minutes = snap.timestamp_ms // 60000
             seconds = (snap.timestamp_ms % 60000) // 1000
-            label = "FINAL SUBMISSION" if idx == len(sorted_snapshots) - 1 else f"Snapshot {idx + 1}"
+            is_last = idx == len(sorted_snapshots) - 1
+            label = "FINAL SUBMISSION" if is_last else f"Snapshot {idx + 1}"
             parts.append(
                 f"\n[{label} at {minutes:02d}:{seconds:02d} — {snap.event_type}, {snap.language}]"
                 f"\n```{snap.language}\n{snap.code}\n```"

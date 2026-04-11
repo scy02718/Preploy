@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FeedbackDashboard } from "@/components/feedback/FeedbackDashboard";
 import type { TimelineEvent } from "@/components/feedback/TimelineView";

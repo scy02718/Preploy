@@ -35,7 +35,6 @@ interface FeedbackDashboardProps {
 
 export function FeedbackDashboard({
   feedback,
-  sessionId,
   sessionType = "behavioral",
 }: FeedbackDashboardProps) {
   const isTechnical = sessionType === "technical";

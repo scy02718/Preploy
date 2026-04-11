@@ -14,7 +14,6 @@ from app.services.code_analyzer import (
     generate_technical_feedback,
 )
 
-
 # ---- Fixtures ----
 
 SAMPLE_TRANSCRIPT = [
