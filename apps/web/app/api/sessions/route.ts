@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { interviewSessions, sessionFeedback } from "@/lib/schema";
+import { interviewSessions, sessionFeedback, users } from "@/lib/schema";
 import { and, desc, eq, gte, lte, sql, ne } from "drizzle-orm";
+import { getPlanConfig } from "@/lib/plans";
 import {
   createSessionSchema,
   behavioralConfigSchema,
@@ -96,6 +97,38 @@ export async function POST(request: NextRequest) {
 
   const rateLimited = checkRateLimit(session.user.id);
   if (rateLimited) return rateLimited;
+
+  // Check daily session limit based on user's plan
+  const [user] = await db
+    .select({ plan: users.plan })
+    .from(users)
+    .where(eq(users.id, session.user.id));
+
+  const plan = getPlanConfig(user?.plan);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const [{ count: todayCount }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(interviewSessions)
+    .where(
+      and(
+        eq(interviewSessions.userId, session.user.id),
+        gte(interviewSessions.createdAt, todayStart)
+      )
+    );
+
+  if (Number(todayCount) >= plan.dailySessionLimit) {
+    return NextResponse.json(
+      {
+        error: `Daily session limit reached (${plan.dailySessionLimit} sessions/day on ${plan.name} plan). Upgrade your plan for more sessions.`,
+        plan: plan.id,
+        limit: plan.dailySessionLimit,
+        used: Number(todayCount),
+      },
+      { status: 429 }
+    );
+  }
 
   const body = await request.json();
 

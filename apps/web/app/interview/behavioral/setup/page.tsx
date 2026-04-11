@@ -1,6 +1,7 @@
 "use client";
 
 import { BehavioralSetupForm } from "@/components/interview/BehavioralSetupForm";
+import { SessionQuota } from "@/components/interview/SessionQuota";
 
 export default function BehavioralSetupPage() {
   return (
@@ -11,7 +12,10 @@ export default function BehavioralSetupPage() {
         these settings.
       </p>
 
-      <BehavioralSetupForm />
+      <SessionQuota />
+      <div className="mt-6">
+        <BehavioralSetupForm />
+      </div>
     </div>
   );
 }

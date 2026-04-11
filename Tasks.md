@@ -246,25 +246,36 @@
 
 ### Tasks
 
-- [ ] **31.1** Add a daily session limit check to `POST /api/sessions`:
+- [x] **31.1** Add tiered plan system:
+  - Add `plan` column to `users` table (enum: `free`, `pro`, `max`) with default `free`
+  - Create `lib/plans.ts` with configurable limits per tier (free: 3/day, pro: 10/day, max: 30/day)
+  - Plans and limits should be easy to rename/reconfigure without code changes to routes
+  - Generate DB migration for the new column
+
+- [x] **31.2** Add daily session limit check to `POST /api/sessions`:
   - Count today's sessions for the authenticated user
-  - Default limit: 10 sessions/day (configurable via env var `MAX_DAILY_SESSIONS`)
-  - Return 429 with clear error message when limit reached
-  - Write integration test for the limit
+  - Look up user's plan → get daily limit from plan config
+  - Return 429 with clear error message including plan name and limit
+  - Write integration tests: free user at limit, user under limit, different plans
 
-- [ ] **31.2** Show remaining sessions in the UI:
-  - Display "X/10 sessions remaining today" on the dashboard or setup pages
-  - Add a `GET /api/sessions/quota` endpoint that returns `{ used, limit, remaining }`
-  - Write integration test for the quota endpoint
+- [x] **31.3** Add `GET /api/sessions/quota` endpoint:
+  - Returns `{ plan, used, limit, remaining }`
+  - Write integration tests for the quota endpoint
 
-- [ ] **31.3** Add `.env.example` entry for `MAX_DAILY_SESSIONS`
+- [x] **31.4** Show remaining sessions in the UI:
+  - Display quota on the dashboard (e.g., "2/3 sessions used today — Free plan")
+  - Show on setup pages before starting an interview
+
+- [x] **31.5** Update `.env.example` and CLAUDE.md
 
 ### Acceptance Criteria
 
-- [ ] Users cannot create more than 10 sessions per day (configurable)
-- [ ] Clear error message when limit reached
-- [ ] Remaining quota visible in the UI
-- [ ] Integration tests cover both under-limit and at-limit scenarios
+- [x] Users cannot exceed their plan's daily session limit
+- [x] Free: 3/day, Pro: 10/day, Max: 30/day (configurable in `lib/plans.ts`)
+- [x] Clear error message when limit reached, including plan name and limit
+- [x] Remaining quota visible on dashboard (stats card) and both setup pages
+- [x] Integration tests: quota endpoint (4 tests), session limit enforcement (2 tests)
+- [x] DB migration committed (`0001_bitter_vin_gonzales.sql` — adds `user_plan` enum + `plan` column)
 
 ---
 

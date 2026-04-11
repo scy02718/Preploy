@@ -70,11 +70,24 @@ export default function DashboardPage() {
   const [totalSessions, setTotalSessions] = useState(0);
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [thisWeek, setThisWeek] = useState(0);
+  const [quota, setQuota] = useState<{
+    plan: string;
+    planName: string;
+    used: number;
+    limit: number;
+    remaining: number;
+  } | null>(null);
 
-  // Fetch stats once on mount (unfiltered)
+  // Fetch stats + quota once on mount
   useEffect(() => {
     async function fetchStats() {
       try {
+        // Fetch quota
+        const quotaRes = await fetch("/api/sessions/quota");
+        if (quotaRes.ok) {
+          setQuota(await quotaRes.json());
+        }
+
         const res = await fetch("/api/sessions?limit=50&page=1");
         if (!res.ok) return;
         const data = await res.json();
@@ -157,7 +170,7 @@ export default function DashboardPage() {
       </p>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl">{totalSessions}</CardTitle>
@@ -176,6 +189,19 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="text-3xl">{thisWeek}</CardTitle>
             <CardDescription>This Week</CardDescription>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-3xl">
+              {quota ? `${quota.remaining}/${quota.limit}` : "--"}
+            </CardTitle>
+            <CardDescription>
+              Sessions Today
+              {quota && (
+                <span className="ml-1 text-xs">({quota.planName} plan)</span>
+              )}
+            </CardDescription>
           </CardHeader>
         </Card>
       </div>

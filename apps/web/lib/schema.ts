@@ -31,6 +31,12 @@ export const codeEventTypeEnum = pgEnum("code_event_type", [
   "submit",
 ]);
 
+export const userPlanEnum = pgEnum("user_plan", [
+  "free",
+  "pro",
+  "max",
+]);
+
 // ---- Tables ----
 
 export const users = pgTable("users", {
@@ -39,6 +45,7 @@ export const users = pgTable("users", {
   name: text("name"),
   emailVerified: timestamp("email_verified", { withTimezone: true }),
   image: text("image"),
+  plan: userPlanEnum("plan").notNull().default("free"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

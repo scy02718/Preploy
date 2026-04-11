@@ -349,4 +349,46 @@ describe("API /api/sessions (integration)", () => {
     const data = await res.json();
     expect(data.sessions).toEqual([]);
   });
+
+  // ---- Daily session limit tests ----
+
+  it("POST returns 429 when daily session limit is reached (free plan = 3)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewSessions } = await import("@/lib/schema");
+
+    // Create 3 sessions (free plan limit)
+    await db.insert(interviewSessions).values([
+      { userId: TEST_USER.id, type: "behavioral", config: {} },
+      { userId: TEST_USER.id, type: "behavioral", config: {} },
+      { userId: TEST_USER.id, type: "behavioral", config: {} },
+    ]);
+
+    // 4th should be rejected
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(429);
+
+    const data = await res.json();
+    expect(data.error).toMatch(/daily session limit/i);
+    expect(data.plan).toBe("free");
+    expect(data.limit).toBe(3);
+  });
+
+  it("POST allows sessions under the daily limit", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewSessions } = await import("@/lib/schema");
+
+    // Create 2 sessions (under free plan limit of 3)
+    await db.insert(interviewSessions).values([
+      { userId: TEST_USER.id, type: "behavioral", config: {} },
+      { userId: TEST_USER.id, type: "behavioral", config: {} },
+    ]);
+
+    // 3rd should succeed
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(201);
+  });
 });

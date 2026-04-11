@@ -1,6 +1,7 @@
 "use client";
 
 import { TechnicalSetupForm } from "@/components/interview/TechnicalSetupForm";
+import { SessionQuota } from "@/components/interview/SessionQuota";
 
 export default function TechnicalSetupPage() {
   return (
@@ -11,7 +12,10 @@ export default function TechnicalSetupPage() {
         analyze your approach.
       </p>
 
-      <TechnicalSetupForm />
+      <SessionQuota />
+      <div className="mt-6">
+        <TechnicalSetupForm />
+      </div>
     </div>
   );
 }
