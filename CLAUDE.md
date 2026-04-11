@@ -31,6 +31,22 @@ cd apps/web && npm run test:coverage                # Unit tests with coverage
 cd apps/api && npm run test:coverage                # Python tests with coverage
 ```
 
-### Key principle
+### Key principles
 
 After finishing a feature, run `turbo test` to ensure nothing is broken. If adding a new API route or modifying an existing one, add or update the corresponding integration test. If adding pure logic, add a unit test.
+
+### API route integration test checklist
+
+Every API route change **must** have integration tests covering:
+
+1. **Auth**: 401 when unauthenticated
+2. **Authorization**: 404 when accessing another user's resource (never leak existence)
+3. **Validation**: 400 for invalid/missing required fields
+4. **Happy path**: Correct status code + response shape for each HTTP method
+5. **Query params/filters**: If the route accepts query params (pagination, filters, etc.), test each param individually AND in combination. This includes:
+   - Pagination: page boundaries, totalCount accuracy with filters applied
+   - Filters: each filter alone, multiple filters combined, empty result sets
+6. **Response shape changes**: If you change what an endpoint returns (e.g., wrapping an array in `{ data, pagination }`), update **every consumer** — other routes, frontend fetch calls, sidebar, dashboard — AND their tests
+7. **Branching logic**: If a route behaves differently based on data (e.g., behavioral vs technical), test both branches
+
+**When modifying an existing route**: always re-read the existing integration test file first. If your change adds a new query param, filter, response field, or behavioral branch, add corresponding test cases before considering the work done.

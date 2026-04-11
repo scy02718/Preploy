@@ -424,6 +424,22 @@
 
 ---
 
+## Note: Dashboard & Session History (completed outside of stories)
+
+The following features were implemented as bug fixes / housekeeping and are not tracked as formal stories:
+
+- **Removed** the leftover spike page at `app/interview/technical/spike/`
+- **Sidebar "Recent Sessions"** now fetches real data from `GET /api/sessions` (was hardcoded dummy data)
+- **Dashboard page** now shows real stats (total sessions, avg score, this week) and a full **Session History** list
+- **`GET /api/sessions`** refactored to support:
+  - **Pagination**: `page` + `limit` query params, returns `{ sessions, pagination }` with `totalCount`/`totalPages`
+  - **Type filter**: `?type=behavioral` or `?type=technical`
+  - **Score filter**: `?minScore=7` / `?maxScore=3.99` (uses LEFT JOIN with `session_feedback`)
+  - Eliminates the N+1 problem — scores are returned inline via LEFT JOIN, not fetched per-session
+- Dashboard UI has pagination controls (Previous/Next) and two filter dropdowns (type, score range)
+
+---
+
 ## Story 21: Component Tests
 
 > **Motivation:** We now have complex interactive components (setup forms with validation, session controls with timers, feedback dashboard with conditional rendering). Component tests catch regressions in these interactions without the overhead of E2E tests. We specifically test components where user interaction drives state changes — skip simple rendering or shadcn wrappers.
@@ -463,6 +479,9 @@
 
 - [ ] **21.5** Verify: all component tests pass via `turbo test`. Count total tests across all workspaces — should be 80+ total.
 
+- [ ] **21.6** Ensure Claude is educated about component tests in future sessions:
+  - Update CLAUDE.md to include short assertion to add component tests when new frontend components are added
+
 ### Acceptance Criteria
 
 - [ ] BehavioralSetupForm has 5+ passing component tests
@@ -471,6 +490,7 @@
 - [ ] ScoreCard has 5+ passing component tests
 - [ ] All tests pass via `turbo test`
 - [ ] Total test count across all workspaces is 80+
+- [ ] CLAUDE.md is updated
 
 ---
 

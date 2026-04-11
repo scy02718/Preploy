@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(npx turbo:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)"
+    ],
+    "deny": []
+  },
   "hooks": {
     "Notification": [
       {
@@ -10,11 +19,5 @@
         ]
       }
     ]
-  },
-  "permissions": {
-    "allow": [
-      "WebSearch"
-    ],
-    "deny": []
   }
 }
