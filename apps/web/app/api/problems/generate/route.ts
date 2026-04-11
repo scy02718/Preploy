@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
+        model: "gpt-5.4-mini",
         messages: [
           {
             role: "system",
