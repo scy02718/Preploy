@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useTheme } from "next-themes";
 import { Sidebar } from "./Sidebar";
 
 const navItems = [
@@ -26,7 +27,12 @@ const navItems = [
 export function Header() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const { theme, setTheme } = useTheme();
   const user = session?.user;
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
@@ -66,6 +72,16 @@ export function Header() {
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label="Toggle theme"
+        >
+          <Sun className="h-4 w-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+        </button>
 
         {/* User menu */}
         {status === "loading" ? (

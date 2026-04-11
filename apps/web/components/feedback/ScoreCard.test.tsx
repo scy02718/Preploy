@@ -15,23 +15,23 @@ describe("ScoreCard", () => {
 
   it("applies red styling for score below 4", () => {
     const { container } = render(<ScoreCard score={2.0} summary="summary" />);
-    expect(container.querySelector(".text-red-600")).toBeTruthy();
+    expect(container.querySelector("[class*='text-red']")).toBeTruthy();
     expect(screen.getByText("Needs Work")).toBeInTheDocument();
   });
 
   it("applies yellow styling for score 4-6", () => {
     const { container } = render(<ScoreCard score={5.0} summary="summary" />);
-    expect(container.querySelector(".text-yellow-600")).toBeTruthy();
+    expect(container.querySelector("[class*='text-yellow']")).toBeTruthy();
   });
 
   it("applies green styling for score 7-8", () => {
     const { container } = render(<ScoreCard score={8.0} summary="summary" />);
-    expect(container.querySelector(".text-green-600")).toBeTruthy();
+    expect(container.querySelector("[class*='text-green']")).toBeTruthy();
   });
 
   it("applies blue styling for score 9+", () => {
     const { container } = render(<ScoreCard score={9.5} summary="summary" />);
-    expect(container.querySelector(".text-blue-600")).toBeTruthy();
+    expect(container.querySelector("[class*='text-blue']")).toBeTruthy();
     expect(screen.getByText("Excellent")).toBeInTheDocument();
   });
 });

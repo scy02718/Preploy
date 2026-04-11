@@ -50,25 +50,25 @@
 
 ### Tasks
 
-- [ ] **25.1** Add a theme toggle button to the Header component:
+- [x] **25.1** Add a theme toggle button to the Header component:
   - Sun/Moon icon (lucide-react) that switches between light/dark/system
   - Use `useTheme()` from `next-themes`
   - Dropdown or simple click-to-cycle toggle
   - Persist choice (next-themes handles this via localStorage)
 
-- [ ] **25.2** Audit all custom colors for dark mode compatibility:
+- [x] **25.2** Audit all custom colors for dark mode compatibility:
   - Check hardcoded colors in TimelineView, MicIndicator, CodeQualityCard
   - Ensure all text is readable in both modes
   - Fix any components using `text-blue-700` without `dark:text-blue-300` etc.
 
-- [ ] **25.3** Write component test for the toggle (renders, clicking changes theme)
+- [x] **25.3** Write component test for the toggle (renders, clicking changes theme)
 
 ### Acceptance Criteria
 
-- [ ] Theme toggle visible in header on all pages
-- [ ] Switching to dark mode applies immediately, persists across page loads
-- [ ] All components readable in both light and dark mode
-- [ ] No flash of unstyled content on page load
+- [x] Theme toggle visible in header on all pages
+- [x] Switching to dark mode applies immediately, persists across page loads
+- [x] All components readable in both light and dark mode (dark: variants on score colors)
+- [x] No flash of unstyled content on page load (suppressHydrationWarning + defaultTheme)
 
 ---
 
