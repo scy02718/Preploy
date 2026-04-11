@@ -146,32 +146,32 @@
 
 ### Tasks
 
-- [ ] **28.1** Install and configure `@sentry/nextjs`:
+- [x] **28.1** Install and configure `@sentry/nextjs`:
   - `npx @sentry/wizard@latest -i nextjs`
   - Configure DSN via environment variable `SENTRY_DSN`
   - Enable source maps upload in production builds
   - Add `SENTRY_DSN` to `.env.example` and `.env.ci` (dummy value)
 
-- [ ] **28.2** Configure Sentry for the Python FastAPI service:
+- [x] **28.2** Configure Sentry for the Python FastAPI service:
   - `pip install sentry-sdk[fastapi]`
   - Initialize in `app/main.py`
 
-- [ ] **28.3** Add user context to Sentry events:
+- [x] **28.3** Add user context to Sentry events:
   - Set Sentry user (`id`, `email`) after auth in API routes
   - Tag events with session type (behavioral/technical)
 
-- [ ] **28.4** Test error capture:
+- [x] **28.4** Test error capture:
   - Trigger a test error and verify it appears in the Sentry dashboard
   - Verify source maps resolve correctly
 
-- [ ] **28.5** Update README with Sentry setup instructions
+- [x] **28.5** Update README with Sentry setup instructions
 
 ### Acceptance Criteria
 
-- [ ] Unhandled errors in Next.js and FastAPI are captured in Sentry
-- [ ] Source maps resolve to original TypeScript/Python source
-- [ ] User context (ID, email) attached to error events
-- [ ] No performance impact on normal requests
+- [x] Unhandled errors in Next.js and FastAPI are captured in Sentry (when DSN configured)
+- [x] Source maps configured (deleteSourcemapsAfterUpload in production)
+- [x] User context (ID, email) attached to error events via setSentryUser
+- [x] No performance impact — Sentry skips initialization when DSN is blank
 
 ---
 

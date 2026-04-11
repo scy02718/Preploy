@@ -55,6 +55,8 @@ Fill in your `.env`:
 | `AUTH_SECRET` | Generate with `openssl rand -base64 32` |
 | `AUTH_URL` | `http://localhost:3000` for local dev |
 | `PYTHON_API_URL` | `http://localhost:8000` (default) |
+| `SENTRY_DSN` | [sentry.io](https://sentry.io) → Project Settings → Client Keys (optional, leave blank to disable) |
+| `NEXT_PUBLIC_SENTRY_DSN` | Same as `SENTRY_DSN` (needed for client-side error capture) |
 
 ### 3. Run database migrations
 

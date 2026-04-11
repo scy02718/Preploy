@@ -8,6 +8,7 @@ import {
   sessionFeedback,
 } from "@/lib/schema";
 import { eq, and, asc } from "drizzle-orm";
+import { setSentryUser, setSentryContext } from "@/lib/sentry-utils";
 
 const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000";
 
@@ -21,6 +22,8 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  setSentryUser(session.user);
 
   // Verify session ownership
   const [found] = await db
@@ -36,6 +39,8 @@ export async function POST(
   if (!found) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
+
+  setSentryContext({ sessionType: found.type, sessionId: id });
 
   // Check if feedback already exists
   const [existing] = await db
@@ -153,6 +158,8 @@ export async function GET(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  setSentryUser(session.user);
 
   // Verify session ownership
   const [found] = await db

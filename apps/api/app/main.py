@@ -1,3 +1,4 @@
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -6,6 +7,14 @@ from app.logging_config import setup_logging
 from app.routers import analysis, health
 
 setup_logging()
+
+# Initialize Sentry if DSN is configured
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        traces_sample_rate=0.1,
+        environment=settings.environment,
+    )
 
 app = FastAPI(
     title="Interview Assistant API",
