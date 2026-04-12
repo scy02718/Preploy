@@ -41,7 +41,9 @@ picks at least one story.
 ### Gate 2 — Tech Lead
 
 For each approved story, launch the `tech-lead-planner` subagent. Pass it the
-story text. When it reports back, present the plan to the user:
+**full** story text — including the "How we'll prove it works" section from
+the PM's proposal. The planner is required to map each scenario to a specific
+test in the plan. When it reports back, present the plan to the user:
 
 ```
 Implementation plan for <story title>:
@@ -59,9 +61,16 @@ feedback. If "yes," continue.
 
 ### Gate 3 — Developer (no gate, runs to completion)
 
-Launch the `feature-implementer` subagent with the approved plan. Let it run
-to completion. It will write code, write tests, and make the implementation
-follow the per-app `CLAUDE.md` rules.
+Launch the `feature-implementer` subagent with:
+
+1. The approved plan from the Tech Lead (including the story-trace mapping
+   of scenarios → tests).
+2. The original story from the PM (including "How we'll prove it works").
+3. An explicit reminder: "Every scenario in 'How we'll prove it works' must
+   end up as a real assertion in a real test file. QA will cross-reference."
+
+Let it run to completion. It will write code, write tests, and make the
+implementation follow the per-app `CLAUDE.md` rules.
 
 **No user gate here** — the developer runs autonomously until done. The next
 gate (QA) is what catches mistakes.
@@ -70,15 +79,51 @@ gate (QA) is what catches mistakes.
 
 Launch the `qa-tester` subagent. It will:
 
-1. Run `/precommit` (lint + typecheck + unit + integration tests)
+1. Run lint, typecheck, unit, component, and integration tests
 2. If the change touches the UI, start the dev server and use the
    `webapp-testing` skill to click through the affected pages
-3. Report a structured pass/fail summary
+3. Verify test coverage exists and is meaningful (not empty or skipped)
+4. Cross-reference the story's "How we'll prove it works" scenarios against
+   the tests added
+5. Report a structured pass/fail summary with a fix-list on failure
 
-If QA reports **any** failure, do NOT advance to the reviewer. Instead, hand
-the failure report back to `feature-implementer` for a fix-up pass and re-run
-QA. Loop at most 3 times. After 3 failed QA passes, stop and surface the
-problem to the user.
+#### QA → Developer fix-up loop
+
+If QA reports **any** failure, do NOT advance to the reviewer. Instead:
+
+1. Take the QA report's `Fix-list` section verbatim.
+2. Re-launch the `feature-implementer` subagent with **just the fix-list**
+   as its task (not the original story). Tell it: "QA found these issues.
+   Fix only these. Do not make unrelated changes."
+3. Once the implementer reports done, re-launch `qa-tester` (a fresh run,
+   not a delta — the gauntlet always runs end-to-end).
+4. Loop at most **3 times**.
+
+After 3 failed QA passes, stop the loop and present a structured handoff to
+the user:
+
+```
+QA loop exhausted (3/3 attempts) on story: <title>
+
+What we tried:
+  Attempt 1: <one-line fix summary> → failed on <step>
+  Attempt 2: <one-line fix summary> → failed on <step>
+  Attempt 3: <one-line fix summary> → failed on <step>
+
+QA's hypothesis on the root blocker:
+  <copy "Why this is stuck" paragraph from the last QA report>
+
+Recommended next steps:
+  - <option 1, e.g., "revise the plan with tech-lead-planner">
+  - <option 2, e.g., "split the story into two smaller pieces">
+  - <option 3, e.g., "investigate the schema mismatch manually">
+
+Reply with the option number, "abort" to discard the branch, or free-form
+guidance to retry.
+```
+
+This is the only place in the loop where a hard failure surfaces to the
+user mid-story. Do not silently keep retrying.
 
 ### Gate 5 — Code Reviewer
 

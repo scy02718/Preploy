@@ -68,6 +68,10 @@ If yes: list the migration steps and call out destructive ops.
 - Unit:        <count> tests in <file> covering <branches>
 - Component:   <count> tests in <file> covering <interactions>
 - Integration: <count> tests in <file> covering <auth/authz/validation/happy/branches>
+- Story trace: list each "How we'll prove it works" scenario from the PM's
+  proposal and name the specific test that will assert it. Every scenario
+  must map to a real test. If you cannot map a scenario to a test, flag it
+  as an open question.
 
 ### Risks and open questions
 - <risk> — <mitigation>

@@ -39,6 +39,10 @@ Acceptance criteria:
   - <specific, testable bullet>
   - <specific, testable bullet>
   - <specific, testable bullet>
+How we'll prove it works (test scenarios — REQUIRED):
+  - Unit: <one concrete behavior a unit test will assert>
+  - Integration: <one concrete request/response the integration test will verify>
+  - UI smoke: <one user action and the visible result, or "N/A — no UI change">
 Out of scope:    <what we will NOT build in this story>
 Estimated size:  S / M / L  (S = under a day, M = 1–2 days, L = 3+ days)
 Dependencies:    <other stories or schema changes that must come first, or "none">
@@ -52,6 +56,9 @@ Dependencies:    <other stories or schema changes that must come first, or "none
   Tasks.md before proposing.
 - Acceptance criteria must be **testable** — "user can X" or "endpoint
   returns Y", not "improve UX."
+- The "How we'll prove it works" section is **mandatory** on every proposal.
+  If you can't name a concrete unit assertion, integration request, and UI
+  action for the story, the story is too vague — split it or rewrite it.
 - Keep proposals **small**. Two S-sized stories beat one L-sized story.
 - If you're unsure whether a feature already exists in the codebase, say so
   explicitly in the proposal. Don't guess.

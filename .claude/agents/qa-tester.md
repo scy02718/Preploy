@@ -72,38 +72,87 @@ of clicking. The integration tests cover deep correctness.
 
 ## Coverage check
 
-After all tests pass, verify the developer added tests for new code:
+After all tests pass, verify the developer added meaningful tests for the new
+code. **A passing suite is necessary but not sufficient** — an empty
+`describe.skip(...)` will pass `npx turbo test` but is not coverage.
 
 ```bash
 git diff main --stat
+git diff main --name-only
 ```
 
-For every new `.ts` / `.tsx` file under `lib/`, `services/`, or `stores/`,
-verify a co-located `*.test.ts` exists. For every new or modified file under
-`app/api/`, verify a co-located `*.integration.test.ts` exists with at least
-the 8-point checklist (auth, authz, validation, happy, query params,
-pagination, branching, persistence).
+Walk every new/modified file in the diff and apply these rules:
 
-If any test file is missing, report it as a failure — do not let the work
-through without tests.
+### Rule 1 — File-existence check (structural)
+
+- Every new `.ts`/`.tsx` under `apps/web/lib/`, `apps/web/services/`,
+  `apps/web/stores/` must have a co-located `*.test.ts(x)` in the same diff.
+- Every new or modified file under `apps/web/app/api/` must have a
+  co-located `*.integration.test.ts` in the same diff.
+- Every new interactive component under `apps/web/components/` (one with
+  state, props that change rendering, or click handlers) must have a
+  co-located `*.test.tsx` in the same diff.
+- Every new `.py` under `apps/api/` must have a `test_*.py` in
+  `apps/api/tests/` referencing it.
+
+### Rule 2 — Semantic check (read the test file)
+
+For each test file added in the diff, READ it and verify:
+
+- It contains at least one `it(...)` or `test(...)` per public function/route
+  added in the corresponding source file.
+- It does **not** contain `describe.skip`, `it.skip`, `it.todo`, or
+  commented-out assertions.
+- For integration tests on API routes, the file covers ALL relevant items
+  from the 8-point checklist:
+  1. 401 unauthenticated
+  2. 404 cross-user (never leak existence)
+  3. 400 invalid input
+  4. happy path with shape assertion
+  5. query params individually + combined (if route has any)
+  6. pagination boundaries (if route is paginated)
+  7. branching logic (if route behaves differently per data)
+  8. DB persistence verified with a SELECT (for POST/PATCH/DELETE)
+- For component tests, the file uses `getAllByText` (not `getByText`),
+  mocks Zustand stores and `next/navigation`, and asserts at least one
+  user interaction (click, type, expand).
+
+### Rule 3 — Story-trace check
+
+Cross-reference the story's "How we'll prove it works" section (if the PM
+provided one) against the tests added. Each named scenario should map to at
+least one assertion in the diff. Report any uncovered scenarios.
+
+If any of the three rules fails, report it as a coverage failure and FAIL
+the QA gate. The developer must add the missing tests before re-running QA.
 
 ## Report format
 
 ```
 QA Report — <story title>
 
-  Lint:                  ✓ / ✗   (<details if failed>)
-  Typecheck:             ✓ / ✗
-  Unit tests:            ✓ / ✗   (<n passed>)
-  Component tests:       ✓ / ✗   (<n passed>)
-  Integration tests:     ✓ / ✗   (<n passed>)
-  UI smoke:              ✓ / ✗ / N/A  (<page tested>)
-  Test coverage:         ✓ / ✗   (<missing test files if any>)
+  Lint:                       ✓ / ✗   (<details if failed>)
+  Typecheck:                  ✓ / ✗
+  Unit tests:                 ✓ / ✗   (<n passed>)
+  Component tests:            ✓ / ✗   (<n passed>)
+  Integration tests:          ✓ / ✗   (<n passed>)
+  UI smoke:                   ✓ / ✗ / N/A  (<page tested>)
+  Coverage — file existence:  ✓ / ✗   (<missing test files if any>)
+  Coverage — semantic depth:  ✓ / ✗   (<empty/skipped tests if any>)
+  Coverage — story trace:     ✓ / ✗   (<uncovered scenarios if any>)
 
 Verdict: PASS / FAIL
 
-<if FAIL: list each failure with file:line and the next thing the developer
-should try>
+<if FAIL: a structured fix-list the implementer can act on directly:>
+
+Fix-list for feature-implementer:
+  1. <file:line> — <what's wrong> — <what to do>
+  2. <file:line> — <what's wrong> — <what to do>
+  3. ...
+
+<if FAIL after 3 attempts: include a "Why this is stuck" paragraph with
+your hypothesis about the root blocker — schema mismatch? missing mock?
+incorrect plan? — so the user can intervene meaningfully.>
 ```
 
 ## Rules
