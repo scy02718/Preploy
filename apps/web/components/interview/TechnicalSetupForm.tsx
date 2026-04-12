@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { TemplateControls } from "./TemplateControls";
+import { ResumeSelector } from "./ResumeSelector";
 import {
   SUPPORTED_LANGUAGES,
   FOCUS_AREAS_BY_TYPE,
@@ -162,8 +163,18 @@ export function TechnicalSetupForm() {
           </Card>
         </div>
 
-        {/* Right column — Language & Difficulty */}
+        {/* Right column — Resume + Language & Difficulty */}
         <div className="space-y-6">
+          <ResumeSelector
+            selectedResumeId={techConfig.resume_id ?? null}
+            onSelect={(resumeId, resumeContent) => {
+              setConfig({
+                resume_id: resumeId ?? undefined,
+                resume_text: resumeContent ?? undefined,
+              });
+            }}
+          />
+
           <Card>
             <CardHeader>
               <CardTitle>Settings</CardTitle>

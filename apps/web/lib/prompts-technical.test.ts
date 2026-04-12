@@ -103,4 +103,18 @@ describe("buildProblemGenerationPrompt", () => {
     const prompt = buildProblemGenerationPrompt(baseConfig);
     expect(prompt).not.toContain("Additional instructions");
   });
+
+  it("includes resume text when provided", () => {
+    const prompt = buildProblemGenerationPrompt({
+      ...baseConfig,
+      resume_text: "Experience with distributed systems and Python",
+    });
+    expect(prompt).toContain("distributed systems");
+    expect(prompt).toContain("background");
+  });
+
+  it("omits resume section when not provided", () => {
+    const prompt = buildProblemGenerationPrompt(baseConfig);
+    expect(prompt).not.toContain("background");
+  });
 });

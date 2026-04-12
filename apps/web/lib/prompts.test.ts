@@ -138,4 +138,18 @@ describe("buildBehavioralSystemPrompt", () => {
     expect(prompt).not.toContain("job description");
     expect(prompt).not.toContain("Tailor your questions");
   });
+
+  it("includes resume text when provided", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      resume_text: "Senior Engineer at Acme Corp. Led a team of 5.",
+    });
+    expect(prompt).toContain("RESUME");
+    expect(prompt).toContain("Acme Corp");
+  });
+
+  it("omits resume section when not provided", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).not.toContain("RESUME");
+  });
 });

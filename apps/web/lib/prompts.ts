@@ -66,6 +66,13 @@ export function buildBehavioralSystemPrompt(
     );
   }
 
+  // Resume context
+  if (config.resume_text?.trim()) {
+    sections.push(
+      `The candidate's resume is provided below. Reference their specific experience, projects, and achievements when asking follow-up questions. This makes the interview feel more realistic and personalized.\n\n--- RESUME ---\n${config.resume_text.trim().slice(0, 3000)}\n--- END RESUME ---`
+    );
+  }
+
   // Interview flow
   sections.push(
     `Interview flow:

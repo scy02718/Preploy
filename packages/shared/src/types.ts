@@ -45,6 +45,8 @@ export interface BehavioralSessionConfig {
   expected_questions?: string[];
   interview_style: number; // 0.0 = strict, 1.0 = casual
   difficulty: number; // 0.0 = easy, 1.0 = hard
+  resume_id?: string;
+  resume_text?: string; // populated at session start, not stored in DB
 }
 
 export interface TechnicalSessionConfig {
@@ -53,6 +55,8 @@ export interface TechnicalSessionConfig {
   language: string;
   difficulty: Difficulty;
   additional_instructions?: string;
+  resume_id?: string;
+  resume_text?: string;
 }
 
 export type SessionConfig = BehavioralSessionConfig | TechnicalSessionConfig;

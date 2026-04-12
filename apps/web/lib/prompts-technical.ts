@@ -49,6 +49,12 @@ export function buildProblemGenerationPrompt(
     );
   }
 
+  if (config.resume_text?.trim()) {
+    sections.push(
+      `The candidate has the following background (from their resume). Generate problems relevant to their experience and tech stack:\n${config.resume_text.trim().slice(0, 2000)}`
+    );
+  }
+
   if (config.additional_instructions) {
     sections.push(
       `Additional instructions from the user: ${config.additional_instructions}`

@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { TemplateControls } from "./TemplateControls";
+import { ResumeSelector } from "./ResumeSelector";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 
 interface CompanyQuestion {
@@ -208,8 +209,18 @@ export function BehavioralSetupForm() {
           </Card>
         </div>
 
-        {/* Right column — Interview Settings + Company Questions */}
+        {/* Right column — Interview Settings + Resume + Company Questions */}
         <div className="space-y-6">
+          <ResumeSelector
+            selectedResumeId={behavioralConfig.resume_id ?? null}
+            onSelect={(resumeId, resumeContent) => {
+              setConfig({
+                resume_id: resumeId ?? undefined,
+                resume_text: resumeContent ?? undefined,
+              });
+            }}
+          />
+
           <Card>
             <CardHeader>
               <CardTitle>Interview Settings</CardTitle>
