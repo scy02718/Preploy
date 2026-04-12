@@ -32,7 +32,10 @@ export function ResumeSelector({ selectedResumeId, onSelect }: ResumeSelectorPro
     async function fetchResumes() {
       try {
         const res = await fetch("/api/resume");
-        if (res.ok) setResumes(await res.json());
+        if (res.ok) {
+          const data = await res.json();
+          setResumes(Array.isArray(data) ? data : data.resumes ?? []);
+        }
       } catch {
         // Silent
       } finally {
