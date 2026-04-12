@@ -49,6 +49,12 @@ export function buildProblemGenerationPrompt(
     );
   }
 
+  if (config.additional_instructions) {
+    sections.push(
+      `Additional instructions from the user: ${config.additional_instructions}`
+    );
+  }
+
   sections.push(
     "Respond ONLY with valid JSON matching this exact schema:\n" +
       '{ "title": string, "difficulty": "Easy" | "Medium" | "Hard", "description": string, ' +

@@ -89,4 +89,18 @@ describe("buildProblemGenerationPrompt", () => {
     expect(prompt).toContain("2-3 examples");
     expect(prompt).toContain("3-5 constraints");
   });
+
+  it("includes additional_instructions when provided", () => {
+    const prompt = buildProblemGenerationPrompt({
+      ...baseConfig,
+      additional_instructions: "Focus on Google-style problems",
+    });
+    expect(prompt).toContain("Focus on Google-style problems");
+    expect(prompt).toContain("Additional instructions");
+  });
+
+  it("omits additional_instructions when empty", () => {
+    const prompt = buildProblemGenerationPrompt(baseConfig);
+    expect(prompt).not.toContain("Additional instructions");
+  });
 });

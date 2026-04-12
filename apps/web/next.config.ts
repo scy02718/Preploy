@@ -3,20 +3,22 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const cspDirectives = [
   "default-src 'self'",
-  // Scripts: self + inline (Next.js requires inline scripts for hydration)
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  // Styles: self + inline (Tailwind injects styles)
-  "style-src 'self' 'unsafe-inline'",
+  // Scripts: self + inline (Next.js hydration) + eval (Monaco) + jsdelivr (Monaco loader)
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+  // Styles: self + inline (Tailwind) + Monaco CDN styles
+  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
   // Images: self + data URIs + avatars/external
   "img-src 'self' data: blob: https://*.googleusercontent.com",
-  // Fonts: self
-  "font-src 'self'",
-  // Connect: self + OpenAI + Supabase + Sentry + Python API
-  "connect-src 'self' https://api.openai.com wss://api.openai.com https://*.supabase.co https://*.sentry.io https://*.ingest.us.sentry.io http://localhost:8000",
+  // Fonts: self + Monaco editor fonts (Codicon)
+  "font-src 'self' https://cdn.jsdelivr.net",
+  // Connect: self + OpenAI + Supabase + Sentry + Python API + Monaco CDN
+  "connect-src 'self' https://api.openai.com wss://api.openai.com https://*.supabase.co https://*.sentry.io https://*.ingest.us.sentry.io http://localhost:8000 https://cdn.jsdelivr.net",
   // Media: self + blob (audio recording)
   "media-src 'self' blob:",
-  // Workers: self + blob (MediaPipe, Monaco)
+  // Workers: self + blob (Monaco editor workers)
   "worker-src 'self' blob:",
+  // Child: same as worker (some browsers use child-src for workers)
+  "child-src 'self' blob:",
   // Frame: none
   "frame-src 'none'",
   // Object: none

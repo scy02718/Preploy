@@ -173,6 +173,38 @@ describe("technicalConfigSchema", () => {
       expect(result.success).toBe(true);
     }
   });
+
+  it("accepts optional additional_instructions", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: ["arrays"],
+      language: "python",
+      difficulty: "medium",
+      additional_instructions: "Focus on Google-style problems",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts missing additional_instructions", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: ["arrays"],
+      language: "python",
+      difficulty: "medium",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects additional_instructions over 1000 chars", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: ["arrays"],
+      language: "python",
+      difficulty: "medium",
+      additional_instructions: "x".repeat(1001),
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("createSessionSchema", () => {

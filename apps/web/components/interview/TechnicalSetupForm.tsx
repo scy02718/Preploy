@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -202,6 +203,29 @@ export function TechnicalSetupForm() {
                   </div>
                 </RadioGroup>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Instructions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Optionally provide extra context for problem generation.
+              </p>
+              <Textarea
+                placeholder="e.g., Focus on Google-style problems, avoid recursion, emphasize graph algorithms..."
+                value={techConfig.additional_instructions ?? ""}
+                onChange={(e) =>
+                  setConfig({ additional_instructions: e.target.value })
+                }
+                maxLength={1000}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                {(techConfig.additional_instructions ?? "").length}/1000
+              </p>
             </CardContent>
           </Card>
         </div>

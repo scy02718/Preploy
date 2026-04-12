@@ -52,6 +52,7 @@ export interface TechnicalSessionConfig {
   focus_areas: string[];
   language: string;
   difficulty: Difficulty;
+  additional_instructions?: string;
 }
 
 export type SessionConfig = BehavioralSessionConfig | TechnicalSessionConfig;
