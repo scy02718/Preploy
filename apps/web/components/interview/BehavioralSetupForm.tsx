@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
+import { TemplateControls } from "./TemplateControls";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 
 interface CompanyQuestion {
@@ -104,6 +105,15 @@ export function BehavioralSetupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <TemplateControls
+        type="behavioral"
+        currentConfig={behavioralConfig as unknown as Record<string, unknown>}
+        onLoadTemplate={(config) => {
+          // Replace the entire config with the template's config
+          const templateConfig = config as unknown as BehavioralSessionConfig;
+          setConfig(templateConfig);
+        }}
+      />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Left column — Company Details + Expected Questions */}
         <div className="space-y-6">

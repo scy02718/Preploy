@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { TemplateManager } from "@/components/profile/TemplateManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -273,6 +274,8 @@ export default function ProfilePage() {
               </Button>
             </CardContent>
           </Card>
+
+          <TemplateManager />
 
           <Card>
             <CardHeader>

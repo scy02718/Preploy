@@ -189,9 +189,26 @@ export const interviewPlans = pgTable("interview_plans", {
     .defaultNow(),
 });
 
+export const sessionTemplates = pgTable("session_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: interviewTypeEnum("type").notNull(),
+  config: jsonb("config").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // ---- Relations ----
 
 export const usersRelations = relations(users, ({ many }) => ({
+  templates: many(sessionTemplates),
   accounts: many(accounts),
   sessions: many(interviewSessions),
   achievements: many(userAchievements),
@@ -285,6 +302,16 @@ export const interviewPlansRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [interviewPlans.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const sessionTemplatesRelations = relations(
+  sessionTemplates,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [sessionTemplates.userId],
       references: [users.id],
     }),
   })

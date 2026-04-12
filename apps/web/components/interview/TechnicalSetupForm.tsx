@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
+import { TemplateControls } from "./TemplateControls";
 import {
   SUPPORTED_LANGUAGES,
   FOCUS_AREAS_BY_TYPE,
@@ -90,6 +91,13 @@ export function TechnicalSetupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <TemplateControls
+        type="technical"
+        currentConfig={techConfig as unknown as Record<string, unknown>}
+        onLoadTemplate={(config) => {
+          setConfig(config as Record<string, unknown>);
+        }}
+      />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Left column — Interview Type + Focus Areas */}
         <div className="space-y-6">

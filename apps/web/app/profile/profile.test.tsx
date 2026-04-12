@@ -22,9 +22,11 @@ describe("ProfilePage", () => {
   const originalFetch = global.fetch;
 
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockProfile,
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/templates")) {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      return Promise.resolve({ ok: true, json: async () => mockProfile });
     }) as unknown as typeof fetch;
   });
 
