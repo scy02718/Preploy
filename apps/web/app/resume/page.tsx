@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { FileText, Upload, Loader2, Sparkles, Trash2 } from "lucide-react";
 
 interface Resume {
@@ -93,6 +94,35 @@ export default function ResumePage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const [pasteText, setPasteText] = useState("");
+  const [isPasting, setIsPasting] = useState(false);
+
+  const handlePaste = async () => {
+    if (!pasteText.trim()) return;
+    setIsPasting(true);
+    try {
+      const res = await fetch("/api/resume/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: pasteText.trim() }),
+      });
+      if (res.ok) {
+        const resume = await res.json();
+        setResumes((prev) => [resume, ...prev]);
+        setSelectedResumeId(resume.id);
+        setPasteText("");
+        showMessage("success", "Resume saved successfully");
+      } else {
+        const err = await res.json();
+        showMessage("error", err.error || "Failed to save resume");
+      }
+    } catch {
+      showMessage("error", "Failed to save resume");
+    } finally {
+      setIsPasting(false);
     }
   };
 
@@ -213,17 +243,39 @@ export default function ResumePage() {
                   {isUploading ? "Uploading..." : "Click to upload your resume"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  PDF or TXT, max 5MB
+                  PDF, TXT, or MD file, max 5MB
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.txt,application/pdf,text/plain"
+                  accept=".pdf,.txt,.md,application/pdf,text/plain"
                   className="hidden"
                   onChange={handleFileChange}
                   disabled={isUploading}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Or Paste Your Resume</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                placeholder="Paste your resume text here... (Copy from your resume PDF or document)"
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                rows={6}
+                maxLength={50000}
+              />
+              <Button
+                onClick={handlePaste}
+                disabled={isPasting || !pasteText.trim()}
+                className="w-full"
+              >
+                {isPasting ? "Saving..." : "Save Resume"}
+              </Button>
             </CardContent>
           </Card>
 
@@ -385,7 +437,7 @@ export default function ResumePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="max-h-[500px] overflow-y-auto space-y-4">
                   {questions.map((q, i) => (
                     <div key={i} className="rounded-md border p-4 space-y-2">
                       <div className="flex items-start justify-between gap-2">

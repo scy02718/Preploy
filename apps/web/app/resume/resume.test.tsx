@@ -43,7 +43,7 @@ describe("ResumePage", () => {
     await vi.waitFor(() => {
       expect(screen.getAllByText("Upload Resume").length).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.getAllByText(/PDF or TXT/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/PDF.*TXT.*MD/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the resume list with uploaded resumes", async () => {

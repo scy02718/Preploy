@@ -499,11 +499,11 @@
 - [ ] Practice streaks and achievement badges on dashboard
 - [ ] Profile page with name editing, plan management, and account disable
 - [ ] 3D avatar replaced with pulsing circle visualizer (no Three.js)
-- [ ] Interview prep planner with personalized schedules
-- [ ] Company-specific question bank for behavioral prep
-- [ ] Session comparison and progress tracking over time
-- [ ] Resume-tailored question generation
-- [ ] All new features have unit tests, integration tests, and component tests
+- [x] Interview prep planner with personalized schedules
+- [x] Company-specific question bank for behavioral prep
+- [x] Session comparison and progress tracking over time
+- [x] Resume-tailored question generation
+- [x] All new features have unit tests, integration tests, and component tests (456 total)
 - [ ] CI pipeline passes all checks
 
 ---

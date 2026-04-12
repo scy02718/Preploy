@@ -39,7 +39,7 @@ export function WeakAreas({ areas }: WeakAreasProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-3">
+        <ul className="max-h-64 overflow-y-auto space-y-3">
           {areas.map((area) => {
             const pct = Math.round((area.count / area.total) * 100);
             return (

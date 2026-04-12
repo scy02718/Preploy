@@ -84,7 +84,7 @@ export function buildPlanGenerationPrompt(input: PlanGenerationInput): string {
   ]
 }
 
-Start from tomorrow's date and generate one entry per day until the interview date. Each day must have 2-4 specific topics. Return ONLY the JSON object.`
+Today's date is ${new Date().toISOString().slice(0, 10)}. Start from tomorrow and generate one entry per day until the interview date (${input.interview_date}). Each day must have 2-4 specific topics. Return ONLY the JSON object.`
   );
 
   return sections.join("\n\n");

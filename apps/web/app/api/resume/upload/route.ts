@@ -3,19 +3,49 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { userResumes } from "@/lib/schema";
 import { createRequestLogger } from "@/lib/logger";
+import OpenAI from "openai";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  // Dynamic import to avoid loading pdf-parse at module level
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  const result = await parser.getText();
-  await parser.destroy();
-  return result.text;
+async function extractTextFromPdfViaGPT(buffer: Buffer): Promise<string> {
+  const openai = new OpenAI();
+  // Convert PDF to base64 and send to GPT for text extraction
+  const base64 = buffer.toString("base64");
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-5.4-mini",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a resume text extractor. Extract ALL text content from the provided PDF resume. " +
+          "Preserve the structure (sections, bullet points, dates). " +
+          "Return ONLY the extracted text, no commentary or formatting instructions.",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "file",
+            file: {
+              filename: "resume.pdf",
+              file_data: `data:application/pdf;base64,${base64}`,
+            },
+          },
+          {
+            type: "text",
+            text: "Extract all text from this resume PDF.",
+          },
+        ],
+      },
+    ],
+    max_completion_tokens: 4000,
+  });
+
+  return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
-// POST /api/resume/upload — upload a PDF or text resume
+// POST /api/resume/upload — upload a resume (PDF, TXT, MD) or paste content
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -24,58 +54,72 @@ export async function POST(request: NextRequest) {
 
   const log = createRequestLogger({ route: "POST /api/resume/upload", userId: session.user.id });
 
-  let formData: FormData;
-  try {
-    formData = await request.formData();
-  } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
-  }
+  const contentType = request.headers.get("content-type") ?? "";
 
-  const file = formData.get("file") as File | null;
-  if (!file || typeof file === "string") {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
-  }
-
-  // Validate file size
-  if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json(
-      { error: "File too large. Maximum size is 5MB." },
-      { status: 400 }
-    );
-  }
-
-  // Validate file type
-  const filename = file.name.toLowerCase();
-  const isPdf = filename.endsWith(".pdf") || file.type === "application/pdf";
-  const isText = filename.endsWith(".txt") || file.type === "text/plain";
-
-  if (!isPdf && !isText) {
-    return NextResponse.json(
-      { error: "Invalid file type. Only PDF and text files are accepted." },
-      { status: 400 }
-    );
-  }
-
+  let filename: string;
   let content: string;
 
-  try {
-    if (isPdf) {
-      const arrayBuffer = await file.arrayBuffer();
-      content = await extractTextFromPdf(Buffer.from(arrayBuffer));
-    } else {
-      content = await file.text();
+  if (contentType.includes("application/json")) {
+    // JSON body: { content: string, filename?: string } — for pasting resume text
+    const body = await request.json();
+    if (!body.content || typeof body.content !== "string") {
+      return NextResponse.json({ error: "Resume content is required" }, { status: 400 });
     }
-  } catch (err) {
-    log.error({ err }, "Failed to extract text from file");
-    return NextResponse.json(
-      { error: "Failed to extract text from file" },
-      { status: 422 }
-    );
+    content = body.content.trim();
+    filename = body.filename ?? "pasted-resume.txt";
+  } else {
+    // Multipart form data: file upload
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    }
+
+    const file = formData.get("file") as File | null;
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size is 5MB." },
+        { status: 400 }
+      );
+    }
+
+    const fname = file.name.toLowerCase();
+    const isPdf = fname.endsWith(".pdf") || file.type === "application/pdf";
+    const isText = fname.endsWith(".txt") || fname.endsWith(".md") || file.type === "text/plain";
+
+    if (!isPdf && !isText) {
+      return NextResponse.json(
+        { error: "Please upload a PDF, TXT, or MD file." },
+        { status: 400 }
+      );
+    }
+
+    try {
+      if (isPdf) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        content = await extractTextFromPdfViaGPT(buffer);
+      } else {
+        content = (await file.text()).trim();
+      }
+    } catch (err) {
+      log.error({ err }, "Failed to extract text from file");
+      return NextResponse.json(
+        { error: "Failed to extract text from file. Please try pasting the text instead." },
+        { status: 422 }
+      );
+    }
+
+    filename = file.name;
   }
 
-  if (!content.trim()) {
+  if (!content) {
     return NextResponse.json(
-      { error: "File contains no extractable text" },
+      { error: "Resume contains no extractable text" },
       { status: 400 }
     );
   }
@@ -84,12 +128,12 @@ export async function POST(request: NextRequest) {
     .insert(userResumes)
     .values({
       userId: session.user.id,
-      filename: file.name,
-      content: content.trim(),
+      filename,
+      content,
     })
     .returning();
 
-  log.info({ resumeId: resume.id, filename: file.name }, "Resume uploaded");
+  log.info({ resumeId: resume.id, filename }, "Resume uploaded");
 
   return NextResponse.json(resume, { status: 201 });
 }

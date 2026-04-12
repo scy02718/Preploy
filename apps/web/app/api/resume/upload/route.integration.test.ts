@@ -20,16 +20,6 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-// Mock pdf-parse
-vi.mock("pdf-parse", () => ({
-  PDFParse: class MockPDFParse {
-    async getText() {
-      return { text: "Extracted PDF resume text" };
-    }
-    async destroy() {}
-  },
-}));
-
 import { POST } from "./route";
 
 const TEST_USER = {
@@ -100,7 +90,7 @@ describe("API POST /api/resume/upload (integration)", () => {
     const res = await POST(makeUploadRequest("data", "resume.docx", "application/vnd.openxmlformats"));
     expect(res.status).toBe(400);
     const data = await res.json();
-    expect(data.error).toContain("Invalid file type");
+    expect(data.error).toContain("PDF, TXT, or MD");
   });
 
   it("returns 400 for empty file content", async () => {
@@ -123,13 +113,19 @@ describe("API POST /api/resume/upload (integration)", () => {
     expect(data.createdAt).toBeDefined();
   });
 
-  it("successfully uploads a PDF file (mocked extraction)", async () => {
+  it("successfully saves pasted resume text via JSON body", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
-    const res = await POST(makeUploadRequest("dummy-pdf-bytes", "resume.pdf", "application/pdf"));
+    const res = await POST(
+      new NextRequest("http://localhost:3000/api/resume/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "Pasted resume content here" }),
+      })
+    );
     expect(res.status).toBe(201);
     const data = await res.json();
-    expect(data.filename).toBe("resume.pdf");
-    expect(data.content).toBe("Extracted PDF resume text");
+    expect(data.content).toBe("Pasted resume content here");
+    expect(data.filename).toBe("pasted-resume.txt");
   });
 
   it("stores the resume in the database", async () => {

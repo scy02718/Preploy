@@ -361,7 +361,7 @@ export default function PlannerPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="max-h-[500px] overflow-y-auto space-y-3">
                   {days.map((day, index) => (
                     <DayCard
                       key={index}

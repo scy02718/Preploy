@@ -151,7 +151,7 @@ export function BehavioralSetupForm() {
               </p>
 
               {questions.length > 0 && (
-                <ul className="space-y-2">
+                <ul className="max-h-48 overflow-y-auto space-y-2">
                   {questions.map((q, i) => (
                     <li
                       key={i}
@@ -271,7 +271,7 @@ export function BehavioralSetupForm() {
               )}
 
               {generatedQuestions.length > 0 && (
-                <ul className="space-y-3" data-testid="generated-questions">
+                <ul className="max-h-64 overflow-y-auto space-y-3" data-testid="generated-questions">
                   {generatedQuestions.map((gq, i) => (
                     <li
                       key={i}
