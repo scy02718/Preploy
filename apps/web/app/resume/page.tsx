@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { usePrefillStore } from "@/stores/prefillStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +32,8 @@ interface GeneratedQuestion {
 }
 
 export default function ResumePage() {
+  const router = useRouter();
+  const { setBehavioralPrefill } = usePrefillStore();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -456,6 +460,21 @@ export default function ResumePage() {
                     </div>
                   ))}
                 </div>
+                {questionType === "behavioral" && (
+                  <Button
+                    className="mt-4 w-full"
+                    onClick={() => {
+                      setBehavioralPrefill({
+                        expected_questions: questions.map((q) => q.question),
+                        company: company || undefined,
+                        resume_id: selectedResumeId ?? undefined,
+                      } as Record<string, unknown> as Parameters<typeof setBehavioralPrefill>[0]);
+                      router.push("/interview/behavioral/setup");
+                    }}
+                  >
+                    Use in Behavioral Setup
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

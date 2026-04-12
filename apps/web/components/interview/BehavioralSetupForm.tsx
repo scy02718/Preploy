@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
+import { usePrefillStore } from "@/stores/prefillStore";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 
 interface CompanyQuestion {
@@ -31,9 +32,24 @@ export function BehavioralSetupForm() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
+  const { behavioralPrefill, clearPrefill } = usePrefillStore();
+
   useEffect(() => {
     setType("behavioral");
-  }, [setType]);
+    // Apply prefill from other pages (resume questions, planner, etc.)
+    if (behavioralPrefill) {
+      if (behavioralPrefill.company_name) {
+        setConfig({ company_name: behavioralPrefill.company_name });
+      }
+      if (behavioralPrefill.expected_questions?.length) {
+        setConfig({ expected_questions: behavioralPrefill.expected_questions });
+      }
+      if (behavioralPrefill.resume_id) {
+        setConfig({ resume_id: behavioralPrefill.resume_id });
+      }
+      clearPrefill();
+    }
+  }, [setType, behavioralPrefill, clearPrefill, setConfig]);
 
   const behavioralConfig = config as BehavioralSessionConfig;
   const interviewStyle = typeof behavioralConfig.interview_style === "number" ? behavioralConfig.interview_style : 0.5;
