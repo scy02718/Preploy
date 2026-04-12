@@ -1,4 +1,4 @@
-# Interview Assistant — Phase 3.5: Features, UX Polish & Lightweight Ops
+# Preploy — Phase 3.5: Features, UX Polish & Lightweight Ops
 
 > **Timeline:** Week 9-12
 > **Goal:** Maximize feature velocity before production hardening. Add user-facing features (emotion/gaze detection, coaching, gamification, PDF export), polish UX (wider layouts, dark mode, loading states), and add non-disruptive ops (Sentry, structured logging, versioned migrations, security hardening). No architectural migrations — the monolith stays intact.
@@ -499,5 +499,208 @@
 - [ ] Practice streaks and achievement badges on dashboard
 - [ ] Profile page with name editing, plan management, and account disable
 - [ ] 3D avatar replaced with pulsing circle visualizer (no Three.js)
+- [ ] Interview prep planner with personalized schedules
+- [ ] Company-specific question bank for behavioral prep
+- [ ] Session comparison and progress tracking over time
+- [ ] Resume-tailored question generation
 - [ ] All new features have unit tests, integration tests, and component tests
 - [ ] CI pipeline passes all checks
+
+---
+
+## Story 39: Interview Prep Planner
+
+> **Motivation:** Random practice is inefficient. Job searchers need a structured plan: "I have an interview at Google in 2 weeks — what should I practice each day?" A planner that generates a personalized schedule based on target company, role, interview date, and weak areas makes the app a complete prep platform, not just a practice tool.
+
+### Tasks
+
+- [ ] **39.1** Create data model for interview plans:
+  - Add `interview_plans` table: `id`, `user_id`, `company`, `role`, `interview_date`, `plan_data` (JSONB), `created_at`
+  - Plan data structure: `{ days: [{ date, focus: "behavioral"|"technical", topics: string[], session_type, completed: boolean }] }`
+  - Generate DB migration
+  - Write integration test for plan CRUD
+
+- [ ] **39.2** Create `POST /api/plans/generate` endpoint:
+  - Input: `{ company, role, interview_date, weak_areas?: string[] }`
+  - Uses GPT to generate a day-by-day practice schedule
+  - Considers: days until interview, user's historical weak areas (from feedback), balanced behavioral/technical split
+  - Returns structured plan as JSON
+  - Write integration test
+
+- [ ] **39.3** Create `GET /api/plans` and `GET /api/plans/[id]` endpoints:
+  - List user's plans, get a specific plan
+  - `PATCH /api/plans/[id]` to mark days as completed
+  - Write integration tests
+
+- [ ] **39.4** Create `app/planner/page.tsx` — prep planner page:
+  - Form to create a new plan: company name, role title, interview date picker
+  - "Generate Plan" button that calls the API
+  - Add "Planner" to sidebar navigation
+
+- [ ] **39.5** Display the generated plan:
+  - Calendar-style view showing each day with focus area and topics
+  - Each day links to the appropriate setup page (behavioral/technical) with pre-filled config
+  - Checkboxes to mark days as completed
+  - Progress bar: "8/14 days completed"
+
+- [ ] **39.6** Auto-detect weak areas:
+  - Query user's past feedback to identify recurring weaknesses
+  - Pass these to the plan generator so it emphasizes weak areas
+  - e.g., "You scored low on complexity analysis in 3 sessions — Day 5-6 focus on that"
+
+- [ ] **39.7** Component tests for planner page (form, plan display, progress tracking)
+
+### Acceptance Criteria
+
+- [ ] Users can generate a personalized prep plan from company + role + date
+- [ ] Plan shows day-by-day schedule with topics and session types
+- [ ] Days can be marked complete, progress tracked
+- [ ] Weak areas from past sessions influence the plan
+- [ ] All endpoints have integration tests
+- [ ] DB migration committed
+
+---
+
+## Story 40: Company-Specific Question Bank
+
+> **Motivation:** "What does Google actually ask in behavioral interviews?" Users want targeted practice, not generic questions. When a user enters a company name, the AI generates likely questions based on that company's known interview style, values, and focus areas. This fills the behavioral setup right column with high-value content.
+
+### Tasks
+
+- [ ] **40.1** Create `POST /api/questions/generate` endpoint:
+  - Input: `{ company: string, role?: string, count?: number }`
+  - Uses GPT to generate 8-10 likely behavioral questions for that company
+  - Each question tagged with category (leadership, conflict, teamwork, etc.)
+  - Returns: `{ company, questions: [{ question, category, tip }] }`
+  - Write integration test
+
+- [ ] **40.2** Create `lib/company-questions.ts` — prompt builder:
+  - Builds a GPT prompt that asks for company-specific questions
+  - Includes company values/culture hints when known (e.g., "Amazon = Leadership Principles")
+  - Pure function, unit testable
+  - Write unit tests (with/without role, different companies)
+
+- [ ] **40.3** Add company question preview to the behavioral setup page:
+  - After user types a company name, show a "Generate likely questions" button
+  - Displays the generated questions in the right column (below Interview Settings)
+  - User can select questions to add to "Expected Questions" list with one click
+  - Loading state while generating
+
+- [ ] **40.4** Cache generated questions:
+  - Store in `company_questions` table: `id`, `user_id`, `company`, `role`, `questions` (JSONB), `created_at`
+  - Return cached version if same company+role was generated in the last 7 days
+  - Generate DB migration
+  - Write integration test for caching behavior
+
+- [ ] **40.5** Component tests for the question preview widget
+
+### Acceptance Criteria
+
+- [ ] Entering a company name shows a "Generate questions" button
+- [ ] Generated questions are company-specific and tagged by category
+- [ ] Questions can be added to expected questions with one click
+- [ ] Results cached for 7 days per company+role
+- [ ] All endpoints have integration tests
+
+---
+
+## Story 41: Session Comparison & Progress Tracking
+
+> **Motivation:** Users practice multiple sessions but have no way to see if they're improving. A progress dashboard showing score trends over time, weak area identification, and side-by-side session comparison gives users confidence that practice is working — or alerts them to areas that need more focus.
+
+### Tasks
+
+- [ ] **41.1** Create `GET /api/users/progress` endpoint:
+  - Returns: score trend (array of `{ date, score, type }` for last 30 sessions), average by type, weak areas (topics that consistently score below 6)
+  - Query from `session_feedback` + `interview_sessions`
+  - Write integration test
+
+- [ ] **41.2** Create a score trend chart component:
+  - Line chart showing overall score over time
+  - Color-coded by session type (behavioral vs technical)
+  - Use a lightweight charting library (e.g., `recharts` — small, React-native)
+  - Shows improvement trajectory
+
+- [ ] **41.3** Create a weak areas summary component:
+  - Identifies recurring themes from feedback weaknesses across sessions
+  - Groups by frequency: "Quantifying impact (mentioned in 5/8 sessions)"
+  - Suggests which session type to practice next
+  - Links to relevant coaching page section
+
+- [ ] **41.4** Add a "Progress" tab or section to the dashboard:
+  - Score trend chart
+  - Weak areas summary
+  - "Sessions this month" vs "last month" comparison
+  - Visible improvement metrics: "Your average score improved by +1.2 this week"
+
+- [ ] **41.5** Session comparison view:
+  - `app/dashboard/compare/page.tsx`
+  - User selects two sessions from a dropdown
+  - Side-by-side display: scores, strengths, weaknesses, answer breakdowns
+  - Highlights what improved and what regressed between the two
+
+- [ ] **41.6** Component tests for chart, weak areas, and comparison view
+
+### Acceptance Criteria
+
+- [ ] Dashboard shows score trend chart with clear improvement trajectory
+- [ ] Weak areas identified from recurring feedback patterns
+- [ ] Two sessions can be compared side-by-side
+- [ ] Progress metrics show week-over-week improvement
+- [ ] All endpoints have integration tests
+
+---
+
+## Story 42: Resume-Tailored Question Generation
+
+> **Motivation:** Generic behavioral questions like "Tell me about a time you led a team" are useful, but questions tailored to YOUR resume are transformative. "Tell me about the migration project you led at Acme Corp that reduced latency by 40%" forces you to practice with questions you'll actually face. This is the highest-differentiation feature.
+
+### Tasks
+
+- [ ] **42.1** Create `POST /api/resume/upload` endpoint:
+  - Accepts PDF or plain text resume
+  - Extracts text content (use `pdf-parse` for PDF)
+  - Stores extracted text in `user_resumes` table: `id`, `user_id`, `filename`, `content` (text), `created_at`
+  - Max file size: 5MB
+  - Generate DB migration
+  - Write integration test
+
+- [ ] **42.2** Create `POST /api/resume/questions` endpoint:
+  - Input: `{ resume_id, company?: string, role?: string, question_type: "behavioral"|"technical" }`
+  - Sends resume text + optional company/role to GPT
+  - GPT generates 8-10 questions specifically referencing the user's experience
+  - Behavioral: "You mentioned leading a team of 5 at Company X — how did you handle disagreements?"
+  - Technical: "Your resume mentions experience with distributed systems — design a message queue for..."
+  - Returns: `{ questions: [{ question, resume_reference, category }] }`
+  - Write integration test
+
+- [ ] **42.3** Create `lib/resume-prompt-builder.ts` — pure function:
+  - Builds GPT prompt that references specific resume entries
+  - Different prompts for behavioral vs technical
+  - Instructs GPT to reference specific projects, metrics, and technologies from the resume
+  - Write unit tests (8+ cases: with/without company, behavioral/technical, different resume content)
+
+- [ ] **42.4** Create `app/resume/page.tsx` — resume management page:
+  - Upload area (drag-and-drop or file picker)
+  - Shows uploaded resume with parsed preview
+  - "Generate Questions" button with type selector (behavioral/technical)
+  - Displays generated questions
+  - "Practice with these questions" button → pre-fills behavioral setup with questions
+  - Add "Resume" to sidebar navigation
+
+- [ ] **42.5** Wire resume questions into the behavioral setup flow:
+  - If user has a resume uploaded, show a "Use resume-tailored questions" toggle
+  - When enabled, auto-generate and pre-fill expected questions from the resume
+  - Combine with company-specific questions (Story 40) for maximum relevance
+
+- [ ] **42.6** Component tests for resume page (upload, preview, question display)
+
+### Acceptance Criteria
+
+- [ ] Users can upload a PDF or text resume
+- [ ] Resume text is extracted and stored
+- [ ] Generated questions reference specific projects and metrics from the resume
+- [ ] Questions can be used directly in behavioral interview setup
+- [ ] Works for both behavioral and technical question types
+- [ ] All endpoints have integration tests
+- [ ] DB migration committed

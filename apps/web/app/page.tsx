@@ -6,9 +6,10 @@ import { MessageSquare, Code } from "lucide-react";
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-3.5rem)] px-4">
-      <div className="text-center mb-12">
+      <div className="flex flex-col items-center mb-12">
+        <img src="/logo.svg" alt="Preploy" className="h-16 w-16 mb-4" />
         <h1 className="text-4xl font-bold tracking-tight mb-4">
-          Interview Assistant
+          Preploy
         </h1>
         <p className="text-lg text-muted-foreground max-w-lg">
           Practice mock interviews with AI and get detailed feedback to improve

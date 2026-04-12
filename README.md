@@ -1,6 +1,6 @@
-# Interview Assistant
+# Preploy
 
-AI-powered mock interview practice with real-time feedback. Practice behavioral and technical interviews, get scored by AI, and track your improvement over time.
+AI-powered mock interview practice with real-time feedback. Practice behavioral and technical interviews, get scored by AI, and track your improvement over time. Deploy yourself.
 
 **Two interview modes:**
 - **Behavioral** — Voice-to-voice mock interview with real-time AI conversation and STAR-method feedback

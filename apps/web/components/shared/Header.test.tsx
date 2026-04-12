@@ -21,7 +21,7 @@ vi.mock("next-themes", () => ({
 describe("Header", () => {
   it("renders the app title", () => {
     render(<Header />);
-    expect(screen.getAllByText("Interview Assistant").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Preploy").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the theme toggle button", () => {

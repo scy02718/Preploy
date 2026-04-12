@@ -49,8 +49,9 @@ export function Header() {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="font-semibold text-lg tracking-tight">
-          Interview Assistant
+        <Link href="/" className="flex items-center gap-2">
+          <img src="/logo.svg" alt="Preploy" className="h-7 w-7" />
+          <span className="font-semibold text-lg tracking-tight">Preploy</span>
         </Link>
 
         {/* Desktop nav */}

@@ -17,7 +17,7 @@ if settings.sentry_dsn:
     )
 
 app = FastAPI(
-    title="Interview Assistant API",
+    title="Preploy API",
     version="0.1.0",
     description="AI-powered interview analysis and feedback service",
 )
