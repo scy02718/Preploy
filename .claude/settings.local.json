@@ -1,16 +1,48 @@
 {
   "permissions": {
     "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
       "WebSearch",
-      "Bash(npx turbo:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run:*)",
-      "Bash(npx vitest:*)",
-      "Bash(.venv/bin/ruff check:*)",
-      "Bash(.venv/bin/pytest)",
-      "Bash(npx drizzle-kit:*)"
+      "WebFetch",
+      "TodoWrite",
+      "Agent",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(echo:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(rm :*)",
+      "Bash(rmdir:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(npx:*)",
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(cd:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git branch:*)",
+      "Bash(git --no-pager:*)",
+      "Bash(git checkout .)",
+      "Bash(.venv/bin/*)",
+      "Bash(python3:*)"
     ],
-    "deny": []
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -f:*)",
+      "Bash(rm -rf /:*)"
+    ]
   },
   "hooks": {
     "Notification": [
@@ -18,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+            "command": "osascript -e 'display notification \"Claude Code needs your approval\" with title \"Preploy Dev\"' 2>/dev/null || true"
           }
         ]
       }

@@ -9,6 +9,8 @@ import { getScoreColor } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { StreakCard } from "@/components/dashboard/StreakCard";
 import { BadgeGrid } from "@/components/dashboard/BadgeGrid";
+import { ScoreTrendChart, ScoreTrendPoint } from "@/components/dashboard/ScoreTrendChart";
+import { WeakAreas, WeakArea } from "@/components/dashboard/WeakAreas";
 
 interface SessionRow {
   id: string;
@@ -85,21 +87,33 @@ export default function DashboardPage() {
     heatmap: { date: string; count: number }[];
     badges: { badgeId: string; earnedAt: string }[];
   } | null>(null);
+  const [progress, setProgress] = useState<{
+    scoreTrend: ScoreTrendPoint[];
+    weakAreas: WeakArea[];
+    monthComparison: {
+      thisMonth: { sessions: number; avgScore: number | null };
+      lastMonth: { sessions: number; avgScore: number | null };
+    };
+  } | null>(null);
 
   // Fetch stats + quota once on mount
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Fetch quota + user stats in parallel
-        const [quotaRes, statsRes] = await Promise.all([
+        // Fetch quota + user stats + progress in parallel
+        const [quotaRes, statsRes, progressRes] = await Promise.all([
           fetch("/api/sessions/quota"),
           fetch("/api/users/stats"),
+          fetch("/api/users/progress"),
         ]);
         if (quotaRes.ok) {
           setQuota(await quotaRes.json());
         }
         if (statsRes.ok) {
           setUserStats(await statsRes.json());
+        }
+        if (progressRes.ok) {
+          setProgress(await progressRes.json());
         }
 
         const res = await fetch("/api/sessions?limit=50&page=1");
@@ -272,6 +286,97 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Progress section */}
+      {progress ? (
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Progress</h2>
+            <Link href="/dashboard/compare">
+              <Button variant="outline" size="sm">
+                Compare Sessions
+              </Button>
+            </Link>
+          </div>
+
+          {/* Month comparison banner */}
+          {(progress.monthComparison.thisMonth.avgScore != null ||
+            progress.monthComparison.lastMonth.avgScore != null) && (
+            <Card>
+              <CardContent className="flex flex-wrap items-center gap-4 py-3 text-sm">
+                <span className="text-muted-foreground">This month:</span>
+                <span className="font-medium">
+                  {progress.monthComparison.thisMonth.sessions} sessions
+                  {progress.monthComparison.thisMonth.avgScore != null &&
+                    `, avg ${progress.monthComparison.thisMonth.avgScore}`}
+                </span>
+                <span className="text-muted-foreground">|</span>
+                <span className="text-muted-foreground">Last month:</span>
+                <span className="font-medium">
+                  {progress.monthComparison.lastMonth.sessions} sessions
+                  {progress.monthComparison.lastMonth.avgScore != null &&
+                    `, avg ${progress.monthComparison.lastMonth.avgScore}`}
+                </span>
+                {progress.monthComparison.thisMonth.avgScore != null &&
+                  progress.monthComparison.lastMonth.avgScore != null && (
+                    <Badge
+                      variant={
+                        progress.monthComparison.thisMonth.avgScore >
+                        progress.monthComparison.lastMonth.avgScore
+                          ? "default"
+                          : progress.monthComparison.thisMonth.avgScore <
+                              progress.monthComparison.lastMonth.avgScore
+                            ? "destructive"
+                            : "secondary"
+                      }
+                    >
+                      {progress.monthComparison.thisMonth.avgScore >
+                      progress.monthComparison.lastMonth.avgScore
+                        ? "+"
+                        : ""}
+                      {(
+                        progress.monthComparison.thisMonth.avgScore -
+                        progress.monthComparison.lastMonth.avgScore
+                      ).toFixed(1)}
+                    </Badge>
+                  )}
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ScoreTrendChart data={progress.scoreTrend} />
+            <WeakAreas areas={progress.weakAreas} />
+          </div>
+        </div>
+      ) : (
+        <div className="mb-8 space-y-4">
+          <h2 className="text-lg font-semibold">Progress</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <div className="h-5 w-28 animate-pulse rounded bg-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-[260px] w-full animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="space-y-1">
+                    <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                    <div className="h-1.5 w-full animate-pulse rounded bg-muted" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 

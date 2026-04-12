@@ -11,6 +11,8 @@ import {
   MessageSquare,
   Code,
   GraduationCap,
+  CalendarDays,
+  FileText,
   History,
 } from "lucide-react";
 
@@ -19,6 +21,8 @@ const navItems = [
   { href: "/interview/behavioral/setup", label: "Behavioral Interview", icon: MessageSquare },
   { href: "/interview/technical/setup", label: "Technical Interview", icon: Code },
   { href: "/coaching", label: "Coaching", icon: GraduationCap },
+  { href: "/planner", label: "Planner", icon: CalendarDays },
+  { href: "/resume", label: "Resume", icon: FileText },
 ];
 
 interface SessionItem {

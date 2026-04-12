@@ -150,12 +150,54 @@ export const userAchievements = pgTable(
   ]
 );
 
+export const companyQuestions = pgTable("company_questions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  company: text("company").notNull(),
+  role: text("role"),
+  questions: jsonb("questions").notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const userResumes = pgTable("user_resumes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const interviewPlans = pgTable("interview_plans", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  company: text("company").notNull(),
+  role: text("role").notNull(),
+  interviewDate: timestamp("interview_date", { withTimezone: true }).notNull(),
+  planData: jsonb("plan_data").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // ---- Relations ----
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(interviewSessions),
   achievements: many(userAchievements),
+  companyQuestions: many(companyQuestions),
+  resumes: many(userResumes),
+  interviewPlans: many(interviewPlans),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -213,6 +255,36 @@ export const userAchievementsRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [userAchievements.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const companyQuestionsRelations = relations(
+  companyQuestions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [companyQuestions.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const userResumesRelations = relations(
+  userResumes,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userResumes.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const interviewPlansRelations = relations(
+  interviewPlans,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [interviewPlans.userId],
       references: [users.id],
     }),
   })

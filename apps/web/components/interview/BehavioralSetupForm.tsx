@@ -11,12 +11,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 
+interface CompanyQuestion {
+  question: string;
+  category: string;
+  tip: string;
+}
+
 export function BehavioralSetupForm() {
   const router = useRouter();
   const { config, setConfig, setType, createSession } = useInterviewStore();
   const [questionInput, setQuestionInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Company question generation state
+  const [generatedQuestions, setGeneratedQuestions] = useState<CompanyQuestion[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   useEffect(() => {
     setType("behavioral");
@@ -26,6 +37,7 @@ export function BehavioralSetupForm() {
   const interviewStyle = typeof behavioralConfig.interview_style === "number" ? behavioralConfig.interview_style : 0.5;
   const difficulty = typeof behavioralConfig.difficulty === "number" ? behavioralConfig.difficulty : 0.5;
   const questions = behavioralConfig.expected_questions ?? [];
+  const companyName = behavioralConfig.company_name ?? "";
 
   const addQuestion = () => {
     const trimmed = questionInput.trim();
@@ -34,10 +46,43 @@ export function BehavioralSetupForm() {
     setQuestionInput("");
   };
 
+  const addGeneratedQuestion = (question: string) => {
+    if (questions.length >= 10) return;
+    if (questions.includes(question)) return;
+    setConfig({ expected_questions: [...questions, question] });
+  };
+
   const removeQuestion = (index: number) => {
     setConfig({
       expected_questions: questions.filter((_, i) => i !== index),
     });
+  };
+
+  const handleGenerateQuestions = async () => {
+    if (!companyName.trim()) return;
+
+    setIsGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const res = await fetch("/api/questions/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company: companyName.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to generate questions");
+      }
+
+      const data = await res.json();
+      setGeneratedQuestions(data.questions);
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Failed to generate questions");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,7 +198,7 @@ export function BehavioralSetupForm() {
           </Card>
         </div>
 
-        {/* Right column — Interview Settings */}
+        {/* Right column — Interview Settings + Company Questions */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -189,6 +234,77 @@ export function BehavioralSetupForm() {
                   <span>Senior / Staff</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Company-Specific Questions Widget */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Company-Specific Questions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Generate likely behavioral questions based on the company&apos;s
+                known interview style and values.
+              </p>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={!companyName.trim() || isGenerating}
+                onClick={handleGenerateQuestions}
+              >
+                {isGenerating
+                  ? "Generating..."
+                  : "Generate likely questions"}
+              </Button>
+
+              {!companyName.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  Enter a company name above to generate questions.
+                </p>
+              )}
+
+              {generateError && (
+                <p className="text-sm text-destructive">{generateError}</p>
+              )}
+
+              {generatedQuestions.length > 0 && (
+                <ul className="space-y-3" data-testid="generated-questions">
+                  {generatedQuestions.map((gq, i) => (
+                    <li
+                      key={i}
+                      className="rounded-md border p-3 text-sm space-y-1"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="flex-1">{gq.question}</span>
+                        {questions.length < 10 && !questions.includes(gq.question) && (
+                          <button
+                            type="button"
+                            onClick={() => addGeneratedQuestion(gq.question)}
+                            className="shrink-0 rounded-md border px-2 py-1 text-xs hover:bg-accent"
+                            aria-label={`Add question ${i + 1}`}
+                          >
+                            +
+                          </button>
+                        )}
+                        {questions.includes(gq.question) && (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            Added
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2 text-xs text-muted-foreground">
+                        <span className="rounded bg-muted px-1.5 py-0.5">
+                          {gq.category}
+                        </span>
+                        <span>{gq.tip}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
         </div>
