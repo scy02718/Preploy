@@ -484,26 +484,219 @@
 
 ---
 
+## Story 43: Session Templates (Save & Load)
+
+> **Motivation:** Users practice the same type of interview repeatedly — same company, same expected questions, same settings. Retyping everything each time is tedious and error-prone. Templates let users save a setup config once and reuse it instantly. This is the #1 daily friction reducer.
+
+### Tasks
+
+- [ ] **43.1** Add `session_templates` table:
+  - `id` (uuid PK), `user_id` (FK users), `name` (text), `type` ("behavioral"|"technical"), `config` (JSONB — full session config), `created_at`, `updated_at`
+  - Generate DB migration
+  - Add relations
+
+- [ ] **43.2** Create template CRUD API routes:
+  - `POST /api/templates` — save current config as a named template. Input: `{ name, type, config }`
+  - `GET /api/templates` — list user's templates, filterable by type
+  - `GET /api/templates/[id]` — get specific template
+  - `PATCH /api/templates/[id]` — update name or config
+  - `DELETE /api/templates/[id]` — delete template
+  - All routes need auth + ownership checks
+  - Write integration tests for ALL routes (auth, validation, CRUD, authorization)
+
+- [ ] **43.3** Add "Save as Template" button to both setup pages:
+  - After filling in the form, user clicks "Save as Template"
+  - Prompts for a template name (modal or inline input)
+  - Saves the current form state as a template
+  - Confirmation: "Template saved!"
+
+- [ ] **43.4** Add "Load Template" dropdown to both setup pages:
+  - Dropdown at the top of the form showing user's templates (filtered by type)
+  - Selecting a template fills all form fields with the saved config
+  - "Last used" badge on most recent template
+
+- [ ] **43.5** Add template management to the Profile page:
+  - New "Templates" section showing all saved templates
+  - Each template shows: name, type badge, created date, preview of config
+  - Edit name, delete buttons
+  - Reorder/favorite later if needed
+
+- [ ] **43.6** Unit tests for any pure logic, integration tests for all CRUD routes, component tests for template dropdown and save modal
+
+### Acceptance Criteria
+
+- [ ] Users can save the current setup as a named template
+- [ ] Templates can be loaded to pre-fill the setup form instantly
+- [ ] Templates are manageable (view, rename, delete) from the Profile page
+- [ ] Works for both behavioral and technical interview types
+- [ ] All CRUD routes have integration tests
+
+---
+
+## Story 44: Resume-Aware Interview Sessions
+
+> **Motivation:** In real interviews, the interviewer has your resume in front of them. Currently, Preploy's AI interviewer doesn't know your background. Adding a resume selector to the setup pages lets the AI reference your specific projects, technologies, and achievements — making practice questions dramatically more realistic. This is the single biggest realism upgrade.
+
+### Tasks
+
+- [ ] **44.1** Add "Include Resume" dropdown to the behavioral setup page (right column):
+  - Fetches user's uploaded resumes from `GET /api/resume`
+  - Dropdown: "None" | list of uploaded resumes
+  - Selected resume ID stored in session config as `resume_id`
+  - Small preview of selected resume content (first 200 chars)
+
+- [ ] **44.2** Add "Include Resume" dropdown to the technical setup page (right column):
+  - Same pattern as behavioral
+  - Resume context influences problem generation (technologies, systems the user knows)
+
+- [ ] **44.3** Include resume text in the behavioral AI interviewer system prompt:
+  - Update `buildBehavioralSystemPrompt()` in `lib/prompts.ts`
+  - When `resume_id` is in config, fetch resume content and include it
+  - Instruct AI: "The candidate's resume is below. Reference their specific experience when asking follow-up questions."
+  - Write unit tests for prompt with/without resume
+
+- [ ] **44.4** Include resume text in the technical problem generation prompt:
+  - Update `buildProblemGenerationPrompt()` in `lib/prompts-technical.ts`
+  - When resume is included: "The candidate has experience with: {technologies from resume}. Generate problems relevant to their background."
+  - Write unit tests
+
+- [ ] **44.5** Include resume text in the feedback analysis prompts:
+  - Update both Python feedback services to accept optional `resume_text`
+  - GPT can compare what the candidate said vs what's on their resume
+  - "The candidate mentioned leading a team of 5, which matches their resume — good consistency"
+  - Write unit tests for prompts with/without resume
+
+- [ ] **44.6** Integration tests for resume-aware session flow (end-to-end: setup with resume → session → feedback references resume)
+
+### Acceptance Criteria
+
+- [ ] Both setup pages show a resume selector dropdown
+- [ ] Behavioral AI interviewer asks questions referencing the user's specific resume experience
+- [ ] Technical problems are tailored to the user's tech stack from the resume
+- [ ] Feedback analysis compares answers to resume claims
+- [ ] Prompt builders have unit tests for with/without resume paths
+- [ ] No regression when no resume is selected
+
+---
+
+## Story 45: One-Click Flows (Cross-Page Integration)
+
+> **Motivation:** Currently, features generate valuable output (resume questions, company questions, planner recommendations) but users have to manually copy data between pages. One-click flows eliminate this friction — "Use these questions" from the resume page should take you directly to a pre-filled setup page.
+
+### Tasks
+
+- [ ] **45.1** Resume Questions → Behavioral Setup (one-click):
+  - "Use these questions" button on resume page → stores questions in Zustand or URL params
+  - Navigates to behavioral setup with Expected Questions pre-filled
+  - Also pre-fills company name if it was specified during generation
+
+- [ ] **45.2** Company Questions → Behavioral Setup ("Practice with all"):
+  - "Start practice session with these questions" button on the company questions widget
+  - Pre-fills company name + all generated questions into Expected Questions
+  - One click from "Generate questions for Google" → fully configured setup → start interview
+
+- [ ] **45.3** Prep Planner → Pre-filled Setup:
+  - Each planner day's "Practice" button pre-fills the setup with:
+    - Company name from the plan
+    - Focus areas matching the day's topics (for technical)
+    - Relevant expected questions (for behavioral)
+    - If user has a resume, include it automatically
+
+- [ ] **45.4** Feedback → Practice Weak Areas:
+  - "Practice weak areas" button on feedback page
+  - Auto-configures next session based on feedback weaknesses:
+    - Behavioral: generates expected questions targeting weak areas
+    - Technical: sets focus areas matching weak topics
+  - Navigates to setup with config pre-filled
+
+- [ ] **45.5** Dashboard → Recommended Next Session:
+  - "Recommended next practice" card on dashboard
+  - Based on: days since last practice, weakest area, active planner day
+  - One-click to start a pre-configured session
+  - "Practice behavioral (leadership) — your weakest area in 3 sessions"
+
+- [ ] **45.6** Component tests for all one-click flows (navigation + pre-fill verification)
+
+### Acceptance Criteria
+
+- [ ] Resume questions can be used in behavioral setup with one click
+- [ ] Company questions can start a session directly
+- [ ] Planner days pre-fill the session setup
+- [ ] Feedback weak areas suggest and pre-configure the next session
+- [ ] Dashboard shows a recommended next session with one-click start
+
+---
+
+## Story 46: Smart Setup (Company + Resume Combined)
+
+> **Motivation:** The ultimate setup experience: select a company and a resume, and Preploy generates questions that are BOTH company-specific AND resume-tailored. "Based on your resume's experience at Acme Corp with distributed systems, Google might ask: How would you design a system similar to what you built, but at Google's scale?" This is the killer differentiation feature.
+
+### Tasks
+
+- [ ] **46.1** Create `POST /api/questions/smart-generate` endpoint:
+  - Input: `{ company, role?, resume_id? }`
+  - If both company and resume provided: generate questions that reference the user's specific experience in the context of that company's interview style
+  - If only company: fall back to Story 40 company-specific questions
+  - If only resume: fall back to Story 42 resume-tailored questions
+  - Cache results (company + resume_id + role as cache key)
+  - Write integration tests for all 3 modes
+
+- [ ] **46.2** Create `lib/smart-questions-prompt.ts` — pure function:
+  - Combines company hints + resume text into a single prompt
+  - "This candidate is interviewing at {company} for {role}. Their resume shows: {resume highlights}. Generate questions that a {company} interviewer would ask THIS specific candidate."
+  - Different prompts for behavioral vs technical
+  - Write 10+ unit tests
+
+- [ ] **46.3** Add "Smart Setup" mode to the behavioral setup page:
+  - When both company name AND resume are selected, show a "Generate Smart Questions" button
+  - Uses the smart-generate endpoint
+  - Badge: "Company + Resume tailored"
+  - Replaces the separate company questions and resume questions widgets with one combined experience
+
+- [ ] **46.4** Add "Smart Setup" to technical setup:
+  - When resume is selected, problem generation prompt includes resume context
+  - "Generate problems relevant to a candidate who has experience with {resume technologies} interviewing at {company}"
+
+- [ ] **46.5** Integration tests and component tests
+
+### Acceptance Criteria
+
+- [ ] Smart questions reference both company culture AND resume experience
+- [ ] Falls back gracefully when only company or only resume is provided
+- [ ] Works for both behavioral and technical setups
+- [ ] Cached to avoid redundant GPT calls
+- [ ] 10+ unit tests for prompt builder
+- [ ] Integration tests for all modes
+
+---
+
 ## Definition of Done — Phase 3.5
 
-- [ ] All setup and feedback pages use wider, two-column layouts on desktop
-- [ ] Dark mode toggle in header, all components work in both modes
-- [ ] Skeleton screens on all data-loading pages
-- [ ] Structured logging (Pino) in all API routes, no console.log
-- [ ] Sentry capturing errors in both Next.js and FastAPI
-- [ ] Database migrations versioned and committed
-- [ ] CSP headers and rate limiting on public routes
-- [ ] Per-user daily session limits enforced
-- [ ] Coaching page with 4 content tabs
-- [ ] PDF export for feedback reports
-- [ ] Practice streaks and achievement badges on dashboard
-- [ ] Profile page with name editing, plan management, and account disable
-- [ ] 3D avatar replaced with pulsing circle visualizer (no Three.js)
+**Completed:**
+- [x] All setup and feedback pages use wider, two-column layouts on desktop
+- [x] Dark mode toggle in header, all components work in both modes
+- [x] Skeleton screens on all data-loading pages
+- [x] Structured logging (Pino) in all API routes, no console.log
+- [x] Sentry capturing errors in both Next.js and FastAPI
+- [x] Database migrations versioned and committed
+- [x] CSP headers and rate limiting on public routes
+- [x] Per-user daily session limits enforced
+- [x] Coaching page with 4 content tabs
+- [x] PDF export for feedback reports
+- [x] Practice streaks and achievement badges on dashboard
+- [x] Profile page with name editing, plan management, and account disable
+- [x] 3D avatar replaced with pulsing circle visualizer (no Three.js)
 - [x] Interview prep planner with personalized schedules
 - [x] Company-specific question bank for behavioral prep
 - [x] Session comparison and progress tracking over time
-- [x] Resume-tailored question generation
-- [x] All new features have unit tests, integration tests, and component tests (456 total)
+- [x] Resume-tailored question generation (PDF via GPT extraction)
+
+**Remaining:**
+- [ ] Session templates (save & load setup configs)
+- [ ] Resume-aware interview sessions (AI interviewer knows your background)
+- [ ] One-click flows between features (resume → setup, feedback → next session)
+- [ ] Smart Setup (company + resume combined question generation)
+- [ ] All new features have unit tests, integration tests, and component tests
 - [ ] CI pipeline passes all checks
 
 ---
@@ -552,12 +745,12 @@
 
 ### Acceptance Criteria
 
-- [ ] Users can generate a personalized prep plan from company + role + date
-- [ ] Plan shows day-by-day schedule with topics and session types
-- [ ] Days can be marked complete, progress tracked
-- [ ] Weak areas from past sessions influence the plan
-- [ ] All endpoints have integration tests
-- [ ] DB migration committed
+- [x] Users can generate a personalized prep plan from company + role + date
+- [x] Plan shows day-by-day schedule with topics and session types
+- [x] Days can be marked complete, progress tracked
+- [x] Weak areas from past sessions influence the plan
+- [x] All endpoints have integration tests (25 tests)
+- [x] DB migration committed
 
 ---
 
@@ -596,11 +789,11 @@
 
 ### Acceptance Criteria
 
-- [ ] Entering a company name shows a "Generate questions" button
-- [ ] Generated questions are company-specific and tagged by category
-- [ ] Questions can be added to expected questions with one click
-- [ ] Results cached for 7 days per company+role
-- [ ] All endpoints have integration tests
+- [x] Entering a company name shows a "Generate questions" button
+- [x] Generated questions are company-specific and tagged by category
+- [x] Questions can be added to expected questions with one click
+- [x] Results cached for 7 days per company+role
+- [x] All endpoints have integration tests (10 tests)
 
 ---
 
@@ -643,11 +836,11 @@
 
 ### Acceptance Criteria
 
-- [ ] Dashboard shows score trend chart with clear improvement trajectory
-- [ ] Weak areas identified from recurring feedback patterns
-- [ ] Two sessions can be compared side-by-side
-- [ ] Progress metrics show week-over-week improvement
-- [ ] All endpoints have integration tests
+- [x] Dashboard shows score trend chart with clear improvement trajectory
+- [x] Weak areas identified from recurring feedback patterns
+- [x] Two sessions can be compared side-by-side
+- [x] Progress metrics show week-over-week improvement
+- [x] All endpoints have integration tests (6 tests)
 
 ---
 
@@ -697,10 +890,10 @@
 
 ### Acceptance Criteria
 
-- [ ] Users can upload a PDF or text resume
-- [ ] Resume text is extracted and stored
-- [ ] Generated questions reference specific projects and metrics from the resume
-- [ ] Questions can be used directly in behavioral interview setup
-- [ ] Works for both behavioral and technical question types
-- [ ] All endpoints have integration tests
-- [ ] DB migration committed
+- [x] Users can upload a PDF or text resume (PDF via GPT extraction)
+- [x] Resume text is extracted and stored
+- [x] Generated questions reference specific projects and metrics from the resume
+- [ ] Questions can be used directly in behavioral interview setup (→ Story 45)
+- [x] Works for both behavioral and technical question types
+- [x] All endpoints have integration tests (21 tests)
+- [x] DB migration committed
