@@ -1,94 +1,88 @@
-# Instructions for Claude
+# Instructions for Claude — Preploy monorepo
 
-After making code change, recommend a commit message for that specific changes, if you made code changes significant enough. 
+## Monorepo layout
 
-When referred to a **task**, go to **Tasks.md** and read through the stories and task descriptions. When you finish a task, always refer back to the **Tasks.md** and mark it as complete.
-
-## Testing Requirements
-
-When implementing a new feature or modifying existing logic, always write tests alongside the code. Aim for these coverage targets:
-
-- **Pure logic** (`lib/`, `services/`, `stores/`, utils): **80%+ line coverage**. These are the highest-value tests.
-- **API routes**: Write integration tests for any new or modified route handler.
-- **Interactive components** (setup forms, feedback dashboard, expandable cards): Write component tests for components with meaningful user interaction (state changes, conditional rendering, expand/collapse). Place `*.test.tsx` next to the component. Mock Zustand stores and `next/navigation` using `vi.hoisted()` + `vi.mock()`. Use `getAllByText` instead of `getByText` since shadcn components may render elements multiple times in jsdom.
-- **Skip testing**: Purely presentational components (shadcn wrappers, badges), Three.js/avatar components, and components that primarily fetch data (better covered by E2E later).
-
-### Where to put tests
-
-- **Web unit tests**: Place `*.test.ts` / `*.test.tsx` next to the source file being tested (e.g., `lib/prompts.test.ts`).
-- **Web integration tests**: Place `*.integration.test.ts` next to the route handler (e.g., `app/api/sessions/route.integration.test.ts`). These run against a real Docker Postgres test DB.
-  - **Never mock the database.** All DB interactions must run against the real Docker test DB. This is the whole point of integration tests — mocked DB queries can't catch real SQL/schema issues.
-  - Mock `@/lib/auth` (for auth simulation) and external APIs (OpenAI, etc.) — these are the only things that should be mocked.
-  - Mock `@/lib/db` to point at `getTestDb()` from `tests/setup-db.ts` — this redirects all DB calls to the Docker test DB (this is **not** mocking the DB; it's pointing to the test instance).
-  - Use `beforeAll` to seed test data (e.g., test users), `beforeEach` to clean tables between tests, `afterAll` to cleanup/teardown.
-- **Python tests**: Place `test_*.py` in `apps/api/tests/`. Mock external API calls (OpenAI) with `unittest.mock.patch`; test everything else for real.
-
-### How to run
-
-```bash
-turbo test                                          # All unit tests
-cd apps/web && npm run test:integration             # Integration tests (requires: docker compose up -d test-db)
-cd apps/web && npm run test:coverage                # Unit tests with coverage
-cd apps/api && npm run test:coverage                # Python tests with coverage
+```
+apps/
+  web/      Next.js 16 (App Router) + Drizzle ORM + Vitest        → see apps/web/CLAUDE.md
+  api/      FastAPI Python service (GPT analysis)                  → see apps/api/CLAUDE.md
+packages/
+  shared/   Shared TypeScript types and constants
 ```
 
-### Logging
+When working inside `apps/web` or `apps/api`, the per-app `CLAUDE.md` is the
+source of truth — read it first.
 
-Use structured logging instead of `console.log`/`console.error` in all server-side code:
+## Workflow
 
-- **API routes (Next.js)**: Use `logger` or `createRequestLogger()` from `@/lib/logger`. The `createRequestLogger` auto-generates a `requestId` for tracing.
-  ```ts
-  import { createRequestLogger } from "@/lib/logger";
-  const log = createRequestLogger({ route: "POST /api/example", userId });
-  log.info("Processing request");
-  log.error({ err }, "Something failed");
-  ```
-- **Python (FastAPI)**: Use `logging.getLogger(__name__)` — already configured with JSON output in production.
-- **Client-side code** (hooks, components, session pages): `console.error` is fine — Pino doesn't run in the browser.
+When asked about a **task**, read `Tasks.md`, find the relevant story, and follow
+its acceptance criteria. When the task is complete, update `Tasks.md` to mark
+it done.
 
-### Pre-commit checklist
+When asked about a **new feature idea**, read `Backlog.md` first to see whether
+it is already planned.
 
-Before marking any story or task as complete, run **all** of the following:
+After making code changes significant enough to be a unit of work, recommend a
+commit message for those specific changes.
+
+## Pre-commit checklist (mandatory)
+
+Before marking any story or task complete, run **all** of:
 
 ```bash
-npx turbo lint typecheck test          # Lint (ESLint + ruff) + typecheck + unit/component tests
-cd apps/web && npm run test:integration # Integration tests (requires Docker test-db)
+npx turbo lint typecheck test           # ESLint + ruff + tsc + unit/component tests
+cd apps/web && npm run test:integration # Real Postgres integration tests
 ```
 
-If any of these fail, fix the issue before committing. CI will reject the push otherwise.
+If any of these fail, fix the issue before committing — CI will reject the push.
+The Stop hook in `.claude/settings.json` runs the first command automatically
+when Claude finishes a turn that touched source files; you should still run the
+integration suite manually before pushing.
 
-### Database schema changes
+## Skills available in this repo
 
-When modifying `lib/schema.ts`, always use versioned migrations:
+The skills below live in `.claude/skills/` and trigger automatically when
+relevant. You don't need to invoke them by name.
+
+- **`webapp-testing`** — Playwright browser testing. Use whenever you need to
+  click through the running web app, verify rendered UI, or capture screenshots.
+- **`claude-api`** — Anthropic SDK reference. Use only when a story explicitly
+  asks to add or modify Claude API calls. The web app currently uses OpenAI;
+  do not silently swap providers.
+- **`skill-creator`** — Use only when the user asks to create or improve a
+  project-specific skill.
+
+## Subagents (the autonomous-loop roles)
+
+The `.claude/agents/` directory holds specialized roles:
+
+- `pm-proposer` — reads `Backlog.md` + `Tasks.md`, proposes the next stories
+- `tech-lead-planner` — reads the codebase and drafts an implementation plan
+- `feature-implementer` — writes the code + tests
+- `qa-tester` — runs the test suites and uses `webapp-testing` to exercise the UI
+- `pr-reviewer` — diffs against `main`, checks the rules in this file, drafts a PR
+
+The `/standup` slash command runs them in sequence with approval gates between
+each role.
+
+## Database schema changes
+
+When modifying `apps/web/lib/schema.ts`, always use versioned migrations:
 
 ```bash
 cd apps/web
-npm run db:generate   # Generate SQL migration file from schema diff
-# Review the generated SQL in drizzle/
-npm run db:migrate    # Apply migration to your local database
+npm run db:generate   # Generate SQL migration
+# review the generated SQL in drizzle/
+npm run db:migrate    # Apply locally
 ```
 
-- **Never use `db:push` in production.** It modifies the schema directly without an audit trail.
-- `db:push` is acceptable for local development iteration, but always generate a migration before committing.
-- Commit the generated SQL files in `drizzle/` — they are the source of truth for the schema.
-- Integration tests automatically apply migrations via `tests/global-setup.ts`.
+**Never** use `db:push` for committed work. Commit the generated SQL files in
+`drizzle/` — they are the source of truth.
 
-### Key principles
+## Other repo-wide rules
 
-After finishing a feature, run `turbo test` to ensure nothing is broken. If adding a new API route or modifying an existing one, add or update the corresponding integration test. If adding pure logic, add a unit test.
-
-### API route integration test checklist
-
-Every API route change **must** have integration tests covering:
-
-1. **Auth**: 401 when unauthenticated
-2. **Authorization**: 404 when accessing another user's resource (never leak existence)
-3. **Validation**: 400 for invalid/missing required fields
-4. **Happy path**: Correct status code + response shape for each HTTP method
-5. **Query params/filters**: If the route accepts query params (pagination, filters, etc.), test each param individually AND in combination. This includes:
-   - Pagination: page boundaries, totalCount accuracy with filters applied
-   - Filters: each filter alone, multiple filters combined, empty result sets
-6. **Response shape changes**: If you change what an endpoint returns (e.g., wrapping an array in `{ data, pagination }`), update **every consumer** — other routes, frontend fetch calls, sidebar, dashboard — AND their tests
-7. **Branching logic**: If a route behaves differently based on data (e.g., behavioral vs technical), test both branches
-
-**When modifying an existing route**: always re-read the existing integration test file first. If your change adds a new query param, filter, response field, or behavioral branch, add corresponding test cases before considering the work done.
+- Conventional Commits style (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:`).
+- Branch naming: `feature/{story-number}-{short-description}` for feature work.
+- Never use `console.log` in server-side code (Next.js API routes or FastAPI
+  endpoints). See per-app CLAUDE.md for the structured logger pattern.
+- Never commit secrets or files containing them (`.env`, `credentials.json`).

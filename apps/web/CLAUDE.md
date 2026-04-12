@@ -1,0 +1,145 @@
+# apps/web — Next.js + Drizzle conventions
+
+This file scopes Claude's instructions to the Next.js app. The root `CLAUDE.md`
+covers monorepo-wide rules (Tasks.md workflow, pre-commit checklist).
+
+## Stack
+
+- Next.js 16 (App Router) + React 19
+- Drizzle ORM + Postgres (`postgres` driver)
+- NextAuth v5 (`@/lib/auth`)
+- Vitest + Testing Library + jsdom for unit/component tests
+- Vitest + real Docker Postgres for integration tests
+- Tailwind v4 + shadcn/ui components
+- Pino structured logging (`@/lib/logger`)
+
+## API routes
+
+- Place in `app/api/{resource}/route.ts`.
+- **Always** check `auth()` first; return 401 if unauthenticated.
+- Validate input with Zod schemas from `@/lib/validations`.
+- Use `checkRateLimit(session.user.id)` from `@/lib/api-utils` for expensive endpoints.
+- Use `createRequestLogger({ route, userId })` from `@/lib/logger` — never `console.log` server-side.
+- On 404 for another user's resource, never leak existence (return 404, not 403).
+
+## Database
+
+- Schema lives in `lib/schema.ts`. Relations are defined in the same file.
+- After modifying the schema, run:
+  ```bash
+  npm run db:generate    # Generate SQL migration
+  # review the SQL in drizzle/
+  npm run db:migrate     # Apply locally
+  ```
+- **Never** use `npm run db:push` for committed work — it bypasses the audit trail.
+  It is acceptable for throwaway local iteration only.
+- Commit the generated SQL files in `drizzle/`. They are the source of truth.
+- Integration tests apply migrations automatically via `tests/global-setup.ts`.
+
+## Pages
+
+- Place in `app/{route}/page.tsx`. Use `"use client"` for interactive pages.
+- Add new protected routes to `middleware.ts` matcher.
+- Add navigation links in `components/shared/Sidebar.tsx` (and `Header.tsx` if top-level).
+- Page containers: `max-w-6xl`. Two-column layouts: `md:grid-cols-2`.
+- Always render a loading skeleton while data fetches.
+
+## Styling
+
+- Tailwind v4 + shadcn/ui (`Card`, `CardHeader`, `CardTitle`, `CardContent`).
+- Dark mode: use `dark:` variants for custom colors.
+- Score colors: `getScoreColor()` from `@/lib/utils`.
+
+## Tests
+
+### Unit tests (`lib/*.test.ts`)
+
+- Co-locate next to the source file (e.g., `lib/prompts.test.ts`).
+- Target 80%+ line coverage on `lib/`, `services/`, `stores/`.
+- Cover happy path, edge cases, error cases, boundary values, empty/null inputs.
+
+### Component tests (`components/**/*.test.tsx`)
+
+- Only for **interactive** components (state changes, conditional rendering, expand/collapse).
+- Skip purely presentational components (shadcn wrappers, badges, icons).
+- Skip Three.js/avatar components — better covered by E2E later.
+- Use `getAllByText`, not `getByText` (shadcn renders multiple times in jsdom).
+- Mock Zustand stores and `next/navigation` with `vi.hoisted()` + `vi.mock()`.
+- For async data: mock `global.fetch` in `beforeEach`, restore in `afterEach`.
+
+### Integration tests (`app/api/**/*.integration.test.ts`)
+
+These run against a **real** Docker Postgres test DB. Start it with:
+
+```bash
+docker compose up -d test-db
+npm run test:integration
+```
+
+**Never mock the database.** That's the whole point of integration tests.
+
+The only things you may mock:
+- `@/lib/auth` — to simulate authenticated requests
+- External APIs (OpenAI, Anthropic, etc.)
+- `@/lib/db` — pointed at `getTestDb()` from `tests/setup-db.ts` (this is *redirection*, not mocking)
+
+**Standard template:**
+
+```typescript
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from "vitest";
+import { NextRequest } from "next/server";
+import { cleanupTestDb, teardownTestDb, getTestDb } from "../../../../tests/setup-db";
+import { users } from "@/lib/schema";
+
+const mockAuth = vi.fn();
+vi.mock("@/lib/auth", () => ({ auth: () => mockAuth() }));
+vi.mock("@/lib/db", () => ({ get db() { return getTestDb(); } }));
+
+import { GET, POST } from "./route";
+
+const TEST_USER = {
+  id: "00000000-0000-0000-0000-000000000001",
+  email: "test@example.com",
+  name: "Test User",
+};
+
+describe("API /api/your-route (integration)", () => {
+  beforeAll(async () => { /* seed users */ });
+  beforeEach(async () => { vi.clearAllMocks(); /* clean tables */ });
+  afterAll(async () => { await cleanupTestDb(); await teardownTestDb(); });
+
+  it("returns 401 when unauthenticated", async () => { /* ... */ });
+  it("returns 404 for another user's resource", async () => { /* ... */ });
+  it("returns 400 for invalid input", async () => { /* ... */ });
+  it("happy path returns correct data", async () => { /* ... */ });
+});
+```
+
+### Integration test checklist (mandatory for every route change)
+
+1. **Auth**: 401 when unauthenticated
+2. **Authorization**: 404 when accessing another user's resource (never leak existence)
+3. **Validation**: 400 for invalid/missing required fields
+4. **Happy path**: correct status code + response shape for each HTTP method
+5. **Query params/filters**: each individually AND in combination — pagination boundaries, totalCount with filters, empty result sets
+6. **Response shape changes**: update **every consumer** (other routes, frontend fetch calls, sidebar, dashboard) AND their tests
+7. **Branching logic**: test both branches (e.g., behavioral vs technical)
+8. **Persistence**: after POST/PATCH, verify with a real SELECT query
+
+When modifying an existing route, **always re-read** its integration test file first and add cases for any new param/field/branch.
+
+## Logging
+
+```ts
+import { createRequestLogger } from "@/lib/logger";
+const log = createRequestLogger({ route: "POST /api/example", userId });
+log.info("processing request");
+log.error({ err }, "something failed");
+```
+
+Client-side `console.error` is fine — Pino doesn't run in the browser.
+
+## Skills available in this project
+
+- **`webapp-testing`** — Playwright for browser tests. Use this when asked to "click through", "exercise the UI", or "verify the avatar renders". Prefer this over writing component tests for Three.js or animation-heavy code.
+- **`claude-api`** — reference this only if the story touches Anthropic SDK code. The web app currently uses OpenAI; do not "convert" OpenAI calls to Anthropic without explicit instruction.
