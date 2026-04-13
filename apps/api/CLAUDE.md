@@ -25,6 +25,23 @@ log.info("processing request", extra={"user_id": user_id})
 log.exception("openai call failed")
 ```
 
+## Conventions
+
+### Retry pattern for GPT analysis services
+
+Analysis services that call OpenAI + parse JSON + Pydantic-validate (currently
+`code_analyzer.py` and `feedback_generator.py`) retry **once** on a malformed
+response using the same prompt. The pattern is duplicated in each service for
+clarity — do not extract a helper until there are three call sites.
+
+- Wrap the OpenAI call + parse + validate in `for attempt in range(2):`.
+- On attempt 0, catch empty content / `json.JSONDecodeError` /
+  Pydantic `ValidationError`, emit a structured warning log
+  (`logger.warning("GPT response malformed, retrying", extra={"attempt": 1, "service": "<name>", "reason": "<empty|invalid_json|schema_mismatch>"})`),
+  then `continue`.
+- On attempt 1, raise the existing `RuntimeError` with the original message.
+- No backoff, no more than 2 attempts, no transport-level retry.
+
 ## Tests
 
 - Place `test_*.py` in `apps/api/tests/`.

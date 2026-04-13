@@ -133,34 +133,70 @@ async def generate_technical_feedback(
     user_prompt = build_technical_analysis_prompt(transcript, code_snapshots, config)
     timeline: list[TimelineEvent] = build_timeline(transcript, code_snapshots)
 
-    response = await client.chat.completions.create(
-        model="gpt-5.4-mini",
-        messages=[
-            {"role": "system", "content": TECHNICAL_ANALYSIS_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        temperature=0.3,
-        max_completion_tokens=4000,
-    )
+    # Retry once on malformed GPT response (empty, invalid JSON, or schema mismatch).
+    # Mirrors the pattern in apps/web/app/api/problems/generate/route.ts.
+    for attempt in range(2):
+        response = await client.chat.completions.create(
+            model="gpt-5.4-mini",
+            messages=[
+                {"role": "system", "content": TECHNICAL_ANALYSIS_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_completion_tokens=4000,
+        )
 
-    raw = response.choices[0].message.content
-    if not raw:
-        raise RuntimeError("GPT-5.4-mini returned empty response")
+        raw = response.choices[0].message.content
+        if not raw:
+            if attempt == 0:
+                logger.warning(
+                    "GPT response malformed, retrying",
+                    extra={
+                        "attempt": 1,
+                        "service": "code_analyzer",
+                        "reason": "empty",
+                    },
+                )
+                continue
+            raise RuntimeError("GPT-5.4-mini returned empty response")
 
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as e:
-        logger.error("Failed to parse GPT-5.4-mini response: %s", raw[:500])
-        raise RuntimeError(f"GPT-5.4-mini returned invalid JSON: {e}") from e
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
+            if attempt == 0:
+                logger.warning(
+                    "GPT response malformed, retrying",
+                    extra={
+                        "attempt": 1,
+                        "service": "code_analyzer",
+                        "reason": "invalid_json",
+                    },
+                )
+                continue
+            logger.error("Failed to parse GPT-5.4-mini response: %s", raw[:500])
+            raise RuntimeError(f"GPT-5.4-mini returned invalid JSON: {e}") from e
 
-    # Inject the deterministic timeline (not from GPT)
-    data["timeline_analysis"] = [event.model_dump() for event in timeline]
+        # Inject the deterministic timeline (not from GPT) before validation.
+        data["timeline_analysis"] = [event.model_dump() for event in timeline]
 
-    try:
-        feedback = TechnicalFeedbackResponse.model_validate(data)
-    except Exception as e:
-        logger.error("GPT-5.4-mini response failed validation: %s", data)
-        raise RuntimeError(f"GPT-5.4-mini response doesn't match expected schema: {e}") from e
+        try:
+            feedback = TechnicalFeedbackResponse.model_validate(data)
+        except Exception as e:
+            if attempt == 0:
+                logger.warning(
+                    "GPT response malformed, retrying",
+                    extra={
+                        "attempt": 1,
+                        "service": "code_analyzer",
+                        "reason": "schema_mismatch",
+                    },
+                )
+                continue
+            logger.error("GPT-5.4-mini response failed validation: %s", data)
+            raise RuntimeError(f"GPT-5.4-mini response doesn't match expected schema: {e}") from e
 
-    return feedback
+        return feedback
+
+    # Defensive: loop always returns or raises above.
+    raise RuntimeError("GPT-5.4-mini retry loop exited without result")

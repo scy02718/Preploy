@@ -4,46 +4,6 @@ Technical debt, deferred fixes, and low-priority improvements captured during co
 
 ---
 
-## [RELIABILITY] Add retry on malformed GPT response in analysis services
-
-**Identified in:** Story 19 review
-**Files:** `apps/api/app/services/code_analyzer.py`, `apps/api/app/services/feedback_generator.py`
-
-### Problem
-
-Both `generate_technical_feedback()` and `generate_behavioral_feedback()` raise a `RuntimeError` immediately on the first malformed or unparseable GPT response (bad JSON or Pydantic schema mismatch). There is no retry. For a technical session, GPT analysis takes 20-30 seconds and the user is waiting on the feedback page — a single flaky response from the model means a complete failure with no recovery.
-
-### What to do
-
-Wrap the OpenAI call + parse + validate block in a retry loop (max 2 attempts). On the first failure, log a warning and retry with the same prompt. Only raise `RuntimeError` after all attempts are exhausted.
-
-Suggested structure (mirrors the retry pattern already in `apps/web/app/api/problems/generate/route.ts`):
-
-```python
-for attempt in range(2):
-    try:
-        response = await client.chat.completions.create(...)
-        raw = response.choices[0].message.content
-        if not raw:
-            if attempt == 0: continue
-            raise RuntimeError("GPT returned empty response")
-        data = json.loads(raw)
-        return ResponseModel.model_validate(data)
-    except (json.JSONDecodeError, ValidationError):
-        if attempt == 0: continue
-        raise RuntimeError("GPT returned invalid response after retry")
-```
-
-Apply the same pattern to both services so behavior is consistent.
-
-### Acceptance criteria
-
-- A single bad GPT response does not fail the request
-- Two consecutive bad responses raise `RuntimeError` and return 500
-- Unit tests cover: succeeds on second attempt after first failure, fails after two bad attempts
-
----
-
 ## [CORRECTNESS] Feedback route returns stale data when previous generation failed mid-way
 
 **Identified in:** Story 19 review
