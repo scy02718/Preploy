@@ -4,6 +4,7 @@ Mocks the OpenAI API call; tests prompt building, response parsing, and error ha
 """
 
 import json
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -203,3 +204,76 @@ class TestGenerateTechnicalFeedback:
 
         # Timeline should be built from actual data, not GPT's empty list
         assert len(result.timeline_analysis) > 0
+
+
+class TestRetryBehavior:
+    """Retry-on-malformed-response behavior (see Backlog: [RELIABILITY])."""
+
+    @pytest.mark.asyncio
+    async def test_retries_once_on_empty_then_succeeds(self, caplog):
+        """S1: empty content on attempt 1, valid on attempt 2 → parsed result + 1 warning."""
+        bad_response = _mock_openai_response(None)
+        good_response = _mock_openai_response(json.dumps(VALID_GPT_RESPONSE))
+
+        mock_create = AsyncMock(side_effect=[bad_response, good_response])
+        caplog.set_level(logging.WARNING, logger="app.services.code_analyzer")
+
+        with patch(
+            "app.services.code_analyzer.client.chat.completions.create",
+            mock_create,
+        ):
+            result = await generate_technical_feedback(SAMPLE_TRANSCRIPT, SAMPLE_SNAPSHOTS, SAMPLE_CONFIG)
+
+        assert isinstance(result, TechnicalFeedbackResponse)
+        assert result.overall_score == 7.0
+        assert mock_create.await_count == 2
+
+        warnings = [
+            r for r in caplog.records if r.levelno == logging.WARNING and r.name == "app.services.code_analyzer"
+        ]
+        assert len(warnings) == 1
+        assert warnings[0].message == "GPT response malformed, retrying"
+        assert getattr(warnings[0], "attempt", None) == 1
+        assert getattr(warnings[0], "service", None) == "code_analyzer"
+        assert getattr(warnings[0], "reason", None) == "empty"
+
+    @pytest.mark.asyncio
+    async def test_two_consecutive_malformed_raises_runtime_error(self):
+        """S2: invalid JSON then schema-invalid JSON → RuntimeError, 2 OpenAI calls."""
+        invalid_json_response = _mock_openai_response("not valid json {{{")
+        schema_invalid_response = _mock_openai_response(
+            json.dumps({"overall_score": 5.0})  # missing required fields
+        )
+
+        mock_create = AsyncMock(side_effect=[invalid_json_response, schema_invalid_response])
+
+        with patch(
+            "app.services.code_analyzer.client.chat.completions.create",
+            mock_create,
+        ):
+            with pytest.raises(RuntimeError, match="doesn't match expected schema"):
+                await generate_technical_feedback(SAMPLE_TRANSCRIPT, SAMPLE_SNAPSHOTS, SAMPLE_CONFIG)
+
+        assert mock_create.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_happy_path_makes_single_call_no_warning(self, caplog):
+        """S4: valid on attempt 1 → exactly 1 OpenAI call, zero warnings."""
+        good_response = _mock_openai_response(json.dumps(VALID_GPT_RESPONSE))
+
+        mock_create = AsyncMock(side_effect=[good_response])
+        caplog.set_level(logging.WARNING, logger="app.services.code_analyzer")
+
+        with patch(
+            "app.services.code_analyzer.client.chat.completions.create",
+            mock_create,
+        ):
+            result = await generate_technical_feedback(SAMPLE_TRANSCRIPT, SAMPLE_SNAPSHOTS, SAMPLE_CONFIG)
+
+        assert isinstance(result, TechnicalFeedbackResponse)
+        assert mock_create.await_count == 1
+
+        warnings = [
+            r for r in caplog.records if r.levelno == logging.WARNING and r.name == "app.services.code_analyzer"
+        ]
+        assert len(warnings) == 0
