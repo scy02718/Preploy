@@ -9,7 +9,7 @@
 export type TechnicalFeedbackShape = {
   codeQualityScore: number | null;
   explanationQualityScore: number | null;
-  timelineAnalysis: Array<unknown> | null;
+  timelineAnalysis: unknown;
 };
 
 /**
