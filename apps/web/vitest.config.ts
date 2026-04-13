@@ -7,6 +7,12 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["**/*.integration.test.{ts,tsx}", "node_modules", ".next"],
+    // Isolate each test file in its own subprocess. Without this, React 19's
+    // concurrent scheduler can flush queued renders from a previous test file
+    // after jsdom's `window` has been torn down, producing "window is not defined"
+    // uncaught exceptions (unrelated to any individual assertion). Using forks
+    // gives each file a fresh module graph and a fresh jsdom environment.
+    pool: "forks",
     coverage: {
       provider: "v8",
       include: ["lib/prompts.ts", "lib/validations.ts", "lib/utils.ts", "lib/transcription.ts", "lib/code-templates.ts"],
