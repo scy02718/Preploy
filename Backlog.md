@@ -96,3 +96,40 @@ Use the `sessionType` prop (already available) to set the heading:
 
 - Technical feedback page heading says "Technical Interview Feedback"
 - Behavioral feedback page heading says "Behavioral Interview Feedback"
+
+---
+
+## [CI] Web test process exits 1 despite 276/276 assertions passing
+
+**Identified in:** PR #1 (autonomous dev loop) — QA gauntlet on the `apps/api` retry story surfaced this on the `apps/web` side and the agent verified it exists on baseline.
+
+**Files:** `apps/web/components/feedback/FeedbackDashboard.test.tsx`, `apps/web/components/setup/BehavioralSetupForm.test.tsx`, `apps/web/components/setup/TechnicalSetupForm.test.tsx`, and several other component test files.
+
+### Problem
+
+`npx turbo test --filter=@interview-assistant/web` (and `cd apps/web && npm run test`) reports all 276 test assertions passing but the Vitest process exits with code 1. The cause is uncaught `ReferenceError: window is not defined` exceptions thrown during React 19 async cleanup in jsdom — they surface AFTER every test has already passed, in the teardown phase, so they don't fail any individual test but they break the process exit code.
+
+Baseline on `main` shows roughly 29 such teardown errors; the PR #1 branch shows 14 (fewer only because fewer files were touched in that test run, not because of any fix). This has been happening for a while and is unrelated to any single story — it's a React 19 + Vitest + jsdom interaction in the component test harness.
+
+This is currently the single biggest blocker for the autonomous loop's QA gate on web stories: a clean implementation will still trip QA because the process exit code says "failure." Right now we have to squint at the output and tell QA "ignore that, 276 passed." That's not sustainable.
+
+### What to do
+
+Investigate in this order — stop as soon as one works:
+
+1. **Upgrade vitest / jsdom / @testing-library/react** to the latest versions that explicitly support React 19. The ecosystem was still catching up when this repo was set up; a straight dependency bump may have already fixed this upstream.
+2. **Switch the offending files to `happy-dom`** instead of `jsdom`. happy-dom has historically been less strict about teardown ordering. Can be scoped per-test-file via `// @vitest-environment happy-dom`.
+3. **Add a global `afterEach` that awaits all pending microtasks** before jsdom tears down. Something like `await new Promise(r => setTimeout(r, 0))` in `vitest.setup.ts` — crude but sometimes effective against React 19 scheduler races.
+4. **Catch uncaught exceptions** at the Node level in `vitest.setup.ts`: `process.on('uncaughtException', e => { if (/window is not defined/.test(e.message)) return; throw e; })`. This is a band-aid but unblocks CI/QA while a proper fix is investigated.
+5. **File an upstream issue** against vitest or @testing-library/react if root cause is clearly in their React 19 shim.
+
+### Acceptance criteria
+
+- `npx turbo test --filter=@interview-assistant/web` exits 0 on a clean `main` checkout.
+- `.claude/hooks/precommit-gate.sh` passes on any valid web-only change without manual override.
+- No reduction in test count (still 276 assertions, no suppressed tests).
+- Fix is documented in `apps/web/CLAUDE.md` under a short "Known gotchas" section so future contributors don't re-trip this.
+
+### Priority
+
+High. This blocks the autonomous loop's QA gate for every web story, not just one-offs.
