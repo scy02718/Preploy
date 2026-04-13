@@ -235,6 +235,39 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const body = await res.json();
     expect(body.overallScore).toBe(7.5);
     expect(body.summary).toBe("Good job");
+    expect(body.type).toBe("behavioral");
+  });
+
+  it("GET returns 200 with type: 'technical' and codeQualityScore for a completed technical session", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    // Seed technical feedback
+    const db = getTestDb();
+    await db.insert(sessionFeedback).values({
+      sessionId: technicalSessionId,
+      overallScore: 7.5,
+      summary: "Solid interview performance.",
+      strengths: ["Clear examples", "Good structure", "Specific details"],
+      weaknesses: ["Could improve follow-up", "Needs more metrics", "Short answers"],
+      answerAnalyses: [],
+      codeQualityScore: 6.5,
+      explanationQualityScore: 8.0,
+      timelineAnalysis: [
+        { timestamp_ms: 0, event_type: "speech", summary: "Explained approach" },
+        { timestamp_ms: 3000, event_type: "code_change", summary: "Changed code" },
+      ],
+    });
+
+    const res = await GET(
+      makeGetRequest(technicalSessionId),
+      makeParams(technicalSessionId)
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.type).toBe("technical");
+    expect(body.codeQualityScore).toBe(6.5);
+    expect(body.explanationQualityScore).toBe(8.0);
+    expect(body.timelineAnalysis).toHaveLength(2);
   });
 
   // ---- POST tests ----
@@ -303,6 +336,101 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
 
     // Python service should NOT have been called
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("POST regenerates feedback when existing technical row has null codeQualityScore (incomplete)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    // Seed an incomplete/stale technical feedback row:
+    // codeQualityScore IS NULL while the other two technical fields are set.
+    const db = getTestDb();
+    await db.insert(sessionFeedback).values({
+      sessionId: technicalSessionId,
+      overallScore: 5,
+      summary: "stale",
+      strengths: [],
+      weaknesses: [],
+      answerAnalyses: [],
+      codeQualityScore: null,
+      explanationQualityScore: 8,
+      timelineAnalysis: [
+        { timestamp_ms: 0, event_type: "speech", summary: "stale note" },
+      ],
+    });
+
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => TECHNICAL_FEEDBACK_RESPONSE,
+    });
+
+    const res = await POST(
+      makePostRequest(technicalSessionId),
+      makeParams(technicalSessionId)
+    );
+    expect(res.status).toBe(201);
+
+    const body = await res.json();
+    // Proves regeneration happened: new values from TECHNICAL_FEEDBACK_RESPONSE.
+    expect(body.codeQualityScore).toBe(6.5);
+    expect(body.summary).toBe("Solid interview performance.");
+
+    // GPT path was invoked exactly once against the technical endpoint.
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toContain("/api/analysis/technical");
+
+    // Real SELECT: exactly one row, all three technical fields non-null.
+    const rows = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, technicalSessionId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].codeQualityScore).not.toBeNull();
+    expect(rows[0].explanationQualityScore).not.toBeNull();
+    expect(rows[0].timelineAnalysis).not.toBeNull();
+    expect(rows[0].codeQualityScore).toBe(6.5);
+    expect(rows[0].explanationQualityScore).toBe(8.0);
+  });
+
+  it("POST returns existing row and does not call GPT when technical feedback is fully populated", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    await db.insert(sessionFeedback).values({
+      sessionId: technicalSessionId,
+      overallScore: 9.0,
+      summary: "Already complete",
+      strengths: ["a"],
+      weaknesses: ["b"],
+      answerAnalyses: [],
+      codeQualityScore: 9.0,
+      explanationQualityScore: 9.0,
+      timelineAnalysis: [
+        { timestamp_ms: 0, event_type: "speech", summary: "ok" },
+      ],
+    });
+
+    const res = await POST(
+      makePostRequest(technicalSessionId),
+      makeParams(technicalSessionId)
+    );
+    // 200 = short-circuited on an already-complete existing row; compare to
+    // the regeneration path above which returns 201 for a newly-inserted row.
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.codeQualityScore).toBe(9.0);
+    expect(body.explanationQualityScore).toBe(9.0);
+
+    // No GPT call made.
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // DB still has exactly one row.
+    const rows = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, technicalSessionId));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].codeQualityScore).toBe(9.0);
   });
 
   it("POST 201 triggers behavioral analysis and persists feedback", async () => {

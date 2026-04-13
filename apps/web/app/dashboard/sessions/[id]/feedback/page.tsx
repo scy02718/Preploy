@@ -30,28 +30,10 @@ export default function FeedbackPage() {
   const router = useRouter();
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
   const [sessionType, setSessionType] = useState<
-    "behavioral" | "technical"
-  >("behavioral");
+    "behavioral" | "technical" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Fetch session type once
-  useEffect(() => {
-    async function fetchSession() {
-      try {
-        const res = await fetch(`/api/sessions/${params.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.type === "technical") {
-            setSessionType("technical");
-          }
-        }
-      } catch {
-        // Non-critical — default to behavioral
-      }
-    }
-    fetchSession();
-  }, [params.id]);
 
   // Poll for feedback — runs once on mount, cleans up on unmount.
   // All mutable state accessed via refs to avoid re-triggering the effect.
@@ -96,6 +78,13 @@ export default function FeedbackPage() {
         const data = await res.json();
         if (cancelled) return;
 
+        // Set sessionType and feedback in the same event handler so React 19
+        // batches them into a single commit. This guarantees CodeQualityCard
+        // and ScoreCard appear on the first paint for technical sessions
+        // (no flicker from two independent fetches). sessionType starts as
+        // null and the loading skeleton gates the <FeedbackDashboard /> render
+        // below until both pieces of state are set in this same commit.
+        setSessionType(data.type === "technical" ? "technical" : "behavioral");
         setFeedback({
           overallScore: data.overallScore ?? data.overall_score ?? 0,
           summary: data.summary ?? "",
@@ -208,7 +197,7 @@ export default function FeedbackPage() {
     );
   }
 
-  if (!feedback) return null;
+  if (!feedback || !sessionType) return null;
 
   return (
     <FeedbackDashboard

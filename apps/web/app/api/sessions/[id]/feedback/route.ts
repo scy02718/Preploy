@@ -9,6 +9,8 @@ import {
 } from "@/lib/schema";
 import { eq, and, asc } from "drizzle-orm";
 import { setSentryUser, setSentryContext } from "@/lib/sentry-utils";
+import { isTechnicalFeedbackComplete } from "@/lib/feedback-utils";
+import { createRequestLogger } from "@/lib/logger";
 
 const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000";
 
@@ -22,6 +24,11 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const log = createRequestLogger({
+    route: "POST /api/sessions/[id]/feedback",
+    userId: session.user.id,
+  });
 
   setSentryUser(session.user);
 
@@ -49,7 +56,25 @@ export async function POST(
     .where(eq(sessionFeedback.sessionId, id));
 
   if (existing) {
-    return NextResponse.json(existing);
+    // For technical sessions, a stale/incomplete row (any of the three
+    // technical fields null) must be discarded so we regenerate. Behavioral
+    // sessions still short-circuit on any existing row.
+    // TODO(concurrency): two simultaneous POSTs on the same incomplete
+    // technical session could each DELETE and then each INSERT, yielding a
+    // duplicate row. Pre-existing race — not introduced here. Fix requires a
+    // unique index on sessionFeedback.sessionId or a transactional
+    // delete+insert.
+    if (found.type === "technical" && !isTechnicalFeedbackComplete(existing)) {
+      log.warn(
+        { sessionId: id },
+        "deleting incomplete technical feedback row, regenerating"
+      );
+      await db
+        .delete(sessionFeedback)
+        .where(eq(sessionFeedback.sessionId, id));
+    } else {
+      return NextResponse.json(existing);
+    }
   }
 
   // Get transcript
@@ -188,5 +213,5 @@ export async function GET(
     );
   }
 
-  return NextResponse.json(feedback);
+  return NextResponse.json({ ...feedback, type: found.type });
 }
