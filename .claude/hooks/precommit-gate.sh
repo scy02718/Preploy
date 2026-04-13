@@ -32,7 +32,7 @@ if echo "$changed" | grep -q '^apps/web/'; then
   filters+=("--filter=@interview-assistant/web")
 fi
 if echo "$changed" | grep -q '^apps/api/'; then
-  filters+=("--filter=interview-assistant-api")
+  filters+=("--filter=@interview-assistant/api")
 fi
 if echo "$changed" | grep -q '^packages/shared/'; then
   filters+=("--filter=@interview-assistant/shared")
@@ -43,8 +43,10 @@ if [ ! -x "node_modules/.bin/turbo" ] && [ ! -x "node_modules/.bin/npx" ]; then
   exit 0
 fi
 
-# Run the gate. Suppress stdout, capture stderr.
-if ! npx --no-install turbo lint typecheck test "${filters[@]}" 2>&1 >/tmp/precommit-gate.log; then
+# Run the gate. Capture both stdout and stderr to the log file.
+# Note: order matters — `>file 2>&1` redirects stdout to file then merges
+# stderr into stdout. The reverse order (`2>&1 >file`) silently drops stderr.
+if ! npx --no-install turbo lint typecheck test "${filters[@]}" >/tmp/precommit-gate.log 2>&1; then
   {
     echo "Stop-hook: pre-commit gate failed."
     echo "The lint/typecheck/test suite failed for the packages you touched:"
