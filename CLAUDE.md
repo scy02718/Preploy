@@ -19,8 +19,12 @@ When asked about a **task**, read `Tasks.md`, find the relevant story, and follo
 its acceptance criteria. When the task is complete, update `Tasks.md` to mark
 it done.
 
-When asked about a **new feature idea**, read `Backlog.md` first to see whether
-it is already planned.
+When asked about a **new feature idea** or tech debt, check open GitHub Issues
+first (use the GitHub MCP or `gh issue list --repo scy02718/interview-assistant`)
+to see whether it is already filed.
+
+`Backlog.md` is archived at `dev_logs/Backlog-archive.md` — new tech debt and
+deferred fixes should be filed as GitHub Issues, not appended to the archive.
 
 After making code changes significant enough to be a unit of work, recommend a
 commit message for those specific changes.

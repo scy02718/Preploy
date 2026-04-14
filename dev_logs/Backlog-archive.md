@@ -1,3 +1,5 @@
+> **Archived 2026-04-14.** This file is frozen. All items migrated to GitHub Issues — see https://github.com/scy02718/interview-assistant/issues. File new tech debt as issues, not here.
+
 # Backlog
 
 Technical debt, deferred fixes, and low-priority improvements captured during code review. Each item includes enough context to be picked up without prior knowledge of the discussion that created it.
