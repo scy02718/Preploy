@@ -60,7 +60,7 @@ relevant. You don't need to invoke them by name.
 
 The `.claude/agents/` directory holds specialized roles:
 
-- `pm-proposer` — reads `Backlog.md` + `Tasks.md`, proposes the next stories
+- `pm-proposer` — reads open GitHub Issues + `Tasks.md`, proposes the next stories
 - `tech-lead-planner` — reads the codebase and drafts an implementation plan
 - `feature-implementer` — writes the code + tests
 - `qa-tester` — runs the test suites and uses `webapp-testing` to exercise the UI

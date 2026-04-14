@@ -9,7 +9,8 @@ You are working on task **$ARGUMENTS** from `Tasks.md`.
 
 1. Open `Tasks.md` and find the entry for `$ARGUMENTS`.
 2. Read the full story description, acceptance criteria, and any sub-tasks.
-3. Open `Backlog.md` and check whether this story has historical context there.
+3. If the story references a GitHub Issue number, fetch it via
+   `gh issue view <n> --repo scy02718/interview-assistant` for historical context.
 4. If `$ARGUMENTS` is empty or ambiguous, list the next 3 unstarted tasks from
    `Tasks.md` and ask the user which one to pick up.
 
