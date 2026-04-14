@@ -3,6 +3,9 @@ import {
   behavioralConfigSchema,
   technicalConfigSchema,
   createSessionSchema,
+  transcriptEntryInputSchema,
+  codeSnapshotInputSchema,
+  timelineEventSchema,
 } from "./validations";
 
 describe("behavioralConfigSchema", () => {
@@ -226,6 +229,77 @@ describe("createSessionSchema", () => {
   it("rejects invalid session type", () => {
     const result = createSessionSchema.safeParse({
       type: "invalid",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("transcriptEntryInputSchema", () => {
+  it("accepts a valid transcript entry", () => {
+    const result = transcriptEntryInputSchema.safeParse({
+      speaker: "user",
+      text: "I would use a hash map here.",
+      timestamp_ms: 1000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing timestamp_ms", () => {
+    const result = transcriptEntryInputSchema.safeParse({
+      speaker: "user",
+      text: "hello",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects non-integer timestamp_ms", () => {
+    const result = transcriptEntryInputSchema.safeParse({
+      speaker: "user",
+      text: "hello",
+      timestamp_ms: 12.5,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("codeSnapshotInputSchema", () => {
+  it("accepts a valid code snapshot", () => {
+    const result = codeSnapshotInputSchema.safeParse({
+      code: "def foo(): pass",
+      language: "python",
+      timestamp_ms: 500,
+      event_type: "edit",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing timestamp_ms", () => {
+    const result = codeSnapshotInputSchema.safeParse({
+      code: "def foo(): pass",
+      language: "python",
+      event_type: "edit",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("timelineEventSchema", () => {
+  it("accepts a valid speech event", () => {
+    const result = timelineEventSchema.safeParse({
+      timestamp_ms: 1000,
+      event_type: "speech",
+      summary: "Hello",
+      code: null,
+      full_text: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown event_type literal", () => {
+    const result = timelineEventSchema.safeParse({
+      timestamp_ms: 1000,
+      event_type: "unknown",
+      summary: "Hello",
     });
     expect(result.success).toBe(false);
   });

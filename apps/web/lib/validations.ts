@@ -37,3 +37,35 @@ export const createSessionSchema = z.object({
   type: z.enum(["behavioral", "technical"]),
   config: z.record(z.string(), z.unknown()).optional(),
 });
+
+// ---- Timeline correlator schemas ----
+// Named with `Input` suffix to avoid collision with the narrower
+// `TranscriptEntry` interface in packages/shared/src/types.ts (which
+// constrains `speaker` to "user" | "ai"). These schemas mirror the Python
+// Pydantic models used by apps/api/app/services/timeline_correlator.py —
+// `speaker` and `event_type` on the input schemas are plain strings to
+// match the Pydantic `str` typing exactly.
+
+export const transcriptEntryInputSchema = z.object({
+  speaker: z.string(),
+  text: z.string(),
+  timestamp_ms: z.number().int(),
+});
+export type TranscriptEntryInput = z.infer<typeof transcriptEntryInputSchema>;
+
+export const codeSnapshotInputSchema = z.object({
+  code: z.string(),
+  language: z.string(),
+  timestamp_ms: z.number().int(),
+  event_type: z.string(),
+});
+export type CodeSnapshotInput = z.infer<typeof codeSnapshotInputSchema>;
+
+export const timelineEventSchema = z.object({
+  timestamp_ms: z.number().int(),
+  event_type: z.enum(["speech", "code_change"]),
+  summary: z.string(),
+  code: z.string().nullable().optional(),
+  full_text: z.string().nullable().optional(),
+});
+export type TimelineEvent = z.infer<typeof timelineEventSchema>;
