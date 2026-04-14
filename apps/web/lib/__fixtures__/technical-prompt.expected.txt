@@ -1,0 +1,27 @@
+Interview Type: leetcode
+Difficulty: Medium
+Language: python
+Focus Areas: Arrays, Sliding Window
+
+--- CODE EVOLUTION ---
+Language used: python
+Total snapshots: 2
+
+[Snapshot 1 at 00:00 — edit, python]
+```python
+def solution(): pass
+```
+
+[FINAL SUBMISSION at 00:08 — edit, python]
+```python
+def solution(nums):
+    return max(nums)
+```
+--- END CODE ---
+
+--- TRANSCRIPT ---
+Candidate: I'll use a sliding window approach.
+Candidate: The time complexity is O(n).
+--- END TRANSCRIPT ---
+
+Analyze this technical interview and provide structured feedback as JSON.

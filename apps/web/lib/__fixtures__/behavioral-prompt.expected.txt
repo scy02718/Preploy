@@ -1,0 +1,15 @@
+Company: Google
+Job Description:
+Senior Software Engineer
+Interview level: Senior/Staff
+
+--- TRANSCRIPT ---
+
+Interviewer: Tell me about a time you led a team.
+Candidate: At my previous company, I led a team of 5 engineers to ship a new feature in 3 weeks.
+Interviewer: What challenges did you face?
+Candidate: We had tight deadlines and had to cut some scope. I facilitated a prioritization session.
+
+--- END TRANSCRIPT ---
+
+Analyze this interview and provide structured feedback as JSON.

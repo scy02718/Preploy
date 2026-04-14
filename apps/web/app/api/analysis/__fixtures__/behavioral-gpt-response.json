@@ -1,0 +1,35 @@
+{
+  "overall_score": 7.5,
+  "summary": "The candidate showed good leadership skills with concrete examples.",
+  "strengths": [
+    "Clear communication",
+    "Concrete examples with metrics",
+    "Good STAR method usage"
+  ],
+  "weaknesses": [
+    "Could elaborate more on results",
+    "Lacked discussion of alternative approaches",
+    "No mention of lessons learned"
+  ],
+  "answer_analyses": [
+    {
+      "question": "Tell me about a time you led a team.",
+      "answer_summary": "Led a team of 5 engineers to ship a feature in 3 weeks.",
+      "score": 8.0,
+      "feedback": "Good specific example with metrics. Could include more about the result.",
+      "suggestions": [
+        "Quantify the business impact of the feature",
+        "Describe how you delegated tasks"
+      ]
+    },
+    {
+      "question": "What challenges did you face?",
+      "answer_summary": "Managed tight deadlines through scope prioritization.",
+      "score": 7.0,
+      "feedback": "Good problem-solving, but could go deeper on the process.",
+      "suggestions": [
+        "Explain the criteria used for prioritization"
+      ]
+    }
+  ]
+}
