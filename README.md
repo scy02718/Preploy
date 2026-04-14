@@ -8,12 +8,11 @@ AI-powered mock interview practice with real-time feedback. Practice behavioral 
 
 ## Project Structure
 
-Turborepo monorepo with three workspaces:
+Turborepo monorepo:
 
 ```
 apps/
   web/          Next.js 16 frontend + API routes (Drizzle ORM, Supabase Postgres)
-  api/          FastAPI Python service (GPT-powered feedback analysis)
 packages/
   shared/       Shared TypeScript types, constants, and schemas
 ```
@@ -21,7 +20,6 @@ packages/
 ## Prerequisites
 
 - **Node.js 20+** and **npm**
-- **Python 3.12+**
 - **Docker** (for local integration tests)
 - A [Supabase](https://supabase.com) account (free tier works)
 - An [OpenAI](https://platform.openai.com) API key
@@ -33,7 +31,6 @@ packages/
 
 ```bash
 npm install
-cd apps/api && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
 ```
 
 ### 2. Configure environment variables
@@ -54,7 +51,6 @@ Fill in your `.env`:
 | `GOOGLE_CLIENT_SECRET` | Same as above |
 | `AUTH_SECRET` | Generate with `openssl rand -base64 32` |
 | `AUTH_URL` | `http://localhost:3000` for local dev |
-| `PYTHON_API_URL` | `http://localhost:8000` (default) |
 | `SENTRY_DSN` | [sentry.io](https://sentry.io) → Project Settings → Client Keys (optional, leave blank to disable) |
 | `NEXT_PUBLIC_SENTRY_DSN` | Same as `SENTRY_DSN` (needed for client-side error capture) |
 
@@ -69,7 +65,7 @@ cd apps/web && npm run db:migrate
 ### 4. Start development
 
 ```bash
-npm run dev   # starts Next.js on :3000 and FastAPI on :8000
+npm run dev   # starts Next.js on :3000
 ```
 
 ## CI Pipeline
@@ -83,8 +79,8 @@ lint-typecheck → unit-tests         → build
 
 | Job | What it runs |
 |-----|-------------|
-| **lint-typecheck** | ESLint (web) + ruff (Python) + `tsc --noEmit` |
-| **unit-tests** | Vitest unit/component tests + pytest |
+| **lint-typecheck** | ESLint (web) + `tsc --noEmit` |
+| **unit-tests** | Vitest unit/component tests |
 | **integration-tests** | Integration tests against a real Postgres service container |
 | **build** | `next build` production build |
 
@@ -95,13 +91,11 @@ No real API keys or secrets are needed — the pipeline uses dummy env vars from
 ### Unit Tests (no Docker needed)
 
 ```bash
-turbo test                           # All unit tests across both workspaces
+turbo test                           # All unit tests
 
 cd apps/web && npm test              # Web unit tests only
-cd apps/api && npm test              # Python unit tests only
 
 cd apps/web && npm run test:coverage # Web unit tests with coverage
-cd apps/api && npm run test:coverage # Python unit tests with coverage
 ```
 
 ### Integration Tests (requires Docker)
@@ -130,7 +124,6 @@ The test database:
 |---|---|---|
 | Web unit tests | Next to the source file | `*.test.ts` / `*.test.tsx` |
 | Web integration tests | Next to the route handler | `*.integration.test.ts` |
-| Python tests | `apps/api/tests/` | `test_*.py` |
 | Test DB helpers | `apps/web/tests/` | Shared setup/cleanup utilities |
 
 ### Writing New Tests
@@ -143,8 +136,3 @@ The test database:
 - Create `route.integration.test.ts` next to `route.ts`
 - Mock `@/lib/auth` for auth simulation, mock `@/lib/db` to point at `getTestDb()` from `tests/setup-db.ts`
 - Use `beforeAll` to seed test users, `beforeEach` to clean data between tests
-
-**Python tests** — for FastAPI services:
-- Create `tests/test_myservice.py`
-- Mock external APIs (OpenAI) with `unittest.mock.patch`
-- Use the `client` fixture from `conftest.py` for endpoint tests

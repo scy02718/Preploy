@@ -5,13 +5,12 @@
 ```
 apps/
   web/      Next.js 16 (App Router) + Drizzle ORM + Vitest        → see apps/web/CLAUDE.md
-  api/      FastAPI Python service (GPT analysis)                  → see apps/api/CLAUDE.md
 packages/
   shared/   Shared TypeScript types and constants
 ```
 
-When working inside `apps/web` or `apps/api`, the per-app `CLAUDE.md` is the
-source of truth — read it first.
+When working inside `apps/web`, the per-app `CLAUDE.md` is the source of
+truth — read it first.
 
 ## Workflow
 
@@ -34,7 +33,7 @@ commit message for those specific changes.
 Before marking any story or task complete, run **all** of:
 
 ```bash
-npx turbo lint typecheck test           # ESLint + ruff + tsc + unit/component tests
+npx turbo lint typecheck test           # ESLint + tsc + unit/component tests
 cd apps/web && npm run test:integration # Real Postgres integration tests
 ```
 
@@ -87,6 +86,6 @@ npm run db:migrate    # Apply locally
 
 - Conventional Commits style (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:`).
 - Branch naming: `feature/{story-number}-{short-description}` for feature work.
-- Never use `console.log` in server-side code (Next.js API routes or FastAPI
-  endpoints). See per-app CLAUDE.md for the structured logger pattern.
+- Never use `console.log` in server-side code (Next.js API routes). See the
+  per-app CLAUDE.md for the structured logger pattern.
 - Never commit secrets or files containing them (`.env`, `credentials.json`).

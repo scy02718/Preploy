@@ -1,32 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 
+import { runTechnicalAnalysis } from "@/lib/analysis-technical";
+import { technicalFeedbackRequestSchema } from "@/lib/analysis-schemas";
 import { createRequestLogger } from "@/lib/logger";
-import {
-  buildTechnicalPrompt,
-  TECHNICAL_SYSTEM_PROMPT,
-} from "@/lib/analysis-prompts";
-import {
-  technicalFeedbackRequestSchema,
-  technicalFeedbackResponseSchema,
-} from "@/lib/analysis-schemas";
-import {
-  OpenAIRetryError,
-  withOpenAIRetry,
-} from "@/lib/openai-retry";
-import { buildTimeline } from "@/lib/timeline-correlator";
+import { OpenAIRetryError } from "@/lib/openai-retry";
 
 /**
  * POST /api/analysis/technical
  *
- * Internal, server-to-server route ported from FastAPI
- * `/analysis/technical` (apps/api/app/routers/analysis.py). No auth.
+ * Internal, server-to-server route. No auth. Thin HTTP wrapper around
+ * `runTechnicalAnalysis()`; the feedback route imports that function directly.
  *
- * The deterministic timeline is built locally via `buildTimeline()` and
- * **overwrites** whatever GPT returns for `timeline_analysis` before schema
- * validation. This mirrors the Python `code_analyzer.py` behavior and means
- * the response always contains an authoritative timeline derived from the
- * actual transcript + code snapshots, never a hallucinated one.
+ * The deterministic timeline is built inside `runTechnicalAnalysis` via
+ * `buildTimeline()` and overwrites whatever GPT returns for `timeline_analysis`
+ * before schema validation.
  */
 export async function POST(request: NextRequest) {
   const log = createRequestLogger({ route: "POST /api/analysis/technical" });
@@ -50,8 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Transcript is empty" }, { status: 400 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  if (!process.env.OPENAI_API_KEY) {
     log.error("OPENAI_API_KEY not configured");
     return NextResponse.json(
       { error: "OpenAI API key not configured" },
@@ -59,53 +45,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const openai = new OpenAI({ apiKey });
-  const prompt = buildTechnicalPrompt(
-    parsed.data.transcript,
-    parsed.data.code_snapshots,
-    parsed.data.config,
-  );
-
-  // Build the deterministic timeline ONCE up front; the parseAndValidate
-  // closure injects it into every parse attempt, overriding whatever GPT
-  // returned for `timeline_analysis`.
-  const timeline = buildTimeline(
-    parsed.data.transcript,
-    parsed.data.code_snapshots,
-  );
-
   try {
-    const result = await withOpenAIRetry(
-      () =>
-        openai.chat.completions.create({
-          model: "gpt-5.4-mini",
-          messages: [
-            { role: "system", content: TECHNICAL_SYSTEM_PROMPT },
-            { role: "user", content: prompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.3,
-          max_completion_tokens: 4000,
-        }),
-      (raw) => {
-        let json: Record<string, unknown>;
-        try {
-          json = JSON.parse(raw) as Record<string, unknown>;
-        } catch (e) {
-          throw new OpenAIRetryError("invalid_json", e);
-        }
-        // Inject deterministic timeline BEFORE validation. This is the whole
-        // reason the technical route exists — we never trust GPT's timeline.
-        json.timeline_analysis = timeline;
-        const validated = technicalFeedbackResponseSchema.safeParse(json);
-        if (!validated.success) {
-          throw new OpenAIRetryError("schema_mismatch", validated.error);
-        }
-        return validated.data;
-      },
-      { service: "technical-analysis", log },
-    );
-
+    const result = await runTechnicalAnalysis(parsed.data, { log });
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof OpenAIRetryError) {

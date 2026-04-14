@@ -11,8 +11,13 @@ import { eq, and, asc } from "drizzle-orm";
 import { setSentryUser, setSentryContext } from "@/lib/sentry-utils";
 import { isTechnicalFeedbackComplete } from "@/lib/feedback-utils";
 import { createRequestLogger } from "@/lib/logger";
-
-const PYTHON_API_URL = process.env.PYTHON_API_URL || "http://localhost:8000";
+import { runBehavioralAnalysis } from "@/lib/analysis-behavioral";
+import { runTechnicalAnalysis } from "@/lib/analysis-technical";
+import type {
+  FeedbackResponse,
+  TechnicalFeedbackResponse,
+} from "@/lib/analysis-schemas";
+import { OpenAIRetryError } from "@/lib/openai-retry";
 
 // POST /api/sessions/[id]/feedback — trigger feedback generation
 export async function POST(
@@ -106,49 +111,56 @@ export async function POST(
       .orderBy(asc(codeSnapshots.timestampMs));
   }
 
-  // Call Python service (behavioral or technical)
-  const analysisEndpoint = isTechnical ? "analysis/technical" : "analysis/behavioral";
-  const analysisBody = isTechnical
-    ? {
-        session_id: id,
-        transcript: transcript.entries,
-        code_snapshots: snapshotRows.map((s) => ({
-          code: s.code,
-          language: s.language,
-          timestamp_ms: s.timestampMs,
-          event_type: s.eventType,
-        })),
-        config: found.config,
-      }
-    : {
-        session_id: id,
-        transcript: transcript.entries,
-        config: found.config,
-      };
-
-  let feedbackData;
+  // Call the local TS analysis pipeline directly (no HTTP hop). These are the
+  // same functions the thin `/api/analysis/{behavioral,technical}` routes wrap.
+  let feedbackData: FeedbackResponse | TechnicalFeedbackResponse;
   try {
-    const res = await fetch(`${PYTHON_API_URL}/api/${analysisEndpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(analysisBody),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: "Unknown error" }));
-      return NextResponse.json(
-        { error: `Feedback generation failed: ${err.detail || res.statusText}` },
-        { status: 502 }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const transcriptEntries = transcript.entries as any;
+    if (isTechnical) {
+      feedbackData = await runTechnicalAnalysis(
+        {
+          session_id: id,
+          transcript: transcriptEntries,
+          code_snapshots: snapshotRows.map((s) => ({
+            code: s.code,
+            language: s.language,
+            timestamp_ms: s.timestampMs,
+            event_type: s.eventType,
+          })),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          config: (found.config ?? {}) as any,
+        },
+        { log },
+      );
+    } else {
+      feedbackData = await runBehavioralAnalysis(
+        {
+          session_id: id,
+          transcript: transcriptEntries,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          config: (found.config ?? {}) as any,
+        },
+        { log },
       );
     }
-
-    feedbackData = await res.json();
   } catch (err) {
+    if (err instanceof OpenAIRetryError) {
+      log.error(
+        { reason: err.reason, sessionId: id },
+        "analysis exhausted retries"
+      );
+      return NextResponse.json(
+        { error: `Feedback generation failed: GPT response malformed (${err.reason})` },
+        { status: 500 }
+      );
+    }
+    log.error({ err, sessionId: id }, "analysis failed");
     return NextResponse.json(
       {
-        error: `Could not reach analysis service: ${err instanceof Error ? err.message : "Unknown error"}`,
+        error: `Feedback generation failed: ${err instanceof Error ? err.message : "Unknown error"}`,
       },
-      { status: 502 }
+      { status: 500 }
     );
   }
 
@@ -163,9 +175,9 @@ export async function POST(
       weaknesses: feedbackData.weaknesses,
       answerAnalyses: feedbackData.answer_analyses,
       ...(isTechnical && {
-        codeQualityScore: feedbackData.code_quality_score,
-        explanationQualityScore: feedbackData.explanation_quality_score,
-        timelineAnalysis: feedbackData.timeline_analysis,
+        codeQualityScore: (feedbackData as TechnicalFeedbackResponse).code_quality_score,
+        explanationQualityScore: (feedbackData as TechnicalFeedbackResponse).explanation_quality_score,
+        timelineAnalysis: (feedbackData as TechnicalFeedbackResponse).timeline_analysis,
       }),
     })
     .returning();

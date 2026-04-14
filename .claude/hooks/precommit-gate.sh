@@ -5,8 +5,8 @@
 #
 # Behavior:
 #   - Detects whether the working tree has any modifications under
-#     apps/web or apps/api. Skips gracefully if not (read-only turns
-#     should not pay the cost).
+#     apps/web or packages/shared. Skips gracefully if not (read-only
+#     turns should not pay the cost).
 #   - Runs `npx turbo lint typecheck test` scoped via --filter to whichever
 #     packages were touched.
 #   - On failure, exits 2 with a stderr message — Claude Code surfaces this
@@ -22,7 +22,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # Skip if there are no source modifications.
-changed=$(git status --porcelain | awk '{print $2}' | grep -E '^(apps/(web|api)|packages/shared)/' || true)
+changed=$(git status --porcelain | awk '{print $2}' | grep -E '^(apps/web|packages/shared)/' || true)
 if [ -z "$changed" ]; then
   exit 0
 fi
@@ -30,9 +30,6 @@ fi
 filters=()
 if echo "$changed" | grep -q '^apps/web/'; then
   filters+=("--filter=@interview-assistant/web")
-fi
-if echo "$changed" | grep -q '^apps/api/'; then
-  filters+=("--filter=@interview-assistant/api")
 fi
 if echo "$changed" | grep -q '^packages/shared/'; then
   filters+=("--filter=@interview-assistant/shared")

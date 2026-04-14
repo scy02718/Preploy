@@ -6,10 +6,9 @@
  * response pipeline with a mocked OpenAI client and re-parses the response
  * with `technicalFeedbackResponseSchema` to prove every constraint passes.
  *
- * The "timeline_injected_from_correlator_not_gpt" test mirrors
- * `apps/api/tests/test_code_analyzer.py::test_timeline_injected_from_correlator_not_gpt`
- * — GPT returns an empty timeline_analysis but the route MUST overwrite it
- * with the deterministic `buildTimeline()` result before validation.
+ * The "timeline_injected_from_correlator_not_gpt" test asserts that even if
+ * GPT returns an empty timeline_analysis, the route MUST overwrite it with
+ * the deterministic `buildTimeline()` result before validation.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
