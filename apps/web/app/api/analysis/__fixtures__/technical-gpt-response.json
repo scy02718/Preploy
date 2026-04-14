@@ -1,0 +1,17 @@
+{
+  "overall_score": 7.0,
+  "summary": "Candidate demonstrated solid problem-solving skills.",
+  "strengths": ["Clear explanation", "Correct approach", "Good complexity analysis"],
+  "weaknesses": ["Edge cases not discussed", "No error handling", "Could optimize further"],
+  "code_quality_score": 6.5,
+  "explanation_quality_score": 7.5,
+  "answer_analyses": [
+    {
+      "question": "Walk me through your approach.",
+      "answer_summary": "Candidate used a sliding window.",
+      "score": 7.0,
+      "feedback": "Good approach but could discuss alternatives.",
+      "suggestions": ["Mention brute force first", "Discuss trade-offs"]
+    }
+  ]
+}
