@@ -73,13 +73,17 @@ describe("ProfilePage", () => {
     });
   });
 
-  it("renders plan options after loading", async () => {
+  it("renders the read-only Plan card showing the user's current plan", async () => {
     render(<ProfilePage />);
     await vi.waitFor(() => {
+      // Plan card title and the user's tier badge
+      expect(screen.getAllByText("Plan").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Free").length).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.getAllByText("Pro").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Max").length).toBeGreaterThanOrEqual(1);
+    // No interactive plan-change UI — the radio group + Update Plan button
+    // were removed because they let any user upgrade themselves to Pro/Max
+    // without paying.
+    expect(screen.queryByText("Update Plan")).toBeNull();
   });
 
   it("renders danger zone section", async () => {

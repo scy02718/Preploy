@@ -106,22 +106,37 @@ describe("API /api/users/me (integration)", () => {
     expect(res.status).toBe(400);
   });
 
-  it("PATCH updates plan", async () => {
+  it("PATCH rejects any attempt to change plan (security: must go through Stripe)", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     const res = await PATCH(makePatchRequest({ plan: "pro" }));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
     const data = await res.json();
-    expect(data.plan).toBe("pro");
+    expect(data.error).toMatch(/Stripe billing/i);
 
-    // Reset
+    // Verify the DB row is still on the original plan (no silent write)
     const db = getTestDb();
-    await db.update(users).set({ plan: "free" }).where(eq(users.id, TEST_USER.id));
+    const [row] = await db
+      .select({ plan: users.plan })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.plan).toBe("free");
   });
 
-  it("PATCH rejects invalid plan", async () => {
+  it("PATCH rejects plan even when paired with a valid name update", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
-    const res = await PATCH(makePatchRequest({ plan: "enterprise" }));
-    expect(res.status).toBe(400);
+    const res = await PATCH(
+      makePatchRequest({ name: "Hacked", plan: "pro" })
+    );
+    expect(res.status).toBe(403);
+
+    // Name should NOT have been written either — the request was rejected wholesale
+    const db = getTestDb();
+    const [row] = await db
+      .select({ name: users.name, plan: users.plan })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.name).toBe("Test User");
+    expect(row.plan).toBe("free");
   });
 
   it("PATCH rejects empty body", async () => {

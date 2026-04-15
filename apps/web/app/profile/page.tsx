@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PLANS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
 
@@ -22,19 +21,15 @@ interface UserProfile {
   createdAt: string;
 }
 
-const PLAN_OPTIONS = Object.values(PLANS);
-
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Editable fields
   const [name, setName] = useState("");
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("free");
 
   // UI state
   const [isSavingName, setIsSavingName] = useState(false);
-  const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [isDisabling, setIsDisabling] = useState(false);
   const [isBillingLoading, setIsBillingLoading] = useState(false);
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
@@ -48,7 +43,6 @@ export default function ProfilePage() {
           const data: UserProfile = await res.json();
           setProfile(data);
           setName(data.name ?? "");
-          setSelectedPlan(data.plan);
         }
       } catch {
         // Silent
@@ -85,30 +79,6 @@ export default function ProfilePage() {
       showMessage("error", "Failed to update name");
     } finally {
       setIsSavingName(false);
-    }
-  };
-
-  const handleSavePlan = async () => {
-    if (selectedPlan === profile?.plan) return;
-    setIsSavingPlan(true);
-    try {
-      const res = await fetch("/api/users/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: selectedPlan }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setProfile((p) => (p ? { ...p, plan: data.plan } : p));
-        showMessage("success", `Plan changed to ${PLANS[data.plan as PlanId].name}`);
-      } else {
-        const err = await res.json();
-        showMessage("error", err.error || "Failed to change plan");
-      }
-    } catch {
-      showMessage("error", "Failed to change plan");
-    } finally {
-      setIsSavingPlan(false);
     }
   };
 
@@ -269,36 +239,12 @@ export default function ProfilePage() {
                 <Badge variant="secondary">{PLANS[profile.plan].name}</Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <RadioGroup
-                value={selectedPlan}
-                onValueChange={(v) => setSelectedPlan(v as PlanId)}
-              >
-                {PLAN_OPTIONS.map((plan) => (
-                  <label
-                    key={plan.id}
-                    className="flex cursor-pointer items-center justify-between rounded-md border px-4 py-3 hover:bg-accent has-[data-checked]:border-primary has-[data-checked]:bg-primary/5"
-                  >
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem value={plan.id} />
-                      <div>
-                        <p className="text-sm font-medium">{plan.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {plan.dailySessionLimit} sessions/day
-                        </p>
-                      </div>
-                    </div>
-                  </label>
-                ))}
-              </RadioGroup>
-
-              <Button
-                onClick={handleSavePlan}
-                disabled={isSavingPlan || selectedPlan === profile.plan}
-                className="w-full"
-              >
-                {isSavingPlan ? "Updating..." : "Update Plan"}
-              </Button>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {profile.plan === "free"
+                  ? "You're on the Free plan with 3 mock interviews per month. Upgrade below to remove the limit."
+                  : "You're on the Pro plan with unlimited mock interviews. Manage your subscription below."}
+              </p>
             </CardContent>
           </Card>
 
