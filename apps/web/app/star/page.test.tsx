@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
-// Mock next/navigation before any imports
+// Mock next/navigation with the canonical vi.hoisted() + vi.mock() pattern
+// so the factory receives a hoisted ref before the import graph is evaluated.
+const { mockPush } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-  }),
+  useRouter: () => ({ push: mockPush }),
+  usePathname: () => "/star",
 }));
 
 import StarPrepPage from "./page";
