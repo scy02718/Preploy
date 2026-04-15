@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 
+// Pure static content — no auth, no DB, no per-user data. Force static
+// rendering so it serves from Vercel's edge CDN instead of going through
+// a fresh Lambda on every request.
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "Privacy",
   description: "Preploy privacy policy — coming before launch.",
