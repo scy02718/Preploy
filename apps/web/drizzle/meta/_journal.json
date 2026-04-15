@@ -43,6 +43,13 @@
       "when": 1775989756690,
       "tag": "0005_thankful_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776254159957,
+      "tag": "0006_silly_banshee",
+      "breakpoints": true
     }
   ]
 }
