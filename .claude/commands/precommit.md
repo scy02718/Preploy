@@ -1,5 +1,5 @@
 ---
-description: Run lint, typecheck, unit tests, and integration tests; fix anything that fails until everything is green.
+description: Run lint, typecheck, unit tests, integration tests, and E2E smoke tests; fix anything that fails until everything is green.
 ---
 
 You are about to run the full pre-commit checklist for this monorepo. Follow
@@ -51,7 +51,35 @@ npm run db:migrate
 
 Then re-run the integration suite.
 
-## Step 4 — Report
+## Step 4 — E2E smoke tests (Playwright)
+
+Skip this step entirely if `apps/web/e2e/` does not exist on the current
+branch (e.g., on branches cut before #41 merged). Otherwise:
+
+```bash
+docker compose --profile test up -d test-db
+cd apps/web && npm run test:e2e:smoke
+```
+
+This spins up a production build (`next build && next start`) and runs the
+chromium smoke suite against it. Expect ~2–3 minutes on a cold cache. The
+suite shares the same `test-db` container as integration tests.
+
+Common failures:
+- `AUTH_SECRET` missing → all authenticated tests redirect to `/login`.
+  `playwright.config.ts` falls back to the CI dummy secret, but verify
+  your shell env does not override it with a different value.
+- Port 3000 already in use → stop any local `next dev` first.
+- Schema drift → run `npm run db:migrate` against `test-db`, then re-run.
+- Transient mic/camera prompts → `playwright.config.ts` grants both
+  permissions; if a new test still blocks, match that pattern.
+
+If a single test flakes, re-run the full suite once before calling it a
+failure. Any test that flakes twice gets a `test.skip(...)` with a
+`TODO(#41-v2)` comment and a follow-up issue filed — we do not tolerate a
+flaky suite in the repo.
+
+## Step 5 — Report
 
 Print a final summary in this format:
 
@@ -62,6 +90,7 @@ Pre-commit checklist
   Unit tests:          ✓ / ✗  (N passed)
   Component tests:     ✓ / ✗  (N passed)
   Integration tests:   ✓ / ✗  (N passed)
+  E2E smoke tests:     ✓ / ✗ / skipped  (N passed)
 ```
 
 Only report SUCCESS if **every** step is green. If anything is still red, list
