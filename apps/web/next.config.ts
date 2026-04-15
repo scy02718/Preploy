@@ -12,8 +12,8 @@ const cspDirectives = [
   "img-src 'self' data: blob: https://*.googleusercontent.com",
   // Fonts: self + Monaco editor fonts (Codicon)
   "font-src 'self' https://cdn.jsdelivr.net",
-  // Connect: self + OpenAI + Supabase + Sentry + Python API + Monaco CDN
-  "connect-src 'self' https://api.openai.com wss://api.openai.com https://*.supabase.co https://*.sentry.io https://*.ingest.us.sentry.io http://localhost:8000 https://cdn.jsdelivr.net",
+  // Connect: self + OpenAI + Supabase + Sentry + Python API + Monaco CDN + Google OAuth
+  "connect-src 'self' https://api.openai.com wss://api.openai.com https://*.supabase.co https://*.sentry.io https://*.ingest.us.sentry.io http://localhost:8000 https://cdn.jsdelivr.net https://accounts.google.com",
   // Media: self + blob (audio recording)
   "media-src 'self' blob:",
   // Workers: self + blob (Monaco editor workers)
@@ -26,8 +26,8 @@ const cspDirectives = [
   "object-src 'none'",
   // Base URI: self
   "base-uri 'self'",
-  // Form action: self
-  "form-action 'self'",
+  // Form action: self + Google OAuth (NextAuth redirects to accounts.google.com on sign-in)
+  "form-action 'self' https://accounts.google.com",
 ].join("; ");
 
 const nextConfig: NextConfig = {

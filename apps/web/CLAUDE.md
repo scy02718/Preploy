@@ -22,6 +22,39 @@ covers monorepo-wide rules (Tasks.md workflow, pre-commit checklist).
 - Use `createRequestLogger({ route, userId })` from `@/lib/logger` — never `console.log` server-side.
 - On 404 for another user's resource, never leak existence (return 404, not 403).
 
+## SDK clients (OpenAI, Stripe, etc.) — lazy-init only
+
+**Never instantiate an SDK client at module load.** Next.js evaluates every
+route module during `next build`'s "Collecting page data" phase, and any SDK
+that throws synchronously when its API key is missing (OpenAI, Stripe, …)
+will crash the build before runtime env vars are read. This has burned us
+twice (PRs #52, #53).
+
+- For SDK clients used in **one** route, construct inside the handler:
+  ```ts
+  export async function POST(req: NextRequest) {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // ...
+  }
+  ```
+- For SDK clients shared across **multiple** routes (e.g. `lib/stripe.ts`),
+  expose a Proxy that defers construction until first property access:
+  ```ts
+  let cached: Stripe | null = null;
+  function getClient(): Stripe {
+    if (cached) return cached;
+    if (!process.env.STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not set");
+    cached = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "..." });
+    return cached;
+  }
+  export const stripe = new Proxy({} as Stripe, {
+    get(_t, prop, recv) { return Reflect.get(getClient(), prop, recv); },
+  });
+  ```
+  The Proxy keeps the existing named export shape so `vi.mock("@/lib/stripe", () => ({ stripe: {...} }))` test patterns work unchanged.
+- **Never** put `if (!process.env.X) throw` at module top level — the build
+  will hit it before your runtime env is in place.
+
 ## Database
 
 - Schema lives in `lib/schema.ts`. Relations are defined in the same file.
