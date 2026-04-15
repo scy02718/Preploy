@@ -95,6 +95,94 @@ jobs:
           TEST_DATABASE_URL: postgresql://test:test@localhost:5433/interview_assistant_test
         run: npm run test:integration
 
+  e2e:
+    name: E2E Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: interview_assistant_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Load CI env vars
+        run: cp .env.ci apps/web/.env
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('apps/web/package-lock.json') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: apps/web
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Chromium system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: apps/web
+        run: npx playwright install-deps chromium
+
+      - name: Apply database migrations
+        working-directory: apps/web
+        env:
+          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+        run: npm run db:migrate
+
+      - name: Build Next.js app
+        working-directory: apps/web
+        env:
+          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          AUTH_SECRET: dummy-auth-secret-for-ci-only
+          AUTH_URL: http://localhost:3000
+        run: npm run build
+
+      - name: Run E2E smoke tests
+        working-directory: apps/web
+        env:
+          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          AUTH_SECRET: dummy-auth-secret-for-ci-only
+          AUTH_URL: http://localhost:3000
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          # webServer config will run `npm run start` (build is already done above)
+        run: |
+          npm run test:e2e:smoke
+
+      - name: Upload Playwright HTML report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
   build:
     name: Build
     runs-on: ubuntu-latest

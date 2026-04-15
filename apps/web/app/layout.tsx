@@ -14,9 +14,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.app";
+
 export const metadata: Metadata = {
-  title: "Preploy",
-  description: "AI-powered mock interview practice with real-time feedback. Deploy yourself.",
+  title: {
+    default: "Preploy — AI Mock Interview Practice",
+    template: "%s | Preploy",
+  },
+  description:
+    "Practice mock interviews with AI and get detailed feedback to improve your performance.",
+  metadataBase: new URL(BASE_URL),
+  alternates: {
+    canonical: BASE_URL,
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({
