@@ -1,5 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NODE_ENV",
+    "CI",
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_URL"
+  ],
   "tasks": {
     "dev": {
       "cache": false,
@@ -7,14 +14,41 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "SUPABASE_DB_URL",
+        "SUPABASE_URL",
+        "SUPABASE_ANON_KEY",
+        "AUTH_SECRET",
+        "NEXTAUTH_SECRET",
+        "AUTH_URL",
+        "NEXTAUTH_URL",
+        "AUTH_TRUST_HOST",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "OPENAI_API_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "STRIPE_PRO_PRICE_ID",
+        "SENTRY_DSN",
+        "NEXT_PUBLIC_SENTRY_DSN",
+        "SENTRY_AUTH_TOKEN",
+        "NEXT_PUBLIC_BASE_URL",
+        "LOG_LEVEL"
+      ]
     },
     "lint": {
       "dependsOn": ["^build"]
     },
     "test": {
       "dependsOn": ["^build"],
-      "cache": false
+      "cache": false,
+      "env": [
+        "SUPABASE_DB_URL",
+        "TEST_DATABASE_URL",
+        "AUTH_SECRET",
+        "OPENAI_API_KEY"
+      ]
     },
     "typecheck": {
       "dependsOn": ["^build"]
