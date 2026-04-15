@@ -72,6 +72,7 @@ export default function DashboardPage() {
   const [scoreFilter, setScoreFilter] = useState<string>("all");
 
   // Stats (fetched once with no filters)
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
   const [totalSessions, setTotalSessions] = useState(0);
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [thisWeek, setThisWeek] = useState(0);
@@ -140,6 +141,8 @@ export default function DashboardPage() {
         );
       } catch {
         // Silent
+      } finally {
+        setIsStatsLoading(false);
       }
     }
     fetchStats();
@@ -204,41 +207,54 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl">{totalSessions}</CardTitle>
-            <CardDescription>Total Sessions</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl">
-              {avgScore !== null ? avgScore.toFixed(1) : "--"}
-            </CardTitle>
-            <CardDescription>Average Score</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl">{thisWeek}</CardTitle>
-            <CardDescription>This Week</CardDescription>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl">
-              {quota ? `${quota.remaining}/${quota.limit}` : "--"}
-            </CardTitle>
-            <CardDescription>
-              Sessions Today
-              {quota && (
-                <span className="ml-1 text-xs">({quota.planName} plan)</span>
-              )}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      {isStatsLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="space-y-2">
+                <div className="h-9 w-16 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-3xl">{totalSessions}</CardTitle>
+              <CardDescription>Total Sessions</CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-3xl">
+                {avgScore !== null ? avgScore.toFixed(1) : "--"}
+              </CardTitle>
+              <CardDescription>Average Score</CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-3xl">{thisWeek}</CardTitle>
+              <CardDescription>This Week</CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-3xl">
+                {quota ? `${quota.remaining}/${quota.limit}` : "--"}
+              </CardTitle>
+              <CardDescription>
+                Sessions Today
+                {quota && (
+                  <span className="ml-1 text-xs">({quota.planName} plan)</span>
+                )}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      )}
 
       {/* Streak + Badges row */}
       {userStats ? (

@@ -75,7 +75,17 @@ twice (PRs #52, #53).
 - Add new protected routes to `middleware.ts` matcher.
 - Add navigation links in `components/shared/Sidebar.tsx` (and `Header.tsx` if top-level).
 - Page containers: `max-w-6xl`. Two-column layouts: `md:grid-cols-2`.
-- Always render a loading skeleton while data fetches.
+
+### Loading skeletons (mandatory for any data-fetching widget)
+
+**Every widget that fetches data MUST render a `animate-pulse` skeleton during the fetch.** Widgets that "pop in" suddenly when data arrives are a regression — file paths and the user has noticed them in PRs #37, #38, and others. Before requesting review:
+
+- [ ] Does any `useEffect` in this component call `fetch(...)`? → Add an `isLoading` state initialized to `true`.
+- [ ] Render a skeleton branch (`if (isLoading) return <skeleton/>`) before the real content.
+- [ ] **The skeleton's shape must mirror the post-load layout exactly.** Same number of cards, same column structure, same approximate heights. A skeleton that shows 1 card per column is wrong if the loaded layout has 4 cards on the right.
+- [ ] When you ADD a new card to a page that already has a skeleton, you MUST add a matching placeholder to the skeleton in the same commit. This is the most common cause of pop-in regressions.
+- [ ] For nested widgets that fetch their own data (e.g., `MonthlyUsageMeter`), the widget owns its own internal skeleton — the parent doesn't need to know about it.
+- [ ] Use `animate-pulse rounded bg-muted` divs sized to match the eventual content. Don't use empty `<Card />` shells without inner placeholders — they look broken.
 
 ## Styling
 

@@ -39,9 +39,12 @@ cd apps/web && npm run test:e2e:smoke   # Playwright E2E smoke suite
 ```
 
 If any of these fail, fix the issue before committing — CI will reject the push.
-The Stop hook in `.claude/settings.json` runs the first command automatically
-when Claude finishes a turn that touched source files; you should still run the
-integration suite manually before pushing.
+The Stop hook in `.claude/settings.json` runs `.claude/hooks/precommit-gate.sh`,
+which executes `npx turbo lint typecheck test` automatically when Claude
+finishes a turn that touched source files. The hook does **not** run the
+integration suite (it would need Docker and is too slow for a per-turn
+check), so you should still run `cd apps/web && npm run test:integration`
+manually before pushing.
 
 ## E2E smoke tests
 
@@ -107,6 +110,19 @@ npm run db:migrate    # Apply locally
 
 **Never** use `db:push` for committed work. Commit the generated SQL files in
 `drizzle/` — they are the source of truth.
+
+**Always stage `apps/web/drizzle/` as a directory**, not individual files.
+`npm run db:generate` writes three things: the SQL file, a snapshot JSON in
+`drizzle/meta/`, AND an entry appended to `drizzle/meta/_journal.json`.
+Drizzle's runtime migrator reads the journal to know which migrations to
+apply — staging only the SQL file and snapshot but missing the journal
+update produces a branch where CI runs migrations 0..N-1 and silently
+skips your N, then crashes on the first INSERT that references the new
+column. This bit us twice in PRs #36 and #51. Safe pattern:
+
+```bash
+git add apps/web/drizzle/   # the whole directory, never individual files
+```
 
 ## Other repo-wide rules
 
