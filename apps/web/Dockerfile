@@ -36,8 +36,21 @@ COPY package.json package-lock.json turbo.json ./
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    # A few API routes construct their OpenAI client at module top-level
+    # (`const openai = new OpenAI()`), which means `next build`'s page-data
+    # collection instantiates the client and the SDK throws if the env var
+    # is missing. Supply a placeholder ONLY for the build stage — it never
+    # reaches the runner image. Real keys are injected at container-run
+    # time via --env-file (see apps/web/README.md → Local Docker).
+    OPENAI_API_KEY=sk-build-placeholder
 WORKDIR /app/apps/web
+# Next.js 16 stat()s apps/web/.env during `next build` and errors out with
+# ENOENT if it is missing instead of treating "no .env" as "no overrides".
+# `.dockerignore` excludes .env* from the build context, so materialize an
+# empty placeholder. Real runtime env values are injected at container-run
+# time via --env-file, never baked into the image.
+RUN touch .env
 RUN npm run build
 
 # -----------------------------------------------------------------------------
