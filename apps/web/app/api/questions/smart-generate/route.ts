@@ -8,14 +8,17 @@ import { checkRateLimit } from "@/lib/api-utils";
 import { buildSmartQuestionsPrompt } from "@/lib/smart-questions-prompt";
 import OpenAI from "openai";
 
-const openai = new OpenAI();
-
 // POST /api/questions/smart-generate — generate questions combining company + resume context
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Lazy-instantiate so `next build` can import this module without
+  // OPENAI_API_KEY being present. The SDK throws synchronously if the key
+  // is missing at construction time.
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const rateLimited = checkRateLimit(session.user.id);
   if (rateLimited) return rateLimited;
