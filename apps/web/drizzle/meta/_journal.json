@@ -50,6 +50,13 @@
       "when": 1776254159957,
       "tag": "0006_silly_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776257828145,
+      "tag": "0007_slow_smasher",
+      "breakpoints": true
     }
   ]
 }
