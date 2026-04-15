@@ -3,10 +3,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/lib/schema";
 import { eq } from "drizzle-orm";
-import type { PlanId } from "@/lib/plans";
-import { PLANS } from "@/lib/plans";
-
-const VALID_PLANS = new Set(Object.keys(PLANS));
 
 // GET /api/users/me — get current user profile
 export async function GET() {
@@ -37,6 +33,13 @@ export async function GET() {
 }
 
 // PATCH /api/users/me — update current user profile
+//
+// SECURITY: this endpoint must NEVER accept the `plan` field. Plan changes
+// are gated entirely through the Stripe webhook (`POST /api/billing/webhook`)
+// which flips `users.plan` to `"pro"` on `checkout.session.completed` and
+// back to `"free"` on `customer.subscription.deleted`. Accepting a `plan`
+// field here would let any signed-in user upgrade themselves for free —
+// this exact bug was reported and fixed in this PR.
 export async function PATCH(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -63,15 +66,16 @@ export async function PATCH(request: NextRequest) {
     updates.image = body.image.trim() || null;
   }
 
-  // Plan update
-  if (typeof body.plan === "string") {
-    if (!VALID_PLANS.has(body.plan)) {
-      return NextResponse.json(
-        { error: `Invalid plan. Must be one of: ${[...VALID_PLANS].join(", ")}` },
-        { status: 400 }
-      );
-    }
-    updates.plan = body.plan as PlanId;
+  // `plan` is intentionally not in the allowlist above. Reject any
+  // attempt to send it so a confused client doesn't get a silent 200.
+  if ("plan" in body) {
+    return NextResponse.json(
+      {
+        error:
+          "Plan changes are managed through Stripe billing. Use /api/billing/checkout to upgrade.",
+      },
+      { status: 403 }
+    );
   }
 
   if (Object.keys(updates).length === 0) {
