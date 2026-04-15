@@ -47,4 +47,8 @@ coverage/
 
 # Misc
 *.tsbuildinfo
-next-env.d.ts.claude/worktrees/
+next-env.d.ts
+.claude/worktrees/
+
+# Graphify knowledge graph (local tool state)
+graphify-out/

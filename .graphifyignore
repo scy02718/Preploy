@@ -1,0 +1,49 @@
+# Exclusions for `graphify update .` — same syntax as .gitignore.
+# Keep in sync with .gitignore for anything that is noise for the graph.
+
+# Dependencies
+node_modules/
+.pnp/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+.turbo/
+**/dist/
+
+# Generated / lockfiles
+package-lock.json
+*.tsbuildinfo
+next-env.d.ts
+
+# Drizzle migration metadata (snapshots are noisy, SQL files are fine)
+apps/web/drizzle/meta/
+
+# Python caches / venvs
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Tests coverage
+coverage/
+.pytest_cache/
+
+# Test-only fixtures + Playwright artefacts
+apps/web/e2e/.auth/
+apps/web/playwright-report/
+apps/web/test-results/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Graphify itself
+graphify-out/
+.claude/worktrees/
+
+# Archived design docs (parked work, don't want them skewing god nodes)
+dev_logs/Backlog-archive.md
