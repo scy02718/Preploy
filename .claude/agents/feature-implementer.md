@@ -1,7 +1,7 @@
 ---
 name: feature-implementer
 description: Implements a complete feature story with API routes, UI, and tests following Preploy conventions
-model: opus
+model: sonnet
 tools:
   - Read
   - Write

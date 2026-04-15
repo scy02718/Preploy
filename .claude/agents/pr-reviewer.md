@@ -1,7 +1,7 @@
 ---
 name: pr-reviewer
 description: Reads the diff against main, audits it against the per-app CLAUDE.md rules, and drafts a PR title and body. Use after qa-tester reports PASS, before opening a PR.
-model: opus
+model: sonnet
 tools:
   - Read
   - Glob

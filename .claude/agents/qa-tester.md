@@ -70,6 +70,58 @@ If there are UI changes, use the **`webapp-testing`** skill to:
 Do not write a full Playwright test suite — this is a smoke test, 30 seconds
 of clicking. The integration tests cover deep correctness.
 
+### 5. Container build validation (only if the change touches Docker)
+
+Run this step when the diff touches any of: `Dockerfile`, `docker-compose.yml`,
+`.dockerignore`, `next.config.ts`/`next.config.js` (standalone output config),
+or any file whose path matches `*docker*`. Detect via:
+
+```bash
+git diff main --name-only | grep -E '(Dockerfile|docker-compose|\.dockerignore|next\.config\.)'
+```
+
+If the diff touches Docker files:
+
+1. Verify Docker is available on the host:
+   ```bash
+   docker version
+   ```
+   If Docker is not installed or the daemon is not running, **fail this gate**
+   with `Docker unavailable — cannot validate container changes`. Do NOT skip
+   silently.
+
+2. Build the image:
+   ```bash
+   docker build -f apps/web/Dockerfile -t preploy-web:qa .
+   ```
+   On build failure, capture the last 40 lines of output and fail the gate.
+
+3. Run the container against the existing env:
+   ```bash
+   docker run -d --name preploy-qa -p 3100:3000 --env-file apps/web/.env.local preploy-web:qa
+   ```
+   Use port 3100 to avoid colliding with a running dev server. If
+   `.env.local` does not exist, fail with a clear message.
+
+4. Wait up to 30 seconds for `/api/health` to return 200:
+   ```bash
+   for i in $(seq 1 30); do
+     if curl -fsS http://localhost:3100/api/health > /dev/null; then break; fi
+     sleep 1
+   done
+   curl -fsS http://localhost:3100/api/health
+   ```
+   If the health check never returns 200, capture `docker logs preploy-qa`
+   (last 40 lines) and fail the gate.
+
+5. Always clean up, even on failure:
+   ```bash
+   docker rm -f preploy-qa || true
+   ```
+
+If the diff does NOT touch Docker files, skip this step entirely (mark
+`Container build: N/A` in the report).
+
 ## Coverage check
 
 After all tests pass, verify the developer added meaningful tests for the new
@@ -137,6 +189,7 @@ QA Report — <story title>
   Component tests:            ✓ / ✗   (<n passed>)
   Integration tests:          ✓ / ✗   (<n passed>)
   UI smoke:                   ✓ / ✗ / N/A  (<page tested>)
+  Container build:            ✓ / ✗ / N/A  (<image tag, health-check result>)
   Coverage — file existence:  ✓ / ✗   (<missing test files if any>)
   Coverage — semantic depth:  ✓ / ✗   (<empty/skipped tests if any>)
   Coverage — story trace:     ✓ / ✗   (<uncovered scenarios if any>)
