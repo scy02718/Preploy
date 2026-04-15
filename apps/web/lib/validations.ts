@@ -69,3 +69,33 @@ export const timelineEventSchema = z.object({
   full_text: z.string().nullable().optional(),
 });
 export type TimelineEvent = z.infer<typeof timelineEventSchema>;
+
+// ---- STAR story schemas ----
+
+export const createStarStorySchema = z.object({
+  title: z.string().min(1).max(200),
+  role: z.string().min(1).max(200),
+  expectedQuestions: z.array(z.string().min(1).max(500)).min(1).max(3),
+  situation: z.string().min(1).max(5000),
+  task: z.string().min(1).max(5000),
+  action: z.string().min(1).max(5000),
+  result: z.string().min(1).max(5000),
+});
+export type CreateStarStoryInput = z.infer<typeof createStarStorySchema>;
+
+export const updateStarStorySchema = createStarStorySchema.partial();
+export type UpdateStarStoryInput = z.infer<typeof updateStarStorySchema>;
+
+export const listStarStoriesQuerySchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 1))
+    .pipe(z.number().int().min(1)),
+  limit: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 20))
+    .pipe(z.number().int().min(1).max(100)),
+});
+export type ListStarStoriesQuery = z.infer<typeof listStarStoriesQuerySchema>;

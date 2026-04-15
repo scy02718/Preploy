@@ -17,6 +17,7 @@ export function getTestDb() {
 
 export async function cleanupTestDb() {
   const db = getTestDb();
+  await db.delete(schema.starStoryAnalyses);
   await db.delete(schema.sessionTemplates);
   await db.delete(schema.companyQuestions);
   await db.delete(schema.userResumes);
@@ -25,6 +26,7 @@ export async function cleanupTestDb() {
   await db.delete(schema.transcripts);
   await db.delete(schema.codeSnapshots);
   await db.delete(schema.interviewSessions);
+  await db.delete(schema.starStories);
   await db.delete(schema.interviewUsage);
   await db.delete(schema.accounts);
   await db.delete(schema.users);

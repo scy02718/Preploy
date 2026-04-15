@@ -14,12 +14,14 @@ import {
   CalendarDays,
   FileText,
   History,
+  Star,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/interview/behavioral/setup", label: "Behavioral Interview", icon: MessageSquare },
   { href: "/interview/technical/setup", label: "Technical Interview", icon: Code },
+  { href: "/star", label: "STAR Prep", icon: Star },
   { href: "/coaching", label: "Coaching", icon: GraduationCap },
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/resume", label: "Resume", icon: FileText },
