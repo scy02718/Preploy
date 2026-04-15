@@ -81,6 +81,7 @@ committed). Required keys — populate before `docker compose up`:
 | `GOOGLE_CLIENT_ID`       | Google OAuth client ID.                                         |
 | `GOOGLE_CLIENT_SECRET`   | Google OAuth client secret.                                     |
 | `OPENAI_API_KEY`         | OpenAI API key.                                                 |
+| `AUTH_TRUST_HOST`        | Set to `true` for any non-Vercel deploy (local Docker included). NextAuth v5 rejects untrusted `Host` headers otherwise — the symptom is `[auth][error] UntrustedHost` in the container logs. |
 
 Runtime envs baked into the container image itself (set in the Dockerfile, not
 `.env.local`):
