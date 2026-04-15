@@ -125,8 +125,9 @@ describe("POST /api/billing/webhook (integration)", () => {
 
   // ---- checkout.session.completed ----
 
-  it("flips plan to pro on checkout.session.completed", async () => {
+  it("flips plan to pro on checkout.session.completed and stores the period end from items.data[0]", async () => {
     const now = Math.floor(Date.now() / 1000);
+    const expectedPeriodEnd = now + 30 * 24 * 3600;
     const event = makeStripeEvent("checkout.session.completed", {
       id: "cs_test_001",
       subscription: "sub_test_001",
@@ -134,10 +135,17 @@ describe("POST /api/billing/webhook (integration)", () => {
     });
 
     mockConstructEvent.mockReturnValueOnce(event);
+    // Stripe v22 nests period timestamps under subscription.items.data[0].
     mockSubscriptionsRetrieve.mockResolvedValueOnce({
       id: "sub_test_001",
-      current_period_start: now,
-      current_period_end: now + 30 * 24 * 3600,
+      items: {
+        data: [
+          {
+            current_period_start: now,
+            current_period_end: expectedPeriodEnd,
+          },
+        ],
+      },
     });
 
     const res = await POST(makeWebhookRequest(JSON.stringify({})));
@@ -151,12 +159,18 @@ describe("POST /api/billing/webhook (integration)", () => {
       .select({
         plan: users.plan,
         stripeSubscriptionId: users.stripeSubscriptionId,
+        planPeriodEnd: users.planPeriodEnd,
       })
       .from(users)
       .where(eq(users.id, TEST_USER.id));
 
     expect(row.plan).toBe("pro");
     expect(row.stripeSubscriptionId).toBe("sub_test_001");
+    // Tight assertion: the period end must come from items.data[0], not fall
+    // back to `new Date()`. Allow a few seconds of clock drift.
+    expect(row.planPeriodEnd).not.toBeNull();
+    const actualSec = Math.floor(row.planPeriodEnd!.getTime() / 1000);
+    expect(Math.abs(actualSec - expectedPeriodEnd)).toBeLessThan(5);
   });
 
   it("is idempotent — same checkout.session.completed event twice makes exactly one state change", async () => {
@@ -170,8 +184,14 @@ describe("POST /api/billing/webhook (integration)", () => {
     mockConstructEvent.mockReturnValue(event);
     mockSubscriptionsRetrieve.mockResolvedValue({
       id: "sub_test_idem",
-      current_period_start: now,
-      current_period_end: now + 30 * 24 * 3600,
+      items: {
+        data: [
+          {
+            current_period_start: now,
+            current_period_end: now + 30 * 24 * 3600,
+          },
+        ],
+      },
     });
 
     // Process event twice
@@ -263,12 +283,19 @@ describe("POST /api/billing/webhook (integration)", () => {
     const now = Math.floor(Date.now() / 1000);
     const newPeriodEnd = now + 60 * 24 * 3600;
 
+    // Stripe v22 nests period timestamps under items.data[0].
     const event = makeStripeEvent("customer.subscription.updated", {
       id: "sub_updated",
       customer: TEST_USER.stripeCustomerId,
       status: "active",
-      current_period_start: now,
-      current_period_end: newPeriodEnd,
+      items: {
+        data: [
+          {
+            current_period_start: now,
+            current_period_end: newPeriodEnd,
+          },
+        ],
+      },
     });
 
     mockConstructEvent.mockReturnValueOnce(event);
@@ -282,7 +309,11 @@ describe("POST /api/billing/webhook (integration)", () => {
       .where(eq(users.id, TEST_USER.id));
 
     expect(row.plan).toBe("pro");
+    // Tight assertion: must match items.data[0].current_period_end, not
+    // fall back to `new Date()`. Allow a few seconds of clock drift.
     expect(row.planPeriodEnd).not.toBeNull();
+    const actualSec = Math.floor(row.planPeriodEnd!.getTime() / 1000);
+    expect(Math.abs(actualSec - newPeriodEnd)).toBeLessThan(5);
   });
 
   it("sets plan to free on customer.subscription.updated with canceled status", async () => {
@@ -292,8 +323,14 @@ describe("POST /api/billing/webhook (integration)", () => {
       id: "sub_canceled_update",
       customer: TEST_USER.stripeCustomerId,
       status: "canceled",
-      current_period_start: now,
-      current_period_end: now + 86400,
+      items: {
+        data: [
+          {
+            current_period_start: now,
+            current_period_end: now + 86400,
+          },
+        ],
+      },
     });
 
     mockConstructEvent.mockReturnValueOnce(event);

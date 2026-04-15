@@ -19,6 +19,20 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+// Mock the rate-limit helper so we can exercise the 429 branch on demand.
+// checkRateLimit is SYNCHRONOUS and returns NextResponse | null.
+// Default to null (passthrough) so existing happy-path tests behave normally.
+const { mockCheckRateLimit } = vi.hoisted(() => ({
+  mockCheckRateLimit: vi.fn<(userId: string) => unknown>(() => null),
+}));
+vi.mock("@/lib/api-utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api-utils")>();
+  return {
+    ...actual,
+    checkRateLimit: (userId: string) => mockCheckRateLimit(userId),
+  };
+});
+
 // Mock Stripe SDK — tests should not hit the real Stripe API
 const mockCustomersCreate = vi.fn();
 const mockCustomersList = vi.fn();
@@ -64,6 +78,9 @@ describe("POST /api/billing/checkout (integration)", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+
+    // Default: rate limit allows the request through (sync return).
+    mockCheckRateLimit.mockReturnValue(null);
 
     // Reset user's stripe customer id between tests
     const db = getTestDb();
@@ -183,5 +200,22 @@ describe("POST /api/billing/checkout (integration)", () => {
     });
     const res = await POST(makePostRequest());
     expect(res.status).toBe(404);
+  });
+
+  it("returns 429 when the rate limiter rejects the request", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    mockCheckRateLimit.mockReturnValueOnce(
+      new Response(JSON.stringify({ error: "rate limited" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    const res = await POST(makePostRequest());
+
+    expect(res.status).toBe(429);
+    // Stripe should never have been called when rate-limited.
+    expect(mockCustomersCreate).not.toHaveBeenCalled();
+    expect(mockCheckoutSessionsCreate).not.toHaveBeenCalled();
   });
 });
