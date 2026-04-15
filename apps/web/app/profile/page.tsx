@@ -85,9 +85,15 @@ export default function ProfilePage() {
   const handleBillingPortal = async () => {
     setIsBillingLoading(true);
     try {
-      const endpoint = profile?.stripeCustomerId
-        ? "/api/billing/portal"
-        : "/api/billing/checkout";
+      // Route by ACTUAL plan, not by `stripeCustomerId` existence.
+      // A free user who started checkout but never completed it (e.g.
+      // a misconfigured price ID) has a `stripe_customer_id` row but no
+      // active subscription — they should still see "Upgrade to Pro" and
+      // hit checkout, not the empty Stripe Billing Portal.
+      const endpoint =
+        profile?.plan === "pro"
+          ? "/api/billing/portal"
+          : "/api/billing/checkout";
       const res = await fetch(endpoint, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
@@ -300,7 +306,7 @@ export default function ProfilePage() {
               <CardTitle>Billing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {profile.stripeCustomerId ? (
+              {profile.plan === "pro" ? (
                 <>
                   <p className="text-sm text-muted-foreground">
                     Update your card, view invoices, or cancel your subscription
