@@ -8,6 +8,12 @@ import type {
   TranscriptEntry,
 } from "@interview-assistant/shared";
 
+/** Set on the store when POST /api/sessions returns 402 free_tier_limit_reached. */
+export interface QuotaError {
+  used: number;
+  limit: number;
+}
+
 interface InterviewState {
   // Session data
   sessionId: string | null;
@@ -16,6 +22,13 @@ interface InterviewState {
   status: SessionStatus;
   transcript: TranscriptEntry[];
   error: string | null;
+  /**
+   * Captures the body of a 402 free_tier_limit_reached response from
+   * `POST /api/sessions` so the setup form can render the
+   * `<UpgradePromptDialog>`. Cleared on the next successful createSession()
+   * or via clearQuotaError().
+   */
+  quotaError: QuotaError | null;
 
   // Timing
   startedAt: Date | null;
@@ -24,6 +37,7 @@ interface InterviewState {
   setType: (type: InterviewType) => void;
   setConfig: (partial: Partial<SessionConfig>) => void;
   createSession: () => Promise<string | null>;
+  clearQuotaError: () => void;
   startSession: () => Promise<void>;
   endSession: () => Promise<void>;
   addTranscriptEntry: (entry: TranscriptEntry) => void;
@@ -49,6 +63,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   status: "configuring",
   transcript: [],
   error: null,
+  quotaError: null,
   startedAt: null,
 
   setType: (type) => {
@@ -67,7 +82,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   createSession: async () => {
     const { config, type } = get();
     const sessionType = type ?? "behavioral";
-    set({ error: null });
+    set({ error: null, quotaError: null });
 
     try {
       const res = await fetch("/api/sessions", {
@@ -77,7 +92,21 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        // Capture the 402 free_tier_limit_reached body so the setup form
+        // can render the upgrade dialog with the exact used/limit numbers.
+        if (
+          res.status === 402 &&
+          data?.error === "free_tier_limit_reached" &&
+          typeof data.used === "number" &&
+          typeof data.limit === "number"
+        ) {
+          set({
+            error: data.error,
+            quotaError: { used: data.used, limit: data.limit },
+          });
+          return null;
+        }
         set({ error: data.error || "Failed to create session" });
         return null;
       }
@@ -93,6 +122,8 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
       return null;
     }
   },
+
+  clearQuotaError: () => set({ quotaError: null, error: null }),
 
   startSession: async () => {
     const { sessionId } = get();
@@ -171,6 +202,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
       status: "configuring",
       transcript: [],
       error: null,
+      quotaError: null,
       startedAt: null,
     }),
 }));

@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
+import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
 import {
   SUPPORTED_LANGUAGES,
   FOCUS_AREAS_BY_TYPE,
@@ -51,6 +52,8 @@ function formatFocusArea(area: string): string {
 export function TechnicalSetupForm() {
   const router = useRouter();
   const { config, setConfig, setType, createSession } = useInterviewStore();
+  const quotaError = useInterviewStore((s) => s.quotaError);
+  const clearQuotaError = useInterviewStore((s) => s.clearQuotaError);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -268,6 +271,15 @@ export function TechnicalSetupForm() {
       >
         {isSubmitting ? "Creating Session..." : "Start Interview"}
       </Button>
+
+      {quotaError && (
+        <UpgradePromptDialog
+          open={true}
+          onClose={clearQuotaError}
+          used={quotaError.used}
+          limit={quotaError.limit}
+        />
+      )}
     </form>
   );
 }

@@ -3,13 +3,14 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { interviewSessions, sessionFeedback, users } from "@/lib/schema";
 import { and, desc, eq, gte, lte, sql, ne } from "drizzle-orm";
-import { getPlanConfig } from "@/lib/plans";
+import { getPlanConfig, FREE_PLAN_MONTHLY_INTERVIEW_LIMIT } from "@/lib/plans";
 import {
   createSessionSchema,
   behavioralConfigSchema,
   technicalConfigSchema,
 } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/api-utils";
+import { tryConsumeInterviewSlot } from "@/lib/usage";
 
 // GET /api/sessions — list sessions with pagination, type/score filters
 // Query params: page (1-based), limit, type, minScore, maxScore
@@ -163,14 +164,54 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const [created] = await db
-    .insert(interviewSessions)
-    .values({
-      userId: session.user.id,
-      type,
-      config: config ?? {},
-    })
-    .returning();
+  // Capture once so the transaction callback closure has a narrowed string
+  // (TypeScript loses the `session.user.id` non-null narrowing across the
+  // async boundary).
+  const userId = session.user.id;
 
-  return NextResponse.json(created, { status: 201 });
+  // Free-tier monthly limit gate. Pro users short-circuit out of the
+  // counter entirely; free users at the limit get a 402 with a documented
+  // body the client uses to trigger the upgrade dialog. The slot consume
+  // and the session insert run in the same transaction so two parallel
+  // requests at 2/3 cannot both succeed.
+  try {
+    const created = await db.transaction(async (tx) => {
+      const slot = await tryConsumeInterviewSlot(userId, tx);
+      if (!slot.allowed) {
+        // Throwing rolls back the transaction (no usage row written, no
+        // session row written). The catch below maps it to 402.
+        const err = new Error("free_tier_limit_reached") as Error & {
+          httpBody?: Record<string, unknown>;
+        };
+        err.httpBody = {
+          error: "free_tier_limit_reached",
+          limit: slot.limit ?? FREE_PLAN_MONTHLY_INTERVIEW_LIMIT,
+          used: slot.used,
+          plan: "free",
+          upgradeUrl: "/api/billing/checkout",
+        };
+        throw err;
+      }
+
+      const [row] = await tx
+        .insert(interviewSessions)
+        .values({
+          userId,
+          type,
+          config: config ?? {},
+        })
+        .returning();
+      return row;
+    });
+    return NextResponse.json(created, { status: 201 });
+  } catch (err) {
+    if (err instanceof Error && err.message === "free_tier_limit_reached") {
+      const httpBody = (err as Error & { httpBody?: Record<string, unknown> })
+        .httpBody;
+      return NextResponse.json(httpBody ?? { error: err.message }, {
+        status: 402,
+      });
+    }
+    throw err;
+  }
 }
