@@ -43,10 +43,13 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    // Landing + login + auth routes need the host check so the OAuth
-    // round-trip starts and ends on the same host. Protected paths keep
-    // the auth gate.
-    "/",
+    // The matcher deliberately EXCLUDES `/`, `/privacy`, and `/terms` so
+    // those statically-generated pages can serve from Vercel's edge CDN
+    // without hitting a Lambda for middleware. The canonical-host
+    // redirect still fires on `/login` and `/api/auth/:path*`, so the
+    // OAuth round-trip can never start on a non-canonical host. A user
+    // who lands on a hashed Vercel alias for the landing page will only
+    // be redirected once they click sign-in.
     "/login",
     "/api/auth/:path*",
     "/interview/:path*",
