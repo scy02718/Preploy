@@ -10,6 +10,7 @@ import {
   primaryKey,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // ---- Enums ----
@@ -84,6 +85,40 @@ export const accounts = pgTable(
   ]
 );
 
+export const starStories = pgTable("star_stories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  role: text("role").notNull(),
+  expectedQuestions: jsonb("expected_questions").notNull().default([]),
+  situation: text("situation").notNull(),
+  task: text("task").notNull(),
+  action: text("action").notNull(),
+  result: text("result").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const starStoryAnalyses = pgTable("star_story_analyses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  storyId: uuid("story_id")
+    .notNull()
+    .references(() => starStories.id, { onDelete: "cascade" }),
+  scores: jsonb("scores").notNull().default({}),
+  suggestions: jsonb("suggestions").notNull().default([]),
+  model: text("model").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const interviewSessions = pgTable("interview_sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -95,6 +130,10 @@ export const interviewSessions = pgTable("interview_sessions", {
   startedAt: timestamp("started_at", { withTimezone: true }),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   durationSeconds: integer("duration_seconds"),
+  sourceStarStoryId: uuid("source_star_story_id").references(
+    (): AnyPgColumn => starStories.id,
+    { onDelete: "set null" }
+  ),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -238,6 +277,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   resumes: many(userResumes),
   interviewPlans: many(interviewPlans),
   interviewUsage: many(interviewUsage),
+  starStories: many(starStories),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -263,6 +303,29 @@ export const interviewSessionsRelations = relations(
       references: [sessionFeedback.sessionId],
     }),
     codeSnapshots: many(codeSnapshots),
+    sourceStarStory: one(starStories, {
+      fields: [interviewSessions.sourceStarStoryId],
+      references: [starStories.id],
+    }),
+  })
+);
+
+export const starStoriesRelations = relations(starStories, ({ one, many }) => ({
+  user: one(users, {
+    fields: [starStories.userId],
+    references: [users.id],
+  }),
+  analyses: many(starStoryAnalyses),
+  sessions: many(interviewSessions),
+}));
+
+export const starStoryAnalysesRelations = relations(
+  starStoryAnalyses,
+  ({ one }) => ({
+    story: one(starStories, {
+      fields: [starStoryAnalyses.storyId],
+      references: [starStories.id],
+    }),
   })
 );
 
