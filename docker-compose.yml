@@ -1,5 +1,28 @@
 services:
+  # Production image of the Next.js web app. Serves http://localhost:3000.
+  # Build context is the repo root so the monorepo workspace files
+  # (package-lock.json, packages/shared) are visible to `npm ci` in the
+  # Dockerfile's deps stage.
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: preploy-web:local
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.local
+        required: false
+    restart: unless-stopped
+
+  # Integration-test Postgres. Intentionally behind the `test` profile so
+  # `docker compose up` does NOT start it — it only runs when explicitly
+  # requested via `docker compose --profile test up -d test-db`. This keeps
+  # the default `up --build` flow focused on the web service while preserving
+  # the existing integration-test workflow (see apps/web/CLAUDE.md).
   test-db:
+    profiles:
+      - test
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: test
