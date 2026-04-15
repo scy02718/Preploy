@@ -47,6 +47,10 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { withTimezone: true }),
   image: text("image"),
   plan: userPlanEnum("plan").notNull().default("free"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  planPeriodStart: timestamp("plan_period_start", { withTimezone: true }),
+  planPeriodEnd: timestamp("plan_period_end", { withTimezone: true }),
   disabledAt: timestamp("disabled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -189,6 +193,23 @@ export const interviewPlans = pgTable("interview_plans", {
     .defaultNow(),
 });
 
+export const interviewUsage = pgTable(
+  "interview_usage",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("interview_usage_user_period_unique").on(
+      table.userId,
+      table.periodStart
+    ),
+  ]
+);
+
 export const sessionTemplates = pgTable("session_templates", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
@@ -215,6 +236,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   companyQuestions: many(companyQuestions),
   resumes: many(userResumes),
   interviewPlans: many(interviewPlans),
+  interviewUsage: many(interviewUsage),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -312,6 +334,16 @@ export const sessionTemplatesRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [sessionTemplates.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const interviewUsageRelations = relations(
+  interviewUsage,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [interviewUsage.userId],
       references: [users.id],
     }),
   })
