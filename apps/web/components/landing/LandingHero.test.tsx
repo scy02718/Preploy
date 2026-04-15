@@ -2,10 +2,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LandingHero } from "./LandingHero";
 
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(() => ({ push: vi.fn() })),
-  usePathname: vi.fn(() => "/"),
+const { mockUseRouter, mockUsePathname, mockPush } = vi.hoisted(() => ({
+  mockPush: vi.fn(),
+  mockUseRouter: vi.fn(),
+  mockUsePathname: vi.fn(),
 }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: mockUseRouter,
+  usePathname: mockUsePathname,
+}));
+
+mockUseRouter.mockReturnValue({ push: mockPush });
+mockUsePathname.mockReturnValue("/");
 
 describe("LandingHero", () => {
   let scrollIntoViewMock: ReturnType<typeof vi.fn>;

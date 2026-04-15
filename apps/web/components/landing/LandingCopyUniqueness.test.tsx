@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { LandingHero } from "./LandingHero";
 import { LandingHowItWorks } from "./LandingHowItWorks";
 import { LandingPersonas } from "./LandingPersonas";
@@ -43,16 +43,12 @@ describe("Landing page copy uniqueness", () => {
   });
 
   it("FAQ questions are unique", () => {
-    const triggers = screen.queryAllByTestId("faq-trigger");
-    // Fresh render for this test
     const { container } = render(<LandingFAQ />);
     const questions = Array.from(
       container.querySelectorAll("[data-testid='faq-trigger'] span")
     ).map((el) => el.textContent?.trim());
     const unique = new Set(questions);
     expect(questions.length).toBe(unique.size);
-    // Suppress unused warning
-    void triggers;
   });
 
   it("hero does not contain banned jargon", () => {

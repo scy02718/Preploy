@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,14 @@ export function LandingHero() {
   return (
     <section className="flex flex-col items-center justify-center text-center py-24 px-4 gap-8">
       <div className="flex flex-col items-center gap-4 max-w-2xl">
-        <img src="/logo.svg" alt="Preploy" className="h-16 w-16" />
+        <Image
+          src="/logo.svg"
+          alt="Preploy"
+          width={64}
+          height={64}
+          className="h-16 w-16"
+          priority
+        />
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
           Practice interviews until the real one feels easy
         </h1>
