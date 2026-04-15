@@ -8,13 +8,31 @@ import { checkRateLimit } from "@/lib/api-utils";
 import { createRequestLogger } from "@/lib/logger";
 
 /**
+ * Resolve the public base URL the deployed app is running at, in priority
+ * order: NEXTAUTH_URL → AUTH_URL → the actual request's origin → localhost.
+ *
+ * Stripe's success_url and cancel_url are HARD failures if they point at a
+ * host the user can't reach (e.g. `localhost:3000` from a Vercel deployment),
+ * so the most defensive fallback is the request's own origin — that is by
+ * definition reachable by the caller, regardless of how Vercel/Turbo handed
+ * env vars to the function.
+ */
+function resolveBaseUrl(request: NextRequest): string {
+  return (
+    process.env.NEXTAUTH_URL ??
+    process.env.AUTH_URL ??
+    new URL(request.url).origin ??
+    "http://localhost:3000"
+  );
+}
+
+/**
  * POST /api/billing/checkout
  * Creates a Stripe Checkout Session for the Pro plan.
  * Looks up or creates a Stripe customer for the current user, persisting
  * stripe_customer_id on the users row for re-use on subsequent calls.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -76,7 +94,7 @@ export async function POST(_request: NextRequest) {
     log.info({ stripeCustomerId: customerId }, "reusing existing stripe customer");
   }
 
-  const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const baseUrl = resolveBaseUrl(request);
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
