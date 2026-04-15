@@ -85,7 +85,18 @@ surface consists of two API routes:
 | Route | Description |
 |---|---|
 | `POST /api/billing/checkout` | Creates a Stripe Checkout Session and returns `{ url }` for client redirect. |
+| `POST /api/billing/portal` | Creates a Stripe Billing Portal session for the current user (requires existing `stripe_customer_id`). Returns `{ url }`. |
 | `POST /api/billing/webhook` | Receives Stripe lifecycle events and updates the user's plan in the DB. |
+
+### Customer Portal configuration (one-time, in the Stripe Dashboard)
+
+After the first deploy, go to **Stripe Dashboard → Settings → Billing → Customer portal** and enable:
+
+- **Update payment method**
+- **View invoices**
+- **Cancel subscription**
+
+Without these toggles, the "Manage billing" button on `/profile` will hit the portal but the user will see a barebones page with no actions available.
 
 ### Local setup
 

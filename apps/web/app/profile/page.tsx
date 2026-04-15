@@ -17,6 +17,7 @@ interface UserProfile {
   name: string | null;
   image: string | null;
   plan: PlanId;
+  stripeCustomerId: string | null;
   disabledAt: string | null;
   createdAt: string;
 }
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const [isSavingName, setIsSavingName] = useState(false);
   const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [isDisabling, setIsDisabling] = useState(false);
+  const [isBillingLoading, setIsBillingLoading] = useState(false);
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -107,6 +109,31 @@ export default function ProfilePage() {
       showMessage("error", "Failed to change plan");
     } finally {
       setIsSavingPlan(false);
+    }
+  };
+
+  const handleBillingPortal = async () => {
+    setIsBillingLoading(true);
+    try {
+      const endpoint = profile?.stripeCustomerId
+        ? "/api/billing/portal"
+        : "/api/billing/checkout";
+      const res = await fetch(endpoint, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.assign(data.url);
+          return;
+        }
+        showMessage("error", "Billing session returned no URL");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showMessage("error", err.error || "Failed to open billing");
+      }
+    } catch {
+      showMessage("error", "Failed to open billing");
+    } finally {
+      setIsBillingLoading(false);
     }
   };
 
@@ -272,6 +299,45 @@ export default function ProfilePage() {
               >
                 {isSavingPlan ? "Updating..." : "Update Plan"}
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {profile.stripeCustomerId ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Update your card, view invoices, or cancel your subscription
+                    on Stripe&apos;s secure portal.
+                  </p>
+                  <Button
+                    onClick={handleBillingPortal}
+                    disabled={isBillingLoading}
+                    data-testid="manage-billing-button"
+                    className="w-full"
+                  >
+                    {isBillingLoading ? "Opening..." : "Manage billing"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Upgrade to Pro to remove the monthly interview limit and
+                    unlock all features.
+                  </p>
+                  <Button
+                    onClick={handleBillingPortal}
+                    disabled={isBillingLoading}
+                    data-testid="upgrade-button"
+                    className="w-full"
+                  >
+                    {isBillingLoading ? "Loading..." : "Upgrade to Pro"}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
