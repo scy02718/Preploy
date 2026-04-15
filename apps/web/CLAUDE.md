@@ -58,6 +58,25 @@ covers monorepo-wide rules (Tasks.md workflow, pre-commit checklist).
 - Target 80%+ line coverage on `lib/`, `services/`, `stores/`.
 - Cover happy path, edge cases, error cases, boundary values, empty/null inputs.
 
+### E2E tests (`e2e/*.spec.ts`)
+
+Playwright smoke tests cover golden paths through the production build.
+
+- Tag every test with `@smoke`.
+- Run against `next build && next start` (never `next dev`).
+- **Golden paths only**: new user flows belong here.
+- **Bug repros and edge cases** → integration tests, not E2E.
+- Auth state is injected via `e2e/.auth/user.json` (minted by `global.setup.ts`).
+- Stub external APIs (OpenAI, etc.) with `page.route()`, not real network calls.
+- Extend only for top-level feature flows; keep the suite under ~10 tests for v1.
+
+Local run (from `apps/web/`):
+
+```bash
+docker compose --profile test up -d test-db   # start test DB
+npm run test:e2e:smoke                          # run smoke tests
+```
+
 ### Component tests (`components/**/*.test.tsx`)
 
 - Only for **interactive** components (state changes, conditional rendering, expand/collapse).

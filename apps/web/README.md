@@ -4,6 +4,61 @@ Next.js 16 (App Router) application for Preploy — AI-powered mock interview
 practice. See the root `CLAUDE.md` and `apps/web/CLAUDE.md` for coding
 conventions.
 
+## E2E tests
+
+Playwright smoke tests live in `apps/web/e2e/`. They run against a **production
+build** (`next build && next start`), not `next dev`, to catch build-time regressions.
+
+### Prerequisites
+
+```bash
+# Install Playwright Chromium (one-time, per machine)
+cd apps/web
+npx playwright install chromium
+```
+
+### Running locally
+
+Start the test Postgres (same Docker service used by integration tests):
+
+```bash
+# From the repo root
+docker compose --profile test up -d test-db
+```
+
+Then, from `apps/web/`:
+
+```bash
+npm run test:e2e          # Run all E2E tests (builds + starts the server)
+npm run test:e2e:smoke    # Run only @smoke-tagged tests (fastest)
+npm run test:e2e:ui       # Open Playwright UI (interactive)
+```
+
+The first run will execute `npm run build` automatically (≈2 min).  Subsequent
+runs with `reuseExistingServer: true` (local default) skip the build if the
+server is already up.
+
+### Auth
+
+`globalSetup` (`e2e/global.setup.ts`) mints a NextAuth v5–compatible JWE cookie
+for a seeded test user (`e2e-test@preploy.dev`) and writes it to
+`e2e/.auth/user.json` (gitignored).  Tests that need to be authenticated use
+this storage state automatically (via `projects[].use.storageState` in
+`playwright.config.ts`).  Public-page tests override `storageState` to `{
+cookies: [], origins: [] }`.
+
+### Extension guidelines
+
+- **Golden paths only** in `e2e/`.  New happy-path flows go here.
+- **Bug repros and edge cases** → integration tests (`app/api/**/*.integration.test.ts`).
+- Keep the suite under ~10 tests for v1; discuss with the team before adding more.
+- Tag every new test with `@smoke` so CI can select it with `--grep @smoke`.
+
+### Flake budget
+
+The suite must pass 10 consecutive CI runs before branch-protection is flipped
+to require E2E (tracked as a follow-up task after #41 merges).
+
 ## Health check
 
 The app exposes a public health endpoint at `GET /api/health`:
@@ -47,6 +102,12 @@ task definition / secrets manager.
 | `GOOGLE_CLIENT_SECRET`     | RUNTIME_ONLY       | Google OAuth client secret for NextAuth (server secret, never client).     |
 | `SENTRY_DSN`               | RUNTIME_ONLY       | Server-side Sentry DSN used in `sentry.server.config.ts` / edge runtime.   |
 | `LOG_LEVEL`                | RUNTIME_ONLY       | Pino log level override (`debug`, `info`, `warn`, `error`).                |
+| `AUTH_SECRET`              | RUNTIME_ONLY       | NextAuth v5 session signing secret (also read as `NEXTAUTH_SECRET`). Generate with `openssl rand -base64 32`. |
+| `NEXTAUTH_SECRET`          | RUNTIME_ONLY       | Legacy alias for `AUTH_SECRET`. Either works; prefer `AUTH_SECRET` for new setups. |
+| `AUTH_URL`                 | RUNTIME_ONLY       | Public URL of the app (also read as `NEXTAUTH_URL`). Forwarded to Playwright's webServer during E2E runs. |
+| `CI`                       | RUNTIME_ONLY       | Set by CI runners (GitHub Actions, etc.). Used to toggle Playwright retry counts and parallel workers. |
+| `PLAYWRIGHT_BASE_URL`      | RUNTIME_ONLY       | Base URL used by the Playwright E2E suite (default: `http://localhost:3000`). |
+| `PLAYWRIGHT_SKIP_WEBSERVER`| RUNTIME_ONLY       | Set to `1` in CI to skip Playwright's built-in webServer block (server is pre-started). |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and
