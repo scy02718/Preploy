@@ -72,9 +72,13 @@ covers monorepo-wide rules (Tasks.md workflow, pre-commit checklist).
 These run against a **real** Docker Postgres test DB. Start it with:
 
 ```bash
-docker compose up -d test-db
+docker compose --profile test up -d test-db
 npm run test:integration
 ```
+
+(`test-db` lives behind the `test` compose profile so it does not start when
+you run `docker compose up` for the `web` service — see `apps/web/README.md`
+→ Local Docker.)
 
 **Never mock the database.** That's the whole point of integration tests.
 

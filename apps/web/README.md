@@ -53,3 +53,56 @@ Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`
 must never appear in the compiled client bundles under `.next/static/**`. The
 automated checks in `tests/readme-env-audit.test.ts` and
 `tests/client-bundle-secrets.test.ts` enforce both invariants.
+
+## Local Docker
+
+One-command local run of the production container image, wired to the existing
+Supabase instance (or any Postgres you point it at) through `.env.local`. This
+is the same image that deploys to production, so a green run here is strong
+evidence the container is shippable.
+
+Build context is the **repo root**, not `apps/web/`, so the monorepo workspace
+files (`package-lock.json`, `packages/shared`) are visible to `npm ci`:
+
+```bash
+# From the repo root
+docker compose up --build            # builds apps/web/Dockerfile, serves :3000
+```
+
+The `web` service reads environment from `.env.local` at the repo root (not
+committed). Required keys — populate before `docker compose up`:
+
+| Key                      | Notes                                                           |
+| ------------------------ | --------------------------------------------------------------- |
+| `DATABASE_URL`           | Postgres connection string (Supabase pooler URL in prod).      |
+| `SUPABASE_DB_URL`        | Drizzle connection string; usually the same as `DATABASE_URL`. |
+| `NEXTAUTH_SECRET`        | NextAuth session signing secret.                                |
+| `NEXTAUTH_URL`           | Public URL of the app — `http://localhost:3000` locally.       |
+| `GOOGLE_CLIENT_ID`       | Google OAuth client ID.                                         |
+| `GOOGLE_CLIENT_SECRET`   | Google OAuth client secret.                                     |
+| `OPENAI_API_KEY`         | OpenAI API key.                                                 |
+
+Runtime envs baked into the container image itself (set in the Dockerfile, not
+`.env.local`):
+
+- `NODE_ENV=production`
+- `HOSTNAME=0.0.0.0` — required so the Next standalone server binds outside
+  the container, not just to `127.0.0.1`.
+- `PORT=3000`
+- `NEXT_TELEMETRY_DISABLED=1`
+
+Smoke check once the container is up:
+
+```bash
+curl -i http://localhost:3000/api/health/live    # liveness — no DB touch
+curl -i http://localhost:3000/api/health         # readiness — pings Postgres
+```
+
+The integration-test Postgres (`test-db` service) lives in the same
+`docker-compose.yml` behind the `test` compose profile, so it is **not**
+started by `docker compose up` and does not conflict with the `web` service.
+Start it on demand with:
+
+```bash
+docker compose --profile test up -d test-db
+```

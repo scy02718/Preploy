@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const cspDirectives = [
@@ -30,6 +31,13 @@ const cspDirectives = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Emit a self-contained server bundle for Docker. The runner stage copies
+  // only `.next/standalone`, `.next/static`, and `public` — see
+  // apps/web/Dockerfile.
+  output: "standalone",
+  // In a monorepo, tell Next to trace files from the repo root so
+  // `packages/shared` is picked up by the standalone output.
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   async headers() {
     return [
       {
