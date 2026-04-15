@@ -99,3 +99,42 @@ export const listStarStoriesQuerySchema = z.object({
     .pipe(z.number().int().min(1).max(100)),
 });
 export type ListStarStoriesQuery = z.infer<typeof listStarStoriesQuerySchema>;
+
+// ---- Marketer schemas ----
+
+export const listMarketerDraftsQuerySchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 1))
+    .pipe(z.number().int().min(1)),
+  limit: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 20))
+    .pipe(z.number().int().min(1).max(100)),
+});
+export type ListMarketerDraftsQuery = z.infer<
+  typeof listMarketerDraftsQuerySchema
+>;
+
+export const discardDraftSchema = z.object({
+  reason: z.enum([
+    "spammy",
+    "off-topic",
+    "duplicate",
+    "low-quality",
+    "other",
+  ]),
+});
+export type DiscardDraftInput = z.infer<typeof discardDraftSchema>;
+
+export const editDraftSchema = z.object({
+  reply: z.string().min(1).max(2000),
+});
+export type EditDraftInput = z.infer<typeof editDraftSchema>;
+
+export const classificationResultSchema = z.object({
+  classification: z.enum(["prepare", "cheat", "irrelevant"]),
+  summary: z.string().max(200),
+});
