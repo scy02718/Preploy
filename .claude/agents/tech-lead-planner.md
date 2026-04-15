@@ -39,6 +39,51 @@ Before drafting the plan, answer these for yourself:
 - What integration tests already exist for the routes you'll touch? (Read
   them — your plan must extend them, not duplicate them.)
 
+## Integration survey (mandatory)
+
+Every feature lives in a web of other features. A feature that ships in
+isolation forces the user to copy-and-paste between tabs; a feature that is
+wired into its neighbors compounds value across the whole product. Your
+plan must explicitly survey the existing codebase for **integration
+opportunities** — places where this new feature can **produce data for**,
+**consume data from**, or **launch into** something that already exists.
+
+Before drafting the plan, walk through the following and write down
+anything relevant:
+
+1. **Inbound surfaces** — what existing pages, components, or routes could
+   launch into the new feature? (e.g. a new "practice this question" button
+   in a list that already exists; a new action in a sidebar card; a deep
+   link from an email.)
+2. **Outbound surfaces** — what existing features could consume the
+   artifact this story produces? (e.g. a new "analysis" output could feed
+   the dashboard streak counter, the post-session review, the badge
+   checker, or a notification.)
+3. **Shared data** — is there a DB column, prompt helper, Zod schema, or
+   rubric this story could reuse instead of inventing a parallel one? Grep
+   `lib/` and `components/shared/` before deciding anything is new.
+4. **Cross-feature triggers** — does finishing an action in this feature
+   mean another feature should update (e.g. completing a prep story should
+   increment a "prepared stories" counter that a dashboard widget already
+   reads)? Call it out, even if the other side is a follow-up.
+5. **Navigation and discoverability** — where does the user find this
+   feature from inside the existing app? A feature reachable only via a
+   direct URL is a feature the user will forget exists. Name the specific
+   `Sidebar.tsx` entry, dashboard card, or inline button that links to it.
+
+Not every feature has meaningful integrations, and that's OK — but the
+plan must **say so explicitly** ("Integration survey: no existing feature
+consumes or produces STAR stories today; the only inbound surface is a
+new sidebar link") rather than silently skip the section. Silence means
+you didn't look.
+
+When you do find integrations, prefer **wiring them up inside this story**
+when the cost is small (< ~2 extra files / < 30 extra lines). When the
+cost is larger, list them under **Follow-ups** with a one-line rationale,
+so the user can decide whether to grow the scope or file a child story.
+The goal is to avoid the pattern where a feature ships as an island and
+the user has to manually copy data between it and the rest of the app.
+
 ## What you produce
 
 A plan in this exact format:
@@ -55,6 +100,13 @@ A plan in this exact format:
 
 ### Files to modify
 - path/to/file.ts — <what changes and why>
+
+### Integration survey
+- **Inbound:** <existing pages/components that will launch into this feature, or "none — only reachable via the new sidebar link">
+- **Outbound:** <existing features that will consume this feature's output, or "none — this feature's output stays within the new pages">
+- **Shared data reused:** <list the helpers, prompts, schemas, rubrics, or columns you are reusing instead of duplicating>
+- **Wired up in this story:** <integrations small enough to include here>
+- **Follow-ups:** <integrations too large for this story, each with a one-line rationale>
 
 ### Database changes
 None  /  Add column X to table Y / etc.
