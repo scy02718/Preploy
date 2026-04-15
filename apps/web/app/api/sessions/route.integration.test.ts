@@ -51,14 +51,20 @@ describe("API /api/sessions (integration)", () => {
   });
 
   beforeEach(async () => {
-    // Clean sessions between tests but keep the user
+    // Clean sessions and usage between tests but keep the user
     const db = getTestDb();
-    const { interviewSessions, sessionFeedback, transcripts } = await import(
-      "@/lib/schema"
-    );
+    const { interviewSessions, sessionFeedback, transcripts, interviewUsage } =
+      await import("@/lib/schema");
     await db.delete(sessionFeedback);
     await db.delete(transcripts);
     await db.delete(interviewSessions);
+    await db.delete(interviewUsage);
+    // Reset plan to free between tests
+    const { eq } = await import("drizzle-orm");
+    await db
+      .update(users)
+      .set({ plan: "free" })
+      .where(eq(users.id, TEST_USER.id));
   });
 
   afterAll(async () => {
@@ -390,6 +396,152 @@ describe("API /api/sessions (integration)", () => {
     // 3rd should succeed
     const res = await POST(makePostRequest({ type: "behavioral" }));
     expect(res.status).toBe(201);
+  });
+
+  // ---- Free-tier monthly limit (#38) ----
+
+  it("POST returns 402 free_tier_limit_reached when monthly limit hit (free plan)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewUsage } = await import("@/lib/schema");
+    const periodStart = new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
+    );
+
+    // Pre-seed the usage row at the limit (3/3)
+    await db.insert(interviewUsage).values({
+      userId: TEST_USER.id,
+      periodStart,
+      count: 3,
+    });
+
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(402);
+    const data = await res.json();
+    expect(data.error).toBe("free_tier_limit_reached");
+    expect(data.limit).toBe(3);
+    expect(data.used).toBe(3);
+    expect(data.plan).toBe("free");
+    expect(data.upgradeUrl).toBe("/api/billing/checkout");
+
+    // No new session row was created — the transaction rolled back
+    const { interviewSessions } = await import("@/lib/schema");
+    const allSessions = await db.select().from(interviewSessions);
+    expect(allSessions.length).toBe(0);
+  });
+
+  it("POST increments interview_usage on successful session creation", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewUsage } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(201);
+
+    // Usage row should now exist with count=1
+    const [usage] = await db
+      .select()
+      .from(interviewUsage)
+      .where(eq(interviewUsage.userId, TEST_USER.id));
+    expect(usage).toBeDefined();
+    expect(usage.count).toBe(1);
+  });
+
+  it("POST does not gate pro users on monthly count", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewUsage } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+
+    // Upgrade user to pro
+    await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+    // Even with 99 prior usage rows, pro users should pass
+    const periodStart = new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
+    );
+    await db.insert(interviewUsage).values({
+      userId: TEST_USER.id,
+      periodStart,
+      count: 99,
+    });
+
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(201);
+
+    // Pro users should NOT have their counter touched
+    const [usage] = await db
+      .select()
+      .from(interviewUsage)
+      .where(eq(interviewUsage.userId, TEST_USER.id));
+    expect(usage.count).toBe(99); // unchanged
+  });
+
+  it("POST treats a fresh calendar month as 1/3, not 4/3", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewUsage } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+
+    // Insert an OLD-month usage row at the limit
+    const oldPeriodStart = new Date(Date.UTC(2025, 0, 1));
+    await db.insert(interviewUsage).values({
+      userId: TEST_USER.id,
+      periodStart: oldPeriodStart,
+      count: 3,
+    });
+
+    // New month should not see the old row
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(201);
+
+    // A fresh row for the current period should be inserted with count=1
+    const currentPeriodStart = new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
+    );
+    const [currentUsage] = await db
+      .select()
+      .from(interviewUsage)
+      .where(eq(interviewUsage.periodStart, currentPeriodStart));
+    expect(currentUsage.count).toBe(1);
+  });
+
+  it("POST concurrent requests at 2/3 — exactly one succeeds, the other gets 402", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewUsage } = await import("@/lib/schema");
+    const periodStart = new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
+    );
+
+    // Pre-seed at 2/3
+    await db.insert(interviewUsage).values({
+      userId: TEST_USER.id,
+      periodStart,
+      count: 2,
+    });
+
+    const [resA, resB] = await Promise.all([
+      POST(makePostRequest({ type: "behavioral" })),
+      POST(makePostRequest({ type: "behavioral" })),
+    ]);
+
+    const statuses = [resA.status, resB.status].sort();
+    expect(statuses).toEqual([201, 402]);
+
+    // Final usage should be exactly 3 (one increment)
+    const { eq } = await import("drizzle-orm");
+    const [finalUsage] = await db
+      .select()
+      .from(interviewUsage)
+      .where(eq(interviewUsage.userId, TEST_USER.id));
+    expect(finalUsage.count).toBe(3);
   });
 
   it("POST returns 403 when account is disabled", async () => {

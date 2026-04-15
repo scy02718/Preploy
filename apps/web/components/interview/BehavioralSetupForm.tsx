@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
+import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
 import { usePrefillStore } from "@/stores/prefillStore";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 
@@ -23,6 +24,8 @@ interface CompanyQuestion {
 export function BehavioralSetupForm() {
   const router = useRouter();
   const { config, setConfig, setType, createSession } = useInterviewStore();
+  const quotaError = useInterviewStore((s) => s.quotaError);
+  const clearQuotaError = useInterviewStore((s) => s.clearQuotaError);
   const [questionInput, setQuestionInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -358,6 +361,15 @@ export function BehavioralSetupForm() {
       <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? "Creating Session..." : "Start Interview"}
       </Button>
+
+      {quotaError && (
+        <UpgradePromptDialog
+          open={true}
+          onClose={clearQuotaError}
+          used={quotaError.used}
+          limit={quotaError.limit}
+        />
+      )}
     </form>
   );
 }

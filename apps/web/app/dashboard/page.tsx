@@ -11,6 +11,7 @@ import { StreakCard } from "@/components/dashboard/StreakCard";
 import { BadgeGrid } from "@/components/dashboard/BadgeGrid";
 import { ScoreTrendChart, ScoreTrendPoint } from "@/components/dashboard/ScoreTrendChart";
 import { WeakAreas, WeakArea } from "@/components/dashboard/WeakAreas";
+import { MonthlyUsageMeter } from "@/components/dashboard/MonthlyUsageMeter";
 
 interface SessionRow {
   id: string;
@@ -196,6 +197,11 @@ export default function DashboardPage() {
       <p className="text-muted-foreground mb-8">
         View your interview history and track your progress.
       </p>
+
+      {/* Free-tier monthly usage meter (renders nothing for Pro users). */}
+      <div className="mb-6">
+        <MonthlyUsageMeter />
+      </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
