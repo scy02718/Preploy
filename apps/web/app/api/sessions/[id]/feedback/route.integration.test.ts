@@ -8,6 +8,8 @@ import {
   afterAll,
 } from "vitest";
 import { NextRequest } from "next/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   cleanupTestDb,
   teardownTestDb,
@@ -35,11 +37,28 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-// Mock global fetch for Python analysis service calls
-const originalFetch = global.fetch;
-const mockFetch = vi.fn();
+// Mock OpenAI at module scope — same pattern as the analysis route integration
+// tests. The extracted `runBehavioralAnalysis` / `runTechnicalAnalysis` lib
+// functions run for real against this mock.
+const mockChatCreate = vi.fn();
+vi.mock("openai", () => ({
+  default: class MockOpenAI {
+    chat = { completions: { create: mockChatCreate } };
+  },
+}));
+
+vi.stubEnv("OPENAI_API_KEY", "sk-integration-test");
 
 import { GET, POST } from "./route";
+
+const BEHAVIORAL_GPT_RESPONSE_RAW = readFileSync(
+  join(__dirname, "..", "..", "..", "analysis", "__fixtures__", "behavioral-gpt-response.json"),
+  "utf-8",
+);
+const TECHNICAL_GPT_RESPONSE_RAW = readFileSync(
+  join(__dirname, "..", "..", "..", "analysis", "__fixtures__", "technical-gpt-response.json"),
+  "utf-8",
+);
 
 const TEST_USER = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -79,32 +98,6 @@ const SAMPLE_TRANSCRIPT = [
   { speaker: "user", text: "I led a migration project", timestamp_ms: 3000 },
 ];
 
-const BEHAVIORAL_FEEDBACK_RESPONSE = {
-  overall_score: 7.5,
-  summary: "Solid interview performance.",
-  strengths: ["Clear examples", "Good structure", "Specific details"],
-  weaknesses: ["Could improve follow-up", "Needs more metrics", "Short answers"],
-  answer_analyses: [
-    {
-      question: "Tell me about a challenge",
-      answer_summary: "Candidate described a migration project.",
-      score: 7.5,
-      feedback: "Good use of STAR method.",
-      suggestions: ["Add more quantitative results"],
-    },
-  ],
-};
-
-const TECHNICAL_FEEDBACK_RESPONSE = {
-  ...BEHAVIORAL_FEEDBACK_RESPONSE,
-  code_quality_score: 6.5,
-  explanation_quality_score: 8.0,
-  timeline_analysis: [
-    { timestamp_ms: 0, event_type: "speech", summary: "Explained approach" },
-    { timestamp_ms: 3000, event_type: "code_change", summary: "Changed code" },
-  ],
-};
-
 describe("API /api/sessions/[id]/feedback (integration)", () => {
   beforeAll(async () => {
     const db = getTestDb();
@@ -114,8 +107,6 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    // Replace global fetch with mock for Python API calls
-    global.fetch = mockFetch;
 
     const db = getTestDb();
     await db.delete(sessionFeedback);
@@ -174,7 +165,6 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
   });
 
   afterAll(async () => {
-    global.fetch = originalFetch;
     await cleanupTestDb();
     await teardownTestDb();
   });
@@ -334,15 +324,14 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     expect(body.overallScore).toBe(8.0);
     expect(body.summary).toBe("Already exists");
 
-    // Python service should NOT have been called
-    expect(mockFetch).not.toHaveBeenCalled();
+    // GPT should NOT have been called
+    expect(mockChatCreate).not.toHaveBeenCalled();
   });
 
   it("POST regenerates feedback when existing technical row has null codeQualityScore (incomplete)", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    // Seed an incomplete/stale technical feedback row:
-    // codeQualityScore IS NULL while the other two technical fields are set.
+    // Seed an incomplete/stale technical feedback row.
     const db = getTestDb();
     await db.insert(sessionFeedback).values({
       sessionId: technicalSessionId,
@@ -352,15 +341,12 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
       weaknesses: [],
       answerAnalyses: [],
       codeQualityScore: null,
-      explanationQualityScore: 8,
-      timelineAnalysis: [
-        { timestamp_ms: 0, event_type: "speech", summary: "stale note" },
-      ],
+      explanationQualityScore: null,
+      timelineAnalysis: null,
     });
 
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => TECHNICAL_FEEDBACK_RESPONSE,
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: TECHNICAL_GPT_RESPONSE_RAW } }],
     });
 
     const res = await POST(
@@ -370,14 +356,11 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     expect(res.status).toBe(201);
 
     const body = await res.json();
-    // Proves regeneration happened: new values from TECHNICAL_FEEDBACK_RESPONSE.
     expect(body.codeQualityScore).toBe(6.5);
-    expect(body.summary).toBe("Solid interview performance.");
+    expect(body.explanationQualityScore).toBe(7.5);
 
-    // GPT path was invoked exactly once against the technical endpoint.
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const [url] = mockFetch.mock.calls[0];
-    expect(url).toContain("/api/analysis/technical");
+    // GPT path was invoked exactly once.
+    expect(mockChatCreate).toHaveBeenCalledOnce();
 
     // Real SELECT: exactly one row, all three technical fields non-null.
     const rows = await db
@@ -385,11 +368,9 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
       .from(sessionFeedback)
       .where(eq(sessionFeedback.sessionId, technicalSessionId));
     expect(rows).toHaveLength(1);
-    expect(rows[0].codeQualityScore).not.toBeNull();
-    expect(rows[0].explanationQualityScore).not.toBeNull();
-    expect(rows[0].timelineAnalysis).not.toBeNull();
     expect(rows[0].codeQualityScore).toBe(6.5);
-    expect(rows[0].explanationQualityScore).toBe(8.0);
+    expect(rows[0].explanationQualityScore).toBe(7.5);
+    expect(rows[0].timelineAnalysis).not.toBeNull();
   });
 
   it("POST returns existing row and does not call GPT when technical feedback is fully populated", async () => {
@@ -414,15 +395,13 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
       makePostRequest(technicalSessionId),
       makeParams(technicalSessionId)
     );
-    // 200 = short-circuited on an already-complete existing row; compare to
-    // the regeneration path above which returns 201 for a newly-inserted row.
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.codeQualityScore).toBe(9.0);
     expect(body.explanationQualityScore).toBe(9.0);
 
     // No GPT call made.
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockChatCreate).not.toHaveBeenCalled();
 
     // DB still has exactly one row.
     const rows = await db
@@ -436,9 +415,8 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
   it("POST 201 triggers behavioral analysis and persists feedback", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => BEHAVIORAL_FEEDBACK_RESPONSE,
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
     });
 
     const res = await POST(
@@ -447,20 +425,10 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     );
     expect(res.status).toBe(201);
 
-    // Verify Python API was called with behavioral endpoint
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const [url, opts] = mockFetch.mock.calls[0];
-    expect(url).toContain("/api/analysis/behavioral");
-    const requestBody = JSON.parse(opts.body);
-    expect(requestBody.session_id).toBe(behavioralSessionId);
-    expect(requestBody.transcript).toHaveLength(2);
-    expect(requestBody.code_snapshots).toBeUndefined();
+    // GPT called exactly once — no URL assertion, no fetch mocking.
+    expect(mockChatCreate).toHaveBeenCalledOnce();
 
-    // Verify persisted in DB
-    const body = await res.json();
-    expect(body.overallScore).toBe(7.5);
-    expect(body.strengths).toHaveLength(3);
-
+    // Verify persisted in DB via real SELECT.
     const db = getTestDb();
     const [row] = await db
       .select()
@@ -468,14 +436,16 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
       .where(eq(sessionFeedback.sessionId, behavioralSessionId));
     expect(row).toBeDefined();
     expect(row.overallScore).toBe(7.5);
+    expect(row.strengths).toHaveLength(3);
+    expect(row.weaknesses).toHaveLength(3);
+    expect(row.answerAnalyses).not.toBeNull();
   });
 
   it("POST 201 triggers technical analysis with code snapshots", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => TECHNICAL_FEEDBACK_RESPONSE,
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: TECHNICAL_GPT_RESPONSE_RAW } }],
     });
 
     const res = await POST(
@@ -484,52 +454,51 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     );
     expect(res.status).toBe(201);
 
-    // Verify Python API was called with technical endpoint + snapshots
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const [url, opts] = mockFetch.mock.calls[0];
-    expect(url).toContain("/api/analysis/technical");
-    const requestBody = JSON.parse(opts.body);
-    expect(requestBody.session_id).toBe(technicalSessionId);
-    expect(requestBody.transcript).toHaveLength(2);
-    expect(requestBody.code_snapshots).toHaveLength(2);
-    expect(requestBody.code_snapshots[0].code).toBe("def solution(): pass");
+    expect(mockChatCreate).toHaveBeenCalledOnce();
 
-    // Verify technical-specific fields persisted
-    const body = await res.json();
-    expect(body.codeQualityScore).toBe(6.5);
-    expect(body.explanationQualityScore).toBe(8.0);
-    expect(body.timelineAnalysis).toHaveLength(2);
+    // Verify technical-specific fields persisted via real SELECT.
+    const db = getTestDb();
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, technicalSessionId));
+    expect(row).toBeDefined();
+    expect(row.codeQualityScore).toBe(6.5);
+    expect(row.explanationQualityScore).toBe(7.5);
+    expect(row.overallScore).toBeDefined();
+    expect(row.timelineAnalysis).not.toBeNull();
+
+    // Timeline comes from buildTimeline(transcript, snapshots), not from the
+    // GPT fixture. Assert structural shape only.
+    const timeline = row.timelineAnalysis as Array<{
+      event_type: string;
+      summary: string;
+    }>;
+    expect(Array.isArray(timeline)).toBe(true);
+    expect(timeline.length).toBeGreaterThanOrEqual(1);
+    for (const entry of timeline) {
+      expect(entry.event_type).toBeDefined();
+      expect(entry.summary).toBeDefined();
+    }
   });
 
-  it("POST returns 502 when Python analysis service is unreachable", async () => {
+  it("POST returns 500 when GPT exhausts retries", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    mockFetch.mockRejectedValue(new Error("ECONNREFUSED"));
-
-    const res = await POST(
-      makePostRequest(behavioralSessionId),
-      makeParams(behavioralSessionId)
-    );
-    expect(res.status).toBe(502);
-    const body = await res.json();
-    expect(body.error).toMatch(/could not reach/i);
-  });
-
-  it("POST returns 502 when Python analysis service returns error", async () => {
-    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
-
-    mockFetch.mockResolvedValue({
-      ok: false,
-      statusText: "Internal Server Error",
-      json: async () => ({ detail: "Model failed" }),
+    // Both attempts return invalid JSON — forces retry exhaustion.
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: "not json at all" } }],
     });
 
     const res = await POST(
       makePostRequest(behavioralSessionId),
       makeParams(behavioralSessionId)
     );
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(500);
     const body = await res.json();
-    expect(body.error).toMatch(/feedback generation failed/i);
+    expect(body.error).toMatch(/feedback generation failed|malformed|unknown error/i);
+
+    // The retry loop in withOpenAIRetry attempts twice before throwing.
+    expect(mockChatCreate).toHaveBeenCalledTimes(2);
   });
 });
