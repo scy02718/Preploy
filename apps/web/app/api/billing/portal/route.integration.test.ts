@@ -158,6 +158,32 @@ describe("POST /api/billing/portal (integration)", () => {
     delete process.env.AUTH_URL;
   });
 
+  it("falls back to the request origin when neither NEXTAUTH_URL nor AUTH_URL is set", async () => {
+    delete process.env.NEXTAUTH_URL;
+    delete process.env.AUTH_URL;
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER_PRO.id } });
+    mockPortalCreate.mockResolvedValueOnce({
+      id: "bps_test_origin",
+      url: "https://billing.stripe.com/session/test_origin",
+    });
+
+    // Build the request from a deployed-looking origin so the route
+    // derives the return_url from `request.url`'s host.
+    const req = new NextRequest(
+      "https://preploy.vercel.app/api/billing/portal",
+      { method: "POST" }
+    );
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(mockPortalCreate).toHaveBeenCalledWith({
+      customer: "cus_portal_pro",
+      return_url: "https://preploy.vercel.app/profile",
+    });
+
+    process.env.NEXTAUTH_URL = "http://localhost:3000";
+  });
+
   it("returns 429 when the rate limiter rejects the request", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER_PRO.id } });
     mockCheckRateLimit.mockReturnValueOnce(

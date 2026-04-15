@@ -194,6 +194,36 @@ describe("POST /api/billing/checkout (integration)", () => {
     );
   });
 
+  it("derives success_url from the request origin when NEXTAUTH_URL and AUTH_URL are unset", async () => {
+    delete process.env.NEXTAUTH_URL;
+    delete process.env.AUTH_URL;
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    mockCustomersCreate.mockResolvedValue({ id: "cus_origin_test" });
+    mockCheckoutSessionsCreate.mockResolvedValue({
+      id: "cs_origin",
+      url: "https://checkout.stripe.com/pay/cs_origin",
+    });
+
+    // Simulate a request coming in on the deployed Vercel host.
+    const req = new NextRequest(
+      "https://preploy.vercel.app/api/billing/checkout",
+      { method: "POST" }
+    );
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success_url: "https://preploy.vercel.app/profile?billing=success",
+        cancel_url: "https://preploy.vercel.app/profile?billing=cancelled",
+      })
+    );
+
+    // Reset for other tests
+    process.env.NEXTAUTH_URL = "http://localhost:3000";
+  });
+
   it("returns 404 when user is not found in db", async () => {
     mockAuth.mockResolvedValue({
       user: { id: "00000000-0000-0000-0000-000000000099" },
