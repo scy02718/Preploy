@@ -76,8 +76,9 @@ committed). Required keys — populate before `docker compose up`:
 | ------------------------ | --------------------------------------------------------------- |
 | `DATABASE_URL`           | Postgres connection string (Supabase pooler URL in prod).      |
 | `SUPABASE_DB_URL`        | Drizzle connection string; usually the same as `DATABASE_URL`. |
-| `NEXTAUTH_SECRET`        | NextAuth session signing secret.                                |
-| `NEXTAUTH_URL`           | Public URL of the app — `http://localhost:3000` locally.       |
+| `AUTH_SECRET`            | NextAuth v5 session signing secret. Generate with `openssl rand -base64 32`. Missing or empty → `[auth][error] MissingSecret` in the container logs. |
+| `NEXTAUTH_SECRET`        | Legacy alias for `AUTH_SECRET`; either one works. Prefer `AUTH_SECRET` for new setups. |
+| `AUTH_URL` / `NEXTAUTH_URL` | Public URL of the app — `http://localhost:3000` locally.   |
 | `GOOGLE_CLIENT_ID`       | Google OAuth client ID.                                         |
 | `GOOGLE_CLIENT_SECRET`   | Google OAuth client secret.                                     |
 | `OPENAI_API_KEY`         | OpenAI API key.                                                 |
