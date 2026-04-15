@@ -6,13 +6,22 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-const baseProfile = {
+const baseProfile: {
+  id: string;
+  email: string;
+  name: string;
+  image: null;
+  plan: "free" | "pro" | "max";
+  stripeCustomerId: string | null;
+  disabledAt: null;
+  createdAt: string;
+} = {
   id: "user-1",
   email: "test@example.com",
   name: "Test User",
   image: null,
-  plan: "free" as const,
-  stripeCustomerId: null as string | null,
+  plan: "free",
+  stripeCustomerId: null,
   disabledAt: null,
   createdAt: "2026-01-01T00:00:00Z",
 };
@@ -100,18 +109,35 @@ describe("ProfilePage", () => {
     });
   });
 
-  it("shows Upgrade to Pro button for a user without a stripe customer", async () => {
-    global.fetch = mockFetchWithProfile({ ...baseProfile, stripeCustomerId: null });
+  it("shows Upgrade to Pro button for a free-plan user", async () => {
+    global.fetch = mockFetchWithProfile({ ...baseProfile, plan: "free" });
     render(<ProfilePage />);
     await vi.waitFor(() => {
       expect(screen.getByTestId("upgrade-button")).toBeTruthy();
     });
     expect(screen.getAllByText("Upgrade to Pro").length).toBeGreaterThanOrEqual(1);
+    // Free users should NEVER see "Manage billing" — even ones with a
+    // dangling stripe_customer_id from a previous failed checkout attempt.
+    expect(screen.queryByTestId("manage-billing-button")).toBeNull();
   });
 
-  it("shows Manage billing button for a user with a stripe customer", async () => {
+  it("shows Upgrade to Pro for a free user even if they have a dangling stripe_customer_id", async () => {
     global.fetch = mockFetchWithProfile({
       ...baseProfile,
+      plan: "free",
+      stripeCustomerId: "cus_left_over_from_failed_checkout",
+    });
+    render(<ProfilePage />);
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("upgrade-button")).toBeTruthy();
+    });
+    expect(screen.queryByTestId("manage-billing-button")).toBeNull();
+  });
+
+  it("shows Manage billing button for a pro-plan user", async () => {
+    global.fetch = mockFetchWithProfile({
+      ...baseProfile,
+      plan: "pro",
       stripeCustomerId: "cus_test_123",
     });
     render(<ProfilePage />);
@@ -119,11 +145,12 @@ describe("ProfilePage", () => {
       expect(screen.getByTestId("manage-billing-button")).toBeTruthy();
     });
     expect(screen.getAllByText("Manage billing").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByTestId("upgrade-button")).toBeNull();
   });
 
   it("clicking Upgrade to Pro calls /api/billing/checkout and redirects", async () => {
     const { fireEvent } = await import("@testing-library/react");
-    const profile = { ...baseProfile, stripeCustomerId: null };
+    const profile = { ...baseProfile, plan: "free" as const, stripeCustomerId: null };
     const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url.includes("/api/templates")) {
         return Promise.resolve({ ok: true, json: async () => [] });
@@ -162,7 +189,7 @@ describe("ProfilePage", () => {
 
   it("clicking Manage billing calls /api/billing/portal and redirects", async () => {
     const { fireEvent } = await import("@testing-library/react");
-    const profile = { ...baseProfile, stripeCustomerId: "cus_test_123" };
+    const profile = { ...baseProfile, plan: "pro" as const, stripeCustomerId: "cus_test_123" };
     const fetchMock = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url.includes("/api/templates")) {
         return Promise.resolve({ ok: true, json: async () => [] });
