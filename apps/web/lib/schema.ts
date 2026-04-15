@@ -266,6 +266,46 @@ export const sessionTemplates = pgTable("session_templates", {
     .defaultNow(),
 });
 
+export const marketerPosts = pgTable(
+  "marketer_posts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    source: text("source").notNull().default("reddit"),
+    externalId: text("external_id").notNull(),
+    subreddit: text("subreddit").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    permalink: text("permalink").notNull(),
+    postedAt: timestamp("posted_at", { withTimezone: true }).notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    classification: text("classification"),
+    summary: text("summary"),
+  },
+  (table) => [
+    uniqueIndex("marketer_posts_external_id_unique").on(table.externalId),
+  ]
+);
+
+export const marketerDrafts = pgTable("marketer_drafts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => marketerPosts.id, { onDelete: "cascade" }),
+  intent: text("intent").notNull(),
+  reply: text("reply").notNull(),
+  status: text("status").notNull().default("pending"),
+  discardReason: text("discard_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: uuid("reviewed_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+});
+
 // ---- Relations ----
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -408,6 +448,27 @@ export const interviewUsageRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [interviewUsage.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const marketerPostsRelations = relations(
+  marketerPosts,
+  ({ many }) => ({
+    drafts: many(marketerDrafts),
+  })
+);
+
+export const marketerDraftsRelations = relations(
+  marketerDrafts,
+  ({ one }) => ({
+    post: one(marketerPosts, {
+      fields: [marketerDrafts.postId],
+      references: [marketerPosts.id],
+    }),
+    reviewer: one(users, {
+      fields: [marketerDrafts.reviewedBy],
       references: [users.id],
     }),
   })

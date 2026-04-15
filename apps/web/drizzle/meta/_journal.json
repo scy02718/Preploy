@@ -64,6 +64,13 @@
       "when": 1776261643845,
       "tag": "0008_sweet_blink",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776289548380,
+      "tag": "0009_brief_network",
+      "breakpoints": true
     }
   ]
 }

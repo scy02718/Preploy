@@ -181,6 +181,9 @@ task definition / secrets manager.
 | `STRIPE_SECRET_KEY`        | RUNTIME_ONLY       | Stripe secret API key (`sk_test_...` for dev, `sk_live_...` for prod). Never expose to client. |
 | `STRIPE_WEBHOOK_SECRET`    | RUNTIME_ONLY       | Webhook signing secret from `stripe listen` or Stripe Dashboard. Used to verify inbound events. |
 | `STRIPE_PRO_PRICE_ID`      | RUNTIME_ONLY       | Stripe Price ID for the Pro subscription plan (`price_...`). |
+| `CRON_SECRET`              | RUNTIME_ONLY       | Bearer token that Vercel Cron passes in the `Authorization` header to authorize `POST /api/admin/marketer/run`. Generate with `openssl rand -hex 32`. |
+| `ADMIN_USER_IDS`           | RUNTIME_ONLY       | Comma-separated list of NextAuth user UUIDs that are allowed to access `/admin/*` routes and the marketer queue API. |
+| `MARKETER_FRESHNESS_HOURS` | RUNTIME_ONLY       | How many hours old a Reddit post can be before being skipped by the marketer cron job (default: 48). |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and
