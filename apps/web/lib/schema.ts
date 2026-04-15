@@ -51,6 +51,7 @@ export const users = pgTable("users", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   planPeriodStart: timestamp("plan_period_start", { withTimezone: true }),
   planPeriodEnd: timestamp("plan_period_end", { withTimezone: true }),
+  pastDueAt: timestamp("past_due_at", { withTimezone: true }),
   disabledAt: timestamp("disabled_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
