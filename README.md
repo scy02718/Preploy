@@ -39,20 +39,25 @@ npm install
 cp .env.example .env
 ```
 
-Fill in your `.env`:
+Fill in your `.env` (or copy `apps/web/.env.local.example` → `apps/web/.env.local` for local-only overrides). The full env table with classifications lives in [`apps/web/README.md`](apps/web/README.md#environment-variables) — this is the minimum to get a dev server running:
 
 | Variable | Where to get it |
 |----------|----------------|
-| `SUPABASE_URL` | Supabase dashboard → Settings → API |
-| `SUPABASE_ANON_KEY` | Supabase dashboard → Settings → API |
-| `SUPABASE_DB_URL` | Supabase dashboard → Settings → Database → Connection string (Transaction pooler) |
+| `SUPABASE_DB_URL` | Supabase dashboard → Settings → Database → Connection string → URI (use the **Session pooler** on port 5432 for local; works for both build-time migrations and runtime queries) |
 | `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | `GOOGLE_CLIENT_ID` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth 2.0 Client |
 | `GOOGLE_CLIENT_SECRET` | Same as above |
 | `AUTH_SECRET` | Generate with `openssl rand -base64 32` |
-| `AUTH_URL` | `http://localhost:3000` for local dev |
-| `SENTRY_DSN` | [sentry.io](https://sentry.io) → Project Settings → Client Keys (optional, leave blank to disable) |
+| `AUTH_URL` | `http://localhost:3000` for local dev; your deployed domain in prod |
+| `AUTH_TRUST_HOST` | `true` — required when running outside Vercel (Docker, Fly.io, self-hosted) so NextAuth accepts the request host. Optional on Vercel. |
+| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` for local dev. Used for canonical tags, sitemap, robots.txt, and OG image URLs. |
+| `STRIPE_SECRET_KEY` | Stripe Dashboard → Developers → API keys → Secret key (`sk_test_...` for test mode) |
+| `STRIPE_WEBHOOK_SECRET` | Output of `stripe listen --forward-to localhost:3000/api/billing/webhook` |
+| `STRIPE_PRO_PRICE_ID` | Stripe Dashboard → Products → Preploy Pro → Pricing → ⋯ → Copy ID (starts with `price_`, **not** `prod_`) |
+| `SENTRY_DSN` | [sentry.io](https://sentry.io) → Project Settings → Client Keys (optional — leave blank to disable Sentry) |
 | `NEXT_PUBLIC_SENTRY_DSN` | Same as `SENTRY_DSN` (needed for client-side error capture) |
+
+> Note: there is no longer a `SUPABASE_URL` or `SUPABASE_ANON_KEY` — Drizzle talks directly to Postgres via `SUPABASE_DB_URL`, and we don't use the Supabase client SDK in `apps/web`.
 
 ### 3. Run database migrations
 
