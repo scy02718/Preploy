@@ -15,14 +15,16 @@ const requestSchema = z.object({
   question_type: z.enum(["behavioral", "technical"]),
 });
 
-const openai = new OpenAI();
-
 // POST /api/resume/questions — generate resume-tailored interview questions
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Lazy-instantiate so `next build` can import this module without
+  // OPENAI_API_KEY being present.
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const log = createRequestLogger({ route: "POST /api/resume/questions", userId: session.user.id });
 
