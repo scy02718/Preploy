@@ -20,6 +20,12 @@ test was poorly written, and even then only with explicit reasoning.
 
 Run these in order. Stop and report a failure as soon as **any** step fails.
 
+**Execution rule:** Every shell command below must be issued as its **own
+Bash tool call**. Do not chain commands with `&&` or `;` in a single call —
+compound commands confuse the permission system's prefix matching and get
+auto-denied in background runs. If a step shows two commands in a fenced
+block, that's two Bash calls, not one.
+
 ### 1. Static analysis
 
 ```bash
