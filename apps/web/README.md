@@ -77,6 +77,63 @@ Smoke test locally:
 curl -i http://localhost:3000/api/health
 ```
 
+## Billing
+
+Preploy uses [Stripe](https://stripe.com) for Pro-plan subscriptions. The billing
+surface consists of two API routes:
+
+| Route | Description |
+|---|---|
+| `POST /api/billing/checkout` | Creates a Stripe Checkout Session and returns `{ url }` for client redirect. |
+| `POST /api/billing/webhook` | Receives Stripe lifecycle events and updates the user's plan in the DB. |
+
+### Local setup
+
+1. Install the [Stripe CLI](https://stripe.com/docs/stripe-cli) and log in:
+
+   ```bash
+   stripe login
+   ```
+
+2. Copy `.env.local.example` to `.env.local` and fill in your Stripe keys:
+
+   ```bash
+   cp apps/web/.env.local.example apps/web/.env.local
+   ```
+
+   | Variable | How to get it |
+   |---|---|
+   | `STRIPE_SECRET_KEY` | Stripe Dashboard → Developers → API keys → Secret key (`sk_test_...`). |
+   | `STRIPE_WEBHOOK_SECRET` | Copied from `stripe listen` output (see below). |
+   | `STRIPE_PRO_PRICE_ID` | Stripe Dashboard → Products → Pro plan → Price ID (`price_...`). |
+
+3. Forward Stripe events to your local dev server:
+
+   ```bash
+   stripe listen --forward-to localhost:3000/api/billing/webhook
+   ```
+
+   The CLI will print `webhook signing secret: whsec_...` — copy that value into
+   `STRIPE_WEBHOOK_SECRET` in your `.env.local`.
+
+4. Trigger a test checkout flow via the app UI (`/profile → Upgrade`), or
+   manually with the CLI:
+
+   ```bash
+   stripe trigger checkout.session.completed
+   ```
+
+### Handled events
+
+| Stripe event | Effect |
+|---|---|
+| `checkout.session.completed` | Upgrades user to `pro`, records `stripe_subscription_id`, period dates. |
+| `customer.subscription.updated` | Refreshes plan and `plan_period_end`; maps `past_due`/`unpaid` → pro-flagged. |
+| `customer.subscription.deleted` | Reverts to `free`, clears subscription ID, resets `interview_usage`. |
+| `invoice.payment_failed` | Sets `past_due_at` timestamp on the user row. |
+
+Webhook handlers are idempotent — re-delivering the same event is safe.
+
 ## Environment variables
 
 ### Runtime vs build-time
@@ -109,6 +166,10 @@ task definition / secrets manager.
 | `CI`                       | RUNTIME_ONLY       | Set by CI runners (GitHub Actions, etc.). Used to toggle Playwright retry counts and parallel workers. |
 | `PLAYWRIGHT_BASE_URL`      | RUNTIME_ONLY       | Base URL used by the Playwright E2E suite (default: `http://localhost:3000`). |
 | `PLAYWRIGHT_SKIP_WEBSERVER`| RUNTIME_ONLY       | Set to `1` in CI to skip Playwright's built-in webServer block (server is pre-started). |
+| `NEXTAUTH_URL`             | RUNTIME_ONLY       | Public URL of the app — used to build Stripe redirect URLs. Alias of `AUTH_URL`. |
+| `STRIPE_SECRET_KEY`        | RUNTIME_ONLY       | Stripe secret API key (`sk_test_...` for dev, `sk_live_...` for prod). Never expose to client. |
+| `STRIPE_WEBHOOK_SECRET`    | RUNTIME_ONLY       | Webhook signing secret from `stripe listen` or Stripe Dashboard. Used to verify inbound events. |
+| `STRIPE_PRO_PRICE_ID`      | RUNTIME_ONLY       | Stripe Price ID for the Pro subscription plan (`price_...`). |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and

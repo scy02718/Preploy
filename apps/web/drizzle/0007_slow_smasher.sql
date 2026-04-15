@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "past_due_at" timestamp with time zone;
