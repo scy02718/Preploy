@@ -92,6 +92,7 @@ task definition / secrets manager.
 
 | Variable                   | Classification     | Description                                                                 |
 | -------------------------- | ------------------ | --------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_BASE_URL`     | BUILD_TIME_BAKED   | Public origin of the site (e.g. `https://preploy.app`). Used for sitemap, robots, canonical, and OG tags. Defaults to `https://preploy.app` when unset. |
 | `NEXT_PUBLIC_SENTRY_DSN`   | BUILD_TIME_BAKED   | Sentry DSN shipped to browsers for client-side error reporting.             |
 | `NODE_ENV`                 | BUILD_TIME_BAKED   | Standard Node env flag; set by Next during `next build` / `next start`.     |
 | `NEXT_RUNTIME`             | BUILD_TIME_BAKED   | Next-managed flag (`nodejs` \| `edge`) used by `instrumentation.ts`.        |
