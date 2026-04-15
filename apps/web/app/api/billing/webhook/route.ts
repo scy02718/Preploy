@@ -4,12 +4,17 @@ import { users, interviewUsage } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { stripe } from "@/lib/stripe";
 import { createRequestLogger } from "@/lib/logger";
+import { UserNotFoundError } from "@/lib/errors";
 import type Stripe from "stripe";
 
 /**
  * POST /api/billing/webhook
  * Handles Stripe webhook events for subscription lifecycle management.
  * No auth — verified via Stripe signature instead.
+ *
+ * Error handling strategy:
+ * - UserNotFoundError → 200 (stale webhook noise; Stripe retrying for 3 days won't help)
+ * - Any other error   → 500 (transient failure; let Stripe retry with exponential backoff)
  */
 export async function POST(request: NextRequest) {
   const log = createRequestLogger({ route: "POST /api/billing/webhook" });
@@ -71,9 +76,26 @@ export async function POST(request: NextRequest) {
         log.info({ eventType: event.type }, "unhandled event type — skipping");
     }
   } catch (err) {
-    // Log and return 200 so Stripe doesn't retry indefinitely.
-    // If a user row is missing, that's stale webhook noise, not a bug.
-    log.error({ err, eventType: event.type, eventId: event.id }, "webhook handler error");
+    if (err instanceof UserNotFoundError) {
+      // Stale webhook noise — the user row is gone and Stripe retrying won't fix that.
+      log.warn(
+        { userId: err.userId, stripeEvent: err.event },
+        "webhook skipped: user not found (stale noise)"
+      );
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    // Transient failure (DB connection drop, Supabase brownout, Drizzle timeout, etc.)
+    // Return 500 so Stripe retries with exponential backoff for up to 3 days.
+    log.error(
+      {
+        err,
+        stripeEventId: event.id,
+        stripeEventType: event.type,
+      },
+      "webhook handler error — returning 500 for Stripe retry"
+    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
@@ -114,8 +136,7 @@ async function handleCheckoutSessionCompleted(
     .where(eq(users.id, userId));
 
   if (!existing) {
-    log.warn({ userId }, "checkout.session.completed: user not found — skipping");
-    return;
+    throw new UserNotFoundError(userId, "checkout.session.completed");
   }
 
   // Idempotent: if already set to this subscription, skip
@@ -168,8 +189,7 @@ async function handleSubscriptionUpdated(
     .where(eq(users.stripeCustomerId, customerId));
 
   if (!user) {
-    log.warn({ customerId }, "customer.subscription.updated: no user found — skipping");
-    return;
+    throw new UserNotFoundError(customerId, "customer.subscription.updated");
   }
 
   // current_period_start/end moved to subscription.items in Stripe v22+
@@ -224,8 +244,7 @@ async function handleSubscriptionDeleted(
     .where(eq(users.stripeCustomerId, customerId));
 
   if (!user) {
-    log.warn({ customerId }, "customer.subscription.deleted: no user found — skipping");
-    return;
+    throw new UserNotFoundError(customerId, "customer.subscription.deleted");
   }
 
   await db
@@ -275,8 +294,7 @@ async function handleInvoicePaymentFailed(
     .where(eq(users.stripeCustomerId, customerId));
 
   if (!user) {
-    log.warn({ customerId }, "invoice.payment_failed: no user found — skipping");
-    return;
+    throw new UserNotFoundError(customerId, "invoice.payment_failed");
   }
 
   await db

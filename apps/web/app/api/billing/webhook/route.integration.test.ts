@@ -366,9 +366,9 @@ describe("POST /api/billing/webhook (integration)", () => {
     expect(row.pastDueAt).not.toBeNull();
   });
 
-  // ---- Stale webhook noise ----
+  // ---- Stale webhook noise (UserNotFoundError) ----
 
-  it("returns 200 (not error) when user is not found — stale webhook noise", async () => {
+  it("returns 200 (not error) when user is not found for checkout.session.completed — stale webhook noise", async () => {
     const event = makeStripeEvent("checkout.session.completed", {
       id: "cs_stale",
       subscription: "sub_stale",
@@ -383,8 +383,69 @@ describe("POST /api/billing/webhook (integration)", () => {
     });
 
     const res = await POST(makeWebhookRequest(JSON.stringify({})));
-    // Should return 200 — stale noise, not a bug
+    // Should return 200 — stale noise, not a transient failure
     expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.received).toBe(true);
+  });
+
+  it("returns 200 when user is not found for customer.subscription.updated — stale webhook noise", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    const event = makeStripeEvent("customer.subscription.updated", {
+      id: "sub_stale_update",
+      customer: "cus_nonexistent_99",
+      status: "active",
+      items: {
+        data: [
+          {
+            current_period_start: now,
+            current_period_end: now + 86400,
+          },
+        ],
+      },
+    });
+
+    mockConstructEvent.mockReturnValueOnce(event);
+    const res = await POST(makeWebhookRequest(JSON.stringify({})));
+    // UserNotFoundError → 200, Stripe should not retry
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.received).toBe(true);
+  });
+
+  it("returns 500 when the db throws during event processing — Stripe should retry", async () => {
+    // The load-bearing assertion: any non-UserNotFoundError → 500 so Stripe retries.
+    // We use invoice.payment_failed with a known customer, so the user SELECT
+    // succeeds (TEST_USER found), but then stripe.subscriptions.retrieve is
+    // irrelevant — for invoice events the failing path is the db.update.
+    //
+    // Instead, use a checkout event for a user whose stripeSubscriptionId is
+    // already set to the SAME subscription (idempotent fast-path won't call
+    // subscriptions.retrieve) — no, that returns early with 200.
+    //
+    // Clearest approach: set TEST_USER stripeSubscriptionId to null, use a
+    // checkout event, and make stripe.subscriptions.retrieve throw a generic
+    // non-UserNotFoundError. Reset all mocks first to clear any sticky impl.
+    mockSubscriptionsRetrieve.mockReset();
+    mockSubscriptionsRetrieve.mockRejectedValueOnce(
+      new Error("connection refused")
+    );
+
+    const event = makeStripeEvent("checkout.session.completed", {
+      id: "cs_db_error",
+      subscription: "sub_db_error",
+      metadata: { userId: TEST_USER.id },
+    });
+
+    mockConstructEvent.mockReturnValueOnce(event);
+
+    const res = await POST(makeWebhookRequest(JSON.stringify({})));
+
+    // Must return 500 so Stripe retries — not 200
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBeDefined();
   });
 
   // ---- Unhandled event types ----

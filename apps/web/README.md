@@ -145,6 +145,8 @@ Without these toggles, the "Manage billing" button on `/profile` will hit the po
 
 Webhook handlers are idempotent — re-delivering the same event is safe.
 
+The webhook distinguishes `UserNotFoundError` (returns 200, Stripe does not retry — handles stale noise) from any other error (returns 500, Stripe retries with exponential backoff for up to 3 days).
+
 ## Environment variables
 
 ### Runtime vs build-time
