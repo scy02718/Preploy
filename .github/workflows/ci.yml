@@ -148,6 +148,12 @@ jobs:
         working-directory: apps/web
         run: npx playwright install-deps chromium
 
+      - name: Apply database migrations
+        working-directory: apps/web
+        env:
+          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+        run: npm run db:migrate
+
       - name: Build Next.js app
         working-directory: apps/web
         env:

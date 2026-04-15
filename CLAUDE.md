@@ -83,6 +83,17 @@ The `.claude/agents/` directory holds specialized roles:
 The `/standup` slash command runs them in sequence with approval gates between
 each role.
 
+### Orchestration rule — always use the subagent chain
+
+When implementing features — whether via `/standup`, a single manual story, or
+a parallel rollout wave — always delegate each gate to its subagent:
+`feature-implementer` → `qa-tester` → `pr-reviewer`. **Do not run
+lint/typecheck/test manually in the main conversation** even when it feels
+faster, and even when parallelizing multiple branches. Why: the main context
+stays clean, the gate stays consistent across stories, and `pr-reviewer`
+cannot be accidentally skipped because you already "saw" the diff. Manual
+orchestration must still follow the same sequence `/standup` enforces.
+
 ## Database schema changes
 
 When modifying `apps/web/lib/schema.ts`, always use versioned migrations:

@@ -104,6 +104,7 @@ task definition / secrets manager.
 | `LOG_LEVEL`                | RUNTIME_ONLY       | Pino log level override (`debug`, `info`, `warn`, `error`).                |
 | `AUTH_SECRET`              | RUNTIME_ONLY       | NextAuth v5 session signing secret (also read as `NEXTAUTH_SECRET`). Generate with `openssl rand -base64 32`. |
 | `NEXTAUTH_SECRET`          | RUNTIME_ONLY       | Legacy alias for `AUTH_SECRET`. Either works; prefer `AUTH_SECRET` for new setups. |
+| `AUTH_URL`                 | RUNTIME_ONLY       | Public URL of the app (also read as `NEXTAUTH_URL`). Forwarded to Playwright's webServer during E2E runs. |
 | `CI`                       | RUNTIME_ONLY       | Set by CI runners (GitHub Actions, etc.). Used to toggle Playwright retry counts and parallel workers. |
 | `PLAYWRIGHT_BASE_URL`      | RUNTIME_ONLY       | Base URL used by the Playwright E2E suite (default: `http://localhost:3000`). |
 | `PLAYWRIGHT_SKIP_WEBSERVER`| RUNTIME_ONLY       | Set to `1` in CI to skip Playwright's built-in webServer block (server is pre-started). |

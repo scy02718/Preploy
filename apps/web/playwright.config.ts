@@ -50,10 +50,17 @@ export default defineConfig({
     reuseExistingServer: !isCI,
     timeout: 180_000,
     env: {
-      // Forward the test DB URL so the server can connect to it during E2E
+      // Forward the test DB URL so the server can connect to it during E2E.
       ...(process.env.TEST_DATABASE_URL
         ? { SUPABASE_DB_URL: process.env.TEST_DATABASE_URL }
         : {}),
+      // Forward AUTH_SECRET explicitly so the NextAuth JWE cookie minted by
+      // global.setup.ts is verifiable by the spawned `npm run start` process.
+      // Falls back to the CI dummy secret for local runs where AUTH_SECRET
+      // is not set in the shell environment — otherwise every authenticated
+      // test silently redirects to /login.
+      AUTH_SECRET: process.env.AUTH_SECRET ?? "dummy-auth-secret-for-ci-only",
+      AUTH_URL: process.env.AUTH_URL ?? BASE_URL,
     },
   },
 });
