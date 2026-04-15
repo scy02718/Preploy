@@ -22,6 +22,7 @@ export async function GET() {
       name: users.name,
       image: users.image,
       plan: users.plan,
+      stripeCustomerId: users.stripeCustomerId,
       disabledAt: users.disabledAt,
       createdAt: users.createdAt,
     })
