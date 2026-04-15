@@ -35,12 +35,27 @@ Before marking any story or task complete, run **all** of:
 ```bash
 npx turbo lint typecheck test           # ESLint + tsc + unit/component tests
 cd apps/web && npm run test:integration # Real Postgres integration tests
+cd apps/web && npm run test:e2e:smoke   # Playwright E2E smoke suite
 ```
 
 If any of these fail, fix the issue before committing — CI will reject the push.
 The Stop hook in `.claude/settings.json` runs the first command automatically
 when Claude finishes a turn that touched source files; you should still run the
 integration suite manually before pushing.
+
+## E2E smoke tests
+
+`apps/web/e2e/` contains Playwright smoke tests for golden paths (landing,
+auth, dashboard, interview setup, profile).  These run against a production
+build — NOT `next dev`.
+
+- Extend only for **new top-level user flows** (golden paths).
+- **Bug repros and edge cases** go in integration tests, not E2E.
+- Tag every test with `@smoke` so CI selects it with `--grep @smoke`.
+- Auth state is pre-minted by `e2e/global.setup.ts` and stored in
+  `e2e/.auth/user.json` (gitignored).
+
+See `apps/web/README.md` → "E2E tests" for local run instructions.
 
 ## Skills available in this repo
 
