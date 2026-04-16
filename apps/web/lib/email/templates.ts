@@ -6,7 +6,7 @@
  */
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://preploy.vercel.app";
+  process.env.NEXT_PUBLIC_BASE_URL || "https://preploy.tech";
 
 const FOOTER = `
 <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
