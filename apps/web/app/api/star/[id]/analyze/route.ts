@@ -87,7 +87,7 @@ export async function POST(
         }
         return validated.data;
       },
-      { service: "star-analysis", log }
+      { service: "star-analysis", log, userId: session.user.id, model: STAR_ANALYSIS_MODEL }
     );
 
     const { suggestions, ...scores } = analysisResult;

@@ -3,6 +3,7 @@ import {
   uuid,
   text,
   timestamp,
+  date,
   pgEnum,
   jsonb,
   integer,
@@ -25,6 +26,7 @@ export const sessionStatusEnum = pgEnum("session_status", [
   "in_progress",
   "completed",
   "cancelled",
+  "failed",
 ]);
 
 export const codeEventTypeEnum = pgEnum("code_event_type", [
@@ -412,3 +414,31 @@ export const interviewUsageRelations = relations(
     }),
   })
 );
+
+// ---------- OpenAI usage tracking ----------
+
+export const openaiUsage = pgTable(
+  "openai_usage",
+  {
+    userId: uuid("user_id").notNull(),
+    date: date("date", { mode: "string" }).notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costUsdMillis: integer("cost_usd_millis").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("openai_usage_user_date_model_unique").on(
+      table.userId,
+      table.date,
+      table.model
+    ),
+  ]
+);
+
+export const openaiUsageRelations = relations(openaiUsage, ({ one }) => ({
+  user: one(users, {
+    fields: [openaiUsage.userId],
+    references: [users.id],
+  }),
+}));

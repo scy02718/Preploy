@@ -39,6 +39,12 @@ export interface OpenAIChatLikeResponse {
 export interface WithOpenAIRetryOptions {
   service: string;
   log: pino.Logger;
+  /** If provided, checks the daily spend cap before the call and records
+   *  usage after a successful call. Omit for background/system calls. */
+  userId?: string;
+  /** The OpenAI model name — needed for cost recording. Required when
+   *  `userId` is set. */
+  model?: string;
 }
 
 /**
@@ -59,7 +65,14 @@ export async function withOpenAIRetry<T>(
   parseAndValidate: (raw: string) => T,
   opts: WithOpenAIRetryOptions,
 ): Promise<T> {
-  const { service, log } = opts;
+  const { service, log, userId, model } = opts;
+
+  // Cap check — runs once before the first attempt. Throws OpenAICapError
+  // (not OpenAIRetryError) so callers can map it to 429.
+  if (userId) {
+    const { checkOpenAICap } = await import("@/lib/openai-usage");
+    await checkOpenAICap(userId);
+  }
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -68,10 +81,32 @@ export async function withOpenAIRetry<T>(
       if (!content) {
         throw new OpenAIRetryError("empty");
       }
-      return parseAndValidate(content);
+      const result = parseAndValidate(content);
+
+      // Record usage after a successful parse — fire-and-forget so it
+      // doesn't block the response.
+      if (userId && model) {
+        const rawResponse = response as OpenAIChatLikeResponse & {
+          usage?: { prompt_tokens?: number; completion_tokens?: number };
+        };
+        if (rawResponse.usage) {
+          import("@/lib/openai-usage")
+            .then(({ recordOpenAIUsage }) =>
+              recordOpenAIUsage(
+                userId,
+                model,
+                rawResponse.usage?.prompt_tokens ?? 0,
+                rawResponse.usage?.completion_tokens ?? 0
+              )
+            )
+            .catch(() => {});
+        }
+      }
+
+      return result;
     } catch (err) {
       if (!(err instanceof OpenAIRetryError)) {
-        // Non-retry-error: propagate immediately, do not retry.
+        // Non-retry-error (including OpenAICapError): propagate immediately.
         throw err;
       }
       if (attempt === 0) {

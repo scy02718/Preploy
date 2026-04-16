@@ -26,6 +26,7 @@ import { buildTimeline } from "@/lib/timeline-correlator";
 
 export interface RunTechnicalAnalysisOptions {
   log: pino.Logger;
+  userId?: string;
 }
 
 export async function runTechnicalAnalysis(
@@ -72,6 +73,6 @@ export async function runTechnicalAnalysis(
       }
       return validated.data;
     },
-    { service: "technical-analysis", log },
+    { service: "technical-analysis", log, userId: opts.userId, model: "gpt-5.4-mini" },
   );
 }
