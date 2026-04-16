@@ -8,6 +8,9 @@ export function LandingFooter() {
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
         <p>© {year} Preploy. All rights reserved.</p>
         <nav className="flex items-center gap-6" aria-label="Footer navigation">
+          <Link href="/pricing" className="hover:text-foreground transition-colors">
+            Pricing
+          </Link>
           <Link href="/privacy" className="hover:text-foreground transition-colors">
             Privacy
           </Link>
