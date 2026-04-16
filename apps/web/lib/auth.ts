@@ -26,12 +26,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Fire-and-forget — never block the auth flow on email delivery.
     async createUser({ user }) {
       if (user.email) {
+        // Welcome email — fire-and-forget
         import("@/lib/email/templates").then(({ welcomeEmail }) => {
           const { subject, html } = welcomeEmail(user.name ?? null);
           import("@/lib/email/send").then(({ sendEmail }) => {
             sendEmail({ to: user.email!, subject, html }).catch(() => {});
           });
         });
+
+        // Anti-abuse: if this email was used by a recently-deleted account,
+        // carry forward their monthly usage so re-creation doesn't reset quota.
+        if (user.id) {
+          import("@/lib/usage").then(({ carryForwardUsage }) => {
+            carryForwardUsage(user.email!, user.id!).catch(() => {});
+          });
+        }
       }
     },
   },
