@@ -108,7 +108,7 @@ describe("POST /api/star/[id]/analyze (integration)", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockCheckRateLimit.mockReturnValue(null); // allow by default
+    mockCheckRateLimit.mockResolvedValue(null); // allow by default
     const db = getTestDb();
     await db.delete(starStoryAnalyses);
     await db.delete(starStories);

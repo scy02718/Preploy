@@ -20,7 +20,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 // Mock the rate-limit helper so we can exercise the 429 branch on demand.
-// checkRateLimit is SYNCHRONOUS and returns NextResponse | null.
+// checkRateLimit is now ASYNC (Redis-backed) and returns NextResponse | null.
 // Default to null (passthrough) so existing happy-path tests behave normally.
 const { mockCheckRateLimit } = vi.hoisted(() => ({
   mockCheckRateLimit: vi.fn<(userId: string) => unknown>(() => null),
@@ -80,7 +80,7 @@ describe("POST /api/billing/checkout (integration)", () => {
     vi.clearAllMocks();
 
     // Default: rate limit allows the request through (sync return).
-    mockCheckRateLimit.mockReturnValue(null);
+    mockCheckRateLimit.mockResolvedValue(null);
 
     // Reset user's stripe customer id between tests
     const db = getTestDb();
@@ -234,7 +234,7 @@ describe("POST /api/billing/checkout (integration)", () => {
 
   it("returns 429 when the rate limiter rejects the request", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
-    mockCheckRateLimit.mockReturnValueOnce(
+    mockCheckRateLimit.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: "rate limited" }), {
         status: 429,
         headers: { "Content-Type": "application/json" },

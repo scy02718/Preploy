@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimited = checkRateLimit(session.user.id);
+  const rateLimited = await checkRateLimit(session.user.id);
   if (rateLimited) return rateLimited;
 
   // Check daily session limit based on user's plan
