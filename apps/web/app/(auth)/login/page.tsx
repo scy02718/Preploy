@@ -3,7 +3,7 @@ import { signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.app";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
 
 export const metadata: Metadata = {
   title: "Sign In",

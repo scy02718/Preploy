@@ -207,7 +207,7 @@ describe("POST /api/billing/checkout (integration)", () => {
 
     // Simulate a request coming in on the deployed Vercel host.
     const req = new NextRequest(
-      "https://preploy.vercel.app/api/billing/checkout",
+      "https://preploy.tech/api/billing/checkout",
       { method: "POST" }
     );
     const res = await POST(req);
@@ -215,8 +215,8 @@ describe("POST /api/billing/checkout (integration)", () => {
 
     expect(mockCheckoutSessionsCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        success_url: "https://preploy.vercel.app/profile?billing=success",
-        cancel_url: "https://preploy.vercel.app/profile?billing=cancelled",
+        success_url: "https://preploy.tech/profile?billing=success",
+        cancel_url: "https://preploy.tech/profile?billing=cancelled",
       })
     );
 

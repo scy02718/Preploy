@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.app";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
 
 export const metadata: Metadata = {
   title: {

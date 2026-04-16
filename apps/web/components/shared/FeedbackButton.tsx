@@ -26,7 +26,7 @@ const FEEDBACK_TYPES = ["Bug", "Feature Request", "Other"] as const;
  * renders a small pill in the bottom-right corner. Clicking opens a compact
  * form where the user selects a type, writes a message, and submits. The
  * submission POSTs to /api/feedback which sends an email to
- * preploy.dev@gmail.com via Resend.
+ * support@preploy.tech via Resend.
  */
 export function FeedbackButton() {
   const pathname = usePathname();

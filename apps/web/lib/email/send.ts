@@ -5,7 +5,8 @@
 import { getResendClient } from "./client";
 import { logger } from "@/lib/logger";
 
-const FROM_ADDRESS = "Preploy <noreply@preploy.app>";
+const FROM_ADDRESS =
+  process.env.RESEND_FROM_ADDRESS || "Preploy <onboarding@resend.dev>";
 
 interface SendEmailOptions {
   to: string;
