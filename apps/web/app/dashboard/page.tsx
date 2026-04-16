@@ -6,12 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getScoreColor } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare, Code } from "lucide-react";
 import { StreakCard } from "@/components/dashboard/StreakCard";
 import { BadgeGrid } from "@/components/dashboard/BadgeGrid";
 import { ScoreTrendChart, ScoreTrendPoint } from "@/components/dashboard/ScoreTrendChart";
 import { WeakAreas, WeakArea } from "@/components/dashboard/WeakAreas";
 import { MonthlyUsageMeter } from "@/components/dashboard/MonthlyUsageMeter";
+
+const ONBOARDING_DISMISSED_KEY = "preploy_onboarding_dismissed";
 
 interface SessionRow {
   id: string;
@@ -65,6 +67,13 @@ export default function DashboardPage() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Onboarding: show a welcome card when the user has zero sessions and
+  // hasn't dismissed it yet.
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(ONBOARDING_DISMISSED_KEY) === "1";
+  });
 
   // Filters
   const [page, setPage] = useState(1);
@@ -206,8 +215,46 @@ export default function DashboardPage() {
         <MonthlyUsageMeter />
       </div>
 
-      {/* Stats cards */}
-      {isStatsLoading ? (
+      {/* Welcome card for first-time users OR stats grid for returning users */}
+      {!isStatsLoading && totalSessions === 0 && !onboardingDismissed ? (
+        <Card className="mb-8" data-testid="welcome-card">
+          <CardContent className="py-10 text-center space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold" data-testid="welcome-heading">
+                Welcome to Preploy
+              </h2>
+              <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+                Let&apos;s run your first mock interview — it takes about 5 minutes.
+                Pick behavioral or technical to get started.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link href="/interview/behavioral/setup">
+                <Button size="lg" className="min-w-52 gap-2" data-testid="cta-behavioral">
+                  <MessageSquare className="h-5 w-5" />
+                  Start Behavioral Interview
+                </Button>
+              </Link>
+              <Link href="/interview/technical/setup">
+                <Button size="lg" variant="outline" className="min-w-52 gap-2" data-testid="cta-technical">
+                  <Code className="h-5 w-5" />
+                  Start Technical Interview
+                </Button>
+              </Link>
+            </div>
+            <button
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="dismiss-onboarding"
+              onClick={() => {
+                localStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
+                setOnboardingDismissed(true);
+              }}
+            >
+              or, explore the dashboard →
+            </button>
+          </CardContent>
+        </Card>
+      ) : isStatsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
