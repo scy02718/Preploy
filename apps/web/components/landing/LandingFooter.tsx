@@ -18,7 +18,7 @@ export function LandingFooter() {
             Terms
           </Link>
           <a
-            href="mailto:preploy.dev@gmail.com"
+            href="mailto:support@preploy.tech"
             className="hover:text-foreground transition-colors"
           >
             Contact

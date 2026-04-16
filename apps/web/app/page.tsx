@@ -7,7 +7,7 @@ import { LandingFAQ } from "@/components/landing/LandingFAQ";
 import { LandingSocialProof } from "@/components/landing/LandingSocialProof";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.app";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
 
 // Statically generated at build time and served from Vercel's edge CDN —
 // the landing page has zero per-user data, no auth, no DB calls. Cuts

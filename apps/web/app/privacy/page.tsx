@@ -32,8 +32,8 @@ export default function PrivacyPage() {
             policy says &ldquo;Preploy,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our,&rdquo; it refers to the
             individual operating the service. Questions or requests about your
             data can be sent to{" "}
-            <a href="mailto:preploy.dev@gmail.com" className="underline hover:text-foreground">
-              preploy.dev@gmail.com
+            <a href="mailto:support@preploy.tech" className="underline hover:text-foreground">
+              support@preploy.tech
             </a>
             .
           </p>
@@ -128,8 +128,8 @@ export default function PrivacyPage() {
           </ul>
           <p className="mt-3">
             To exercise any of these rights, email{" "}
-            <a href="mailto:preploy.dev@gmail.com" className="underline hover:text-foreground">
-              preploy.dev@gmail.com
+            <a href="mailto:support@preploy.tech" className="underline hover:text-foreground">
+              support@preploy.tech
             </a>
             . We will respond within 30 days.
           </p>
@@ -159,8 +159,8 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold mb-3">Contact</h2>
           <p>
             For any privacy question, request, or complaint, email{" "}
-            <a href="mailto:preploy.dev@gmail.com" className="underline hover:text-foreground">
-              preploy.dev@gmail.com
+            <a href="mailto:support@preploy.tech" className="underline hover:text-foreground">
+              support@preploy.tech
             </a>
             .
           </p>

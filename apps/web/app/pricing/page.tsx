@@ -9,7 +9,7 @@ import { PLAN_DEFINITIONS } from "@/lib/plans";
 
 export const dynamic = "force-static";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.app";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
 
 export const metadata: Metadata = {
   title: "Pricing — Preploy",
@@ -157,10 +157,10 @@ export default function PricingPage() {
           </Link>{" "}
           or email{" "}
           <a
-            href="mailto:support@preploy.app"
+            href="mailto:support@preploy.tech"
             className="underline hover:text-foreground"
           >
-            support@preploy.app
+            support@preploy.tech
           </a>
           .
         </p>

@@ -139,7 +139,7 @@ describe("POST /api/billing/portal (integration)", () => {
 
   it("falls back to AUTH_URL when NEXTAUTH_URL is unset", async () => {
     delete process.env.NEXTAUTH_URL;
-    process.env.AUTH_URL = "https://preploy.vercel.app";
+    process.env.AUTH_URL = "https://preploy.tech";
 
     mockAuth.mockResolvedValue({ user: { id: TEST_USER_PRO.id } });
     mockPortalCreate.mockResolvedValueOnce({
@@ -151,7 +151,7 @@ describe("POST /api/billing/portal (integration)", () => {
     expect(res.status).toBe(200);
     expect(mockPortalCreate).toHaveBeenCalledWith({
       customer: "cus_portal_pro",
-      return_url: "https://preploy.vercel.app/profile",
+      return_url: "https://preploy.tech/profile",
     });
 
     process.env.NEXTAUTH_URL = "http://localhost:3000";
@@ -171,14 +171,14 @@ describe("POST /api/billing/portal (integration)", () => {
     // Build the request from a deployed-looking origin so the route
     // derives the return_url from `request.url`'s host.
     const req = new NextRequest(
-      "https://preploy.vercel.app/api/billing/portal",
+      "https://preploy.tech/api/billing/portal",
       { method: "POST" }
     );
     const res = await POST(req);
     expect(res.status).toBe(200);
     expect(mockPortalCreate).toHaveBeenCalledWith({
       customer: "cus_portal_pro",
-      return_url: "https://preploy.vercel.app/profile",
+      return_url: "https://preploy.tech/profile",
     });
 
     process.env.NEXTAUTH_URL = "http://localhost:3000";
