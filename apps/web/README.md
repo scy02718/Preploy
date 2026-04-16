@@ -184,6 +184,8 @@ task definition / secrets manager.
 | `STRIPE_WEBHOOK_SECRET`    | RUNTIME_ONLY       | Webhook signing secret from `stripe listen` or Stripe Dashboard. Used to verify inbound events. |
 | `STRIPE_PRO_PRICE_ID`      | RUNTIME_ONLY       | Stripe Price ID for the MONTHLY Pro subscription plan (`price_...`). |
 | `STRIPE_PRO_PRICE_ID_ANNUAL` | RUNTIME_ONLY     | Stripe Price ID for the ANNUAL Pro subscription plan (`price_...`). Separate recurring price on the same Pro product. |
+| `CRON_SECRET`              | RUNTIME_ONLY       | Bearer token for Vercel Cron endpoints (`/api/admin/cron/*`). Generate with `openssl rand -hex 32`. |
+| `ORPHANED_SESSION_TIMEOUT_HOURS` | RUNTIME_ONLY | How long (hours) before an `in_progress` session is auto-marked `failed` by the cleanup cron (default: `2`). |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and
