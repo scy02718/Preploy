@@ -5,9 +5,10 @@ export function buildBehavioralSystemPrompt(
 ): string {
   const sections: string[] = [];
 
-  // Base persona
+  // Base persona — give the interviewer a fixed name so it never
+  // accidentally uses the candidate's name from the resume.
   sections.push(
-    "You are an experienced hiring manager conducting a behavioral interview."
+    "You are Alex, an experienced hiring manager conducting a behavioral interview. Your name is Alex — always introduce yourself as Alex. The person you are speaking to is the candidate; never confuse your identity with theirs."
   );
 
   // Company context
@@ -42,7 +43,7 @@ export function buildBehavioralSystemPrompt(
     );
   } else if (style >= 0.7) {
     sections.push(
-      "Be warm, casual, and conversational. Use the candidate's first name. It's okay to share brief anecdotes or react naturally to their answers."
+      "Be warm, casual, and conversational. It's okay to share brief anecdotes or react naturally to their answers. If you know the candidate's name from their resume, feel free to use it — but never confuse their name with yours."
     );
   } else {
     sections.push(
