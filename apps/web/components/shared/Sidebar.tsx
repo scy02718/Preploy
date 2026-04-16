@@ -15,6 +15,7 @@ import {
   FileText,
   History,
   Star,
+  Trophy,
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/coaching", label: "Coaching", icon: GraduationCap },
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/resume", label: "Resume", icon: FileText },
+  { href: "/achievements", label: "Achievements", icon: Trophy },
 ];
 
 interface SessionItem {

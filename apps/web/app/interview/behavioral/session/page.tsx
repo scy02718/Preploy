@@ -128,9 +128,14 @@ export default function BehavioralSessionPage() {
     fetch(`/api/sessions/${sessionId}/feedback`, { method: "POST" }).catch(
       (err) => console.error("Failed to trigger feedback generation:", err)
     );
-    fetch("/api/users/badges", { method: "POST" }).catch(
-      (err) => console.error("Failed to check badges:", err)
-    );
+    fetch("/api/users/badges", { method: "POST" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.awarded?.length > 0) {
+          sessionStorage.setItem("new_badges", JSON.stringify(data.awarded));
+        }
+      })
+      .catch((err) => console.error("Failed to check badges:", err));
 
     router.push(`/dashboard/sessions/${sessionId}/feedback`);
   }, [voice, sessionId, endSession, router]);
