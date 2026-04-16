@@ -91,22 +91,23 @@ describe("GET /api/usage/current (integration)", () => {
       .set({ plan: "pro" })
       .where(eq(users.id, TEST_USER.id));
 
-    // Even with prior usage rows, pro users always see used=0 / limit=null
+    // Pro users now have a 40/month cap (not unlimited), so the usage
+    // counter IS read and the limit is 40, not null.
     const periodStart = new Date(
       Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
     );
     await db.insert(interviewUsage).values({
       userId: TEST_USER.id,
       periodStart,
-      count: 99,
+      count: 15,
     });
 
     const res = await GET();
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.plan).toBe("pro");
-    expect(data.used).toBe(0);
-    expect(data.limit).toBeNull();
+    expect(data.used).toBe(15);
+    expect(data.limit).toBe(40);
   });
 
   it("ignores usage rows from other periods (calendar rollover)", async () => {

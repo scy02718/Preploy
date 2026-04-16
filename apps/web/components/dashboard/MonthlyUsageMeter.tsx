@@ -48,8 +48,9 @@ export function MonthlyUsageMeter() {
     );
   }
 
-  // Pro users (or unknown) get nothing.
-  if (!usage || usage.plan === "pro" || usage.limit === null) {
+  // Only hide for truly unlimited plans (limit === null) — currently no
+  // plan is unlimited. Both Free (3/mo) and Pro (40/mo) show the meter.
+  if (!usage || usage.limit === null) {
     return null;
   }
 
