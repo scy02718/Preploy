@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimitResult = checkRateLimit("cron-cleanup-sessions");
+  const rateLimitResult = await checkRateLimit("cron-cleanup-sessions");
   if (rateLimitResult) return rateLimitResult;
 
   const log = createRequestLogger({
