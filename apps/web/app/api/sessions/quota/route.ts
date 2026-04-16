@@ -5,7 +5,11 @@ import { interviewSessions, users } from "@/lib/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
 import { getPlanConfig } from "@/lib/plans";
 
-// GET /api/sessions/quota — get daily session quota for the authenticated user
+// GET /api/sessions/quota — fair-use daily rate-limit check (NOT the billing monthly limit).
+// The monthly billing limit is exposed by GET /api/usage/current.
+// This route counts sessions created today to enforce a per-day fair-use cap
+// and is used server-side by the session creation endpoint (/api/sessions POST).
+// The UI should show monthly quota from /api/usage/current, not this endpoint.
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {

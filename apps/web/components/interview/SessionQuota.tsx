@@ -2,30 +2,37 @@
 
 import { useEffect, useState } from "react";
 
-interface Quota {
+interface MonthlyUsage {
   plan: string;
-  planName: string;
   used: number;
-  limit: number;
-  remaining: number;
+  limit: number | null;
 }
 
+/**
+ * SessionQuota — displays the user's monthly session usage in the interview
+ * setup page, so they know how many sessions they have left before starting.
+ *
+ * Data source: GET /api/usage/current (monthly billing period).
+ * The daily fair-use rate limit lives in /api/sessions/quota and is
+ * surfaced as a 429 error when the session creation endpoint rejects a
+ * request, not here.
+ */
 export function SessionQuota() {
-  const [quota, setQuota] = useState<Quota | null>(null);
+  const [usage, setUsage] = useState<MonthlyUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchQuota() {
+    async function fetchUsage() {
       try {
-        const res = await fetch("/api/sessions/quota");
-        if (res.ok) setQuota(await res.json());
+        const res = await fetch("/api/usage/current");
+        if (res.ok) setUsage(await res.json());
       } catch {
         // Non-critical
       } finally {
         setIsLoading(false);
       }
     }
-    fetchQuota();
+    fetchUsage();
   }, []);
 
   if (isLoading) {
@@ -36,10 +43,20 @@ export function SessionQuota() {
     );
   }
 
-  if (!quota) return null;
+  if (!usage) return null;
 
-  const isAtLimit = quota.remaining <= 0;
-  const isLow = quota.remaining === 1;
+  // Truly unlimited plan (limit === null)
+  if (usage.limit === null) {
+    return (
+      <div className="rounded-md border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+        Unlimited sessions this month
+      </div>
+    );
+  }
+
+  const remaining = Math.max(0, usage.limit - usage.used);
+  const isAtLimit = remaining <= 0;
+  const isLow = remaining === 1;
 
   return (
     <div
@@ -53,12 +70,12 @@ export function SessionQuota() {
     >
       {isAtLimit ? (
         <>
-          Daily session limit reached ({quota.limit}/{quota.limit} on{" "}
-          {quota.planName} plan). Try again tomorrow.
+          Monthly limit reached ({usage.limit}/{usage.limit} sessions used this
+          month). Upgrade for more, or try again next month.
         </>
       ) : (
         <>
-          {quota.used}/{quota.limit} sessions used today — {quota.planName} plan
+          {usage.used}/{usage.limit} sessions used this month
           {isLow && " (1 remaining)"}
         </>
       )}
