@@ -43,6 +43,9 @@ let warnedAboutFallback = false;
 
 function isRedisConfigured(): boolean {
   if (redisAvailable !== null) return redisAvailable;
+  // Prefer the canonical Upstash env vars. The KV_REST_API_* names are from
+  // the deprecated Vercel KV product but @upstash/redis reads both via
+  // Redis.fromEnv(), so we still detect them for backwards compat.
   redisAvailable = !!(
     (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
     (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
