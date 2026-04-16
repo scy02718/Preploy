@@ -12,7 +12,7 @@ import {
   cleanupTestDb,
   teardownTestDb,
   getTestDb,
-} from "../../../../tests/setup-db";
+} from "../../../tests/setup-db";
 import { users } from "@/lib/schema";
 
 // --- Mock auth ---------------------------------------------------------------
@@ -171,8 +171,8 @@ describe("POST /api/feedback (integration)", () => {
     expect(callArgs.subject).toContain("Other");
   });
 
-  // 109-3 (extra): verify recipient is always preploy.dev@gmail.com (not the old address)
-  it("never sends to the old support@preploy.tech address", async () => {
+  // 109-3 (extra): verify recipient is always preploy.dev@gmail.com (never the stale tech domain)
+  it("never sends to the stale preploy-tech email — always uses preploy.dev@gmail.com", async () => {
     mockAuth.mockResolvedValue({
       user: { id: TEST_USER.id, email: TEST_USER.email, name: TEST_USER.name },
     });
