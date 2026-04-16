@@ -55,12 +55,12 @@ describe("POST /api/admin/cron/cleanup-sessions (integration)", () => {
 
   it("returns 401 when no authorization header is present", async () => {
     const res = await POST(makeRequest());
-    expect(res.status).toBe(401);
+    expect(res!.status).toBe(401);
   });
 
   it("returns 401 when the secret is wrong", async () => {
     const res = await POST(makeRequest("wrong-secret"));
-    expect(res.status).toBe(401);
+    expect(res!.status).toBe(401);
   });
 
   it("does not touch an in_progress session started 1 minute ago", async () => {
@@ -75,11 +75,10 @@ describe("POST /api/admin/cron/cleanup-sessions (integration)", () => {
     });
 
     const res = await POST(makeRequest("test-cron-secret"));
-    expect(res.status).toBe(200);
-    const data = await res.json();
+    expect(res!.status).toBe(200);
+    const data = await res!.json();
     expect(data.cleanedCount).toBe(0);
 
-    // Session should still be in_progress
     const [session] = await db
       .select({ status: interviewSessions.status })
       .from(interviewSessions)
@@ -99,8 +98,8 @@ describe("POST /api/admin/cron/cleanup-sessions (integration)", () => {
     });
 
     const res = await POST(makeRequest("test-cron-secret"));
-    expect(res.status).toBe(200);
-    const data = await res.json();
+    expect(res!.status).toBe(200);
+    const data = await res!.json();
     expect(data.cleanedCount).toBe(1);
 
     const [session] = await db
@@ -127,8 +126,8 @@ describe("POST /api/admin/cron/cleanup-sessions (integration)", () => {
     });
 
     const res = await POST(makeRequest("test-cron-secret"));
-    expect(res.status).toBe(200);
-    const data = await res.json();
+    expect(res!.status).toBe(200);
+    const data = await res!.json();
     expect(data.cleanedCount).toBe(0);
 
     const [session] = await db
@@ -150,12 +149,11 @@ describe("POST /api/admin/cron/cleanup-sessions (integration)", () => {
     });
 
     const res1 = await POST(makeRequest("test-cron-secret"));
-    const data1 = await res1.json();
+    const data1 = await res1!.json();
     expect(data1.cleanedCount).toBe(1);
 
-    // Second run should find nothing to clean (already failed)
     const res2 = await POST(makeRequest("test-cron-secret"));
-    const data2 = await res2.json();
+    const data2 = await res2!.json();
     expect(data2.cleanedCount).toBe(0);
   });
 });
