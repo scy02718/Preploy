@@ -131,6 +131,9 @@ git add apps/web/drizzle/   # the whole directory, never individual files
 - Never use `console.log` in server-side code (Next.js API routes). See the
   per-app CLAUDE.md for the structured logger pattern.
 - Never commit secrets or files containing them (`.env`, `credentials.json`).
+- Before pushing to any branch, verify its PR is not already merged or closed
+  (`gh pr list --state merged --head <branch>`). If it is, create a fresh
+  branch from `main` instead.
 
 ## graphify
 
