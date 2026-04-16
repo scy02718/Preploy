@@ -37,7 +37,9 @@
       "Bash(python3:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:origin *)"
+      "Bash(git push:origin *)",
+      "Bash(git checkout *)",
+      "Bash(git rm *)"
     ],
     "deny": [
       "Bash(git push --force:*)",
