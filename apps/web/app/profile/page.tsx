@@ -30,9 +30,10 @@ export default function ProfilePage() {
 
   // UI state
   const [isSavingName, setIsSavingName] = useState(false);
-  const [isDisabling, setIsDisabling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isBillingLoading, setIsBillingLoading] = useState(false);
-  const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -130,22 +131,25 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDisableAccount = async () => {
-    setIsDisabling(true);
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE my account and all my data") return;
+    setIsDeleting(true);
     try {
-      const res = await fetch("/api/users/me/disable", { method: "POST" });
-      if (res.ok) {
-        setProfile((p) => (p ? { ...p, disabledAt: new Date().toISOString() } : p));
-        setShowDisableConfirm(false);
-        showMessage("success", "Account disabled. You can no longer create new sessions.");
-      } else {
-        const err = await res.json();
-        showMessage("error", err.error || "Failed to disable account");
+      const res = await fetch("/api/users/me", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: deleteConfirmation }),
+      });
+      if (res.ok || res.status === 204) {
+        window.location.assign("/?deleted=1");
+        return;
       }
+      const err = await res.json().catch(() => ({}));
+      showMessage("error", err.error || "Failed to delete account");
     } catch {
-      showMessage("error", "Failed to disable account");
+      showMessage("error", "Failed to delete account");
     } finally {
-      setIsDisabling(false);
+      setIsDeleting(false);
     }
   };
 
@@ -375,44 +379,68 @@ export default function ProfilePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardTitle className="text-destructive">Delete Account</CardTitle>
             </CardHeader>
             <CardContent>
-              {isDisabled ? (
-                <p className="text-sm text-muted-foreground">
-                  Account disabled on{" "}
-                  {new Date(profile.disabledAt!).toLocaleDateString()}.
-                  Contact support to re-enable.
-                </p>
-              ) : showDisableConfirm ? (
+              {showDeleteConfirm ? (
                 <div className="space-y-3">
-                  <p className="text-sm">
-                    Are you sure? You won&apos;t be able to create new sessions.
-                    Your existing feedback will remain accessible.
+                  <p className="text-sm text-destructive">
+                    This will <strong>permanently delete</strong> your account
+                    and all associated data: interview sessions, transcripts,
+                    feedback, STAR stories, resume uploads, saved questions,
+                    templates, achievements, and billing records. This action
+                    cannot be undone.
                   </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-confirm" className="text-sm">
+                      Type <strong>DELETE my account and all my data</strong> to
+                      confirm:
+                    </Label>
+                    <Input
+                      id="delete-confirm"
+                      value={deleteConfirmation}
+                      onChange={(e) => setDeleteConfirmation(e.target.value)}
+                      placeholder="DELETE my account and all my data"
+                      className="border-destructive/50"
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant="destructive"
-                      onClick={handleDisableAccount}
-                      disabled={isDisabling}
+                      onClick={handleDeleteAccount}
+                      disabled={
+                        isDeleting ||
+                        deleteConfirmation !== "DELETE my account and all my data"
+                      }
                     >
-                      {isDisabling ? "Disabling..." : "Yes, disable my account"}
+                      {isDeleting
+                        ? "Deleting..."
+                        : "Permanently delete my account"}
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setShowDisableConfirm(false)}
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteConfirmation("");
+                      }}
                     >
                       Cancel
                     </Button>
                   </div>
                 </div>
               ) : (
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowDisableConfirm(true)}
-                >
-                  Disable Account
-                </Button>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Permanently delete your account and all your data. This
+                    cannot be undone.
+                  </p>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    Delete Account
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
