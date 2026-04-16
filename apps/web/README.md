@@ -184,10 +184,8 @@ task definition / secrets manager.
 | `STRIPE_WEBHOOK_SECRET`    | RUNTIME_ONLY       | Webhook signing secret from `stripe listen` or Stripe Dashboard. Used to verify inbound events. |
 | `STRIPE_PRO_PRICE_ID`      | RUNTIME_ONLY       | Stripe Price ID for the MONTHLY Pro subscription plan (`price_...`). |
 | `STRIPE_PRO_PRICE_ID_ANNUAL` | RUNTIME_ONLY     | Stripe Price ID for the ANNUAL Pro subscription plan (`price_...`). Separate recurring price on the same Pro product. |
-| `UPSTASH_REDIS_REST_URL`   | RUNTIME_ONLY       | Upstash Redis REST URL for rate limiting (auto-provided if using Vercel KV). Falls back to in-memory when unset. |
-| `UPSTASH_REDIS_REST_TOKEN` | RUNTIME_ONLY       | Upstash Redis REST token (auto-provided if using Vercel KV). |
-| `KV_REST_API_URL`          | RUNTIME_ONLY       | Vercel KV REST URL — alternative to `UPSTASH_REDIS_REST_URL`. |
-| `KV_REST_API_TOKEN`        | RUNTIME_ONLY       | Vercel KV REST token — alternative to `UPSTASH_REDIS_REST_TOKEN`. |
+| `UPSTASH_REDIS_REST_URL`   | RUNTIME_ONLY       | Upstash Redis REST URL for rate limiting. Create a free Redis at [console.upstash.com](https://console.upstash.com). Falls back to in-memory limiter when unset (fine for dev, NOT for prod). |
+| `UPSTASH_REDIS_REST_TOKEN` | RUNTIME_ONLY       | Upstash Redis REST token. **Do NOT use deprecated Vercel KV** — go to Upstash directly. |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and
