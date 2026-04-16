@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod/v4";
 import { auth } from "@/lib/auth";
 import { sendEmail } from "@/lib/email/send";
 import { createRequestLogger } from "@/lib/logger";
@@ -6,9 +7,16 @@ import { checkRateLimit } from "@/lib/api-utils";
 
 const FEEDBACK_RECIPIENT = "preploy.dev@gmail.com";
 
+const feedbackSchema = z.object({
+  type: z.enum(["Bug", "Feature Request", "Other"]).default("Other"),
+  message: z.string().trim().min(5).max(5000),
+  page: z.string().max(500).default("unknown"),
+});
+
 /**
- * POST /api/feedback — submit user feedback from the in-app popup.
- * Sends an email to the product owner via Resend.
+ * POST /api/feedback — submit user feedback from the in-app dialog.
+ * Validates input with Zod, then sends an email to preploy.dev@gmail.com
+ * via Resend. The feedback dialog is now hosted in the Sidebar component.
  */
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -24,31 +32,22 @@ export async function POST(request: NextRequest) {
     userId: session.user.id,
   });
 
-  let body: { type?: string; message?: string; page?: string };
+  let rawBody: unknown;
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const type = body.type ?? "Other";
-  const message = body.message?.trim();
-  const page = body.page ?? "unknown";
-
-  if (!message || message.length < 5) {
-    return NextResponse.json(
-      { error: "Message must be at least 5 characters" },
-      { status: 400 }
-    );
+  const parsed = feedbackSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    const summary = parsed.error.issues
+      .map((i) => i.message)
+      .join("; ");
+    return NextResponse.json({ error: summary }, { status: 400 });
   }
 
-  if (message.length > 5000) {
-    return NextResponse.json(
-      { error: "Message must be under 5000 characters" },
-      { status: 400 }
-    );
-  }
-
+  const { type, message, page } = parsed.data;
   const userEmail = session.user.email ?? "unknown";
   const userName = session.user.name ?? "Unknown user";
 
