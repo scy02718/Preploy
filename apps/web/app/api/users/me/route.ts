@@ -231,5 +231,22 @@ export async function DELETE(request: NextRequest) {
     }
   }
 
-  return new NextResponse(null, { status: 204 });
+  // Clear the NextAuth session cookies so the browser doesn't keep using
+  // the now-invalid JWT. NextAuth v5 uses "authjs.session-token" on HTTP
+  // and "__Secure-authjs.session-token" on HTTPS. Clear both to be safe.
+  const response = new NextResponse(null, { status: 204 });
+  for (const name of [
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+    "authjs.callback-url",
+    "__Secure-authjs.callback-url",
+    "authjs.csrf-token",
+    "__Secure-authjs.csrf-token",
+  ]) {
+    response.cookies.set(name, "", {
+      expires: new Date(0),
+      path: "/",
+    });
+  }
+  return response;
 }
