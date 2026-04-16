@@ -109,13 +109,15 @@ describe("ProfilePage", () => {
     });
   });
 
-  it("shows Upgrade to Pro button for a free-plan user", async () => {
+  it("shows Upgrade monthly + annual buttons for a free-plan user", async () => {
     global.fetch = mockFetchWithProfile({ ...baseProfile, plan: "free" });
     render(<ProfilePage />);
     await vi.waitFor(() => {
       expect(screen.getByTestId("upgrade-button")).toBeTruthy();
     });
-    expect(screen.getAllByText("Upgrade to Pro").length).toBeGreaterThanOrEqual(1);
+    // Both upgrade CTAs render for free users — monthly (primary) and
+    // annual (outline variant).
+    expect(screen.getByTestId("upgrade-annual-button")).toBeTruthy();
     // Free users should NEVER see "Manage billing" — even ones with a
     // dangling stripe_customer_id from a previous failed checkout attempt.
     expect(screen.queryByTestId("manage-billing-button")).toBeNull();

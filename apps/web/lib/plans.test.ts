@@ -5,6 +5,7 @@ import {
   PLAN_DEFINITIONS,
   getPlanLimits,
   FREE_PLAN_MONTHLY_INTERVIEW_LIMIT,
+  PRO_PLAN_MONTHLY_INTERVIEW_LIMIT,
 } from "./plans";
 import type { Plan } from "./plans";
 
@@ -17,18 +18,18 @@ describe("plans (legacy)", () => {
     expect(PLANS.free.dailySessionLimit).toBe(3);
   });
 
-  it("pro plan has 10 daily sessions", () => {
-    expect(PLANS.pro.dailySessionLimit).toBe(10);
+  it("pro plan has 40 daily sessions (fair-use ceiling — monthly cap is primary)", () => {
+    expect(PLANS.pro.dailySessionLimit).toBe(40);
   });
 
-  it("max plan has 30 daily sessions", () => {
-    expect(PLANS.max.dailySessionLimit).toBe(30);
+  it("max plan has 40 daily sessions (matches pro, legacy tier)", () => {
+    expect(PLANS.max.dailySessionLimit).toBe(40);
   });
 });
 
 describe("getPlanConfig (legacy)", () => {
   it("returns correct config for known plan", () => {
-    expect(getPlanConfig("pro").dailySessionLimit).toBe(10);
+    expect(getPlanConfig("pro").dailySessionLimit).toBe(40);
   });
 
   it("falls back to free for unknown plan", () => {
@@ -96,8 +97,14 @@ describe("getPlanLimits", () => {
     expect(getPlanLimits("free").monthlyInterviews).toBe(3);
   });
 
-  it("pro plan monthlyInterviews is null (unlimited)", () => {
-    expect(getPlanLimits("pro").monthlyInterviews).toBeNull();
+  it("pro plan monthlyInterviews equals PRO_PLAN_MONTHLY_INTERVIEW_LIMIT", () => {
+    expect(getPlanLimits("pro").monthlyInterviews).toBe(
+      PRO_PLAN_MONTHLY_INTERVIEW_LIMIT
+    );
+  });
+
+  it("pro plan monthlyInterviews is 40", () => {
+    expect(getPlanLimits("pro").monthlyInterviews).toBe(40);
   });
 
   it("free plan dailySessions is a positive number", () => {
