@@ -95,17 +95,17 @@ describe("ProfilePage", () => {
     expect(screen.queryByText("Update Plan")).toBeNull();
   });
 
-  it("renders danger zone section", async () => {
+  it("renders delete account section", async () => {
     render(<ProfilePage />);
     await vi.waitFor(() => {
-      expect(screen.getAllByText("Danger Zone").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Delete Account").length).toBeGreaterThanOrEqual(1);
     });
   });
 
-  it("renders disable account button", async () => {
+  it("renders delete account button", async () => {
     render(<ProfilePage />);
     await vi.waitFor(() => {
-      expect(screen.getAllByText("Disable Account").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Delete Account").length).toBeGreaterThanOrEqual(1);
     });
   });
 
