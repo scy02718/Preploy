@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { signOut } from "next-auth/react";
 import { PLANS, PLAN_DEFINITIONS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
 
@@ -141,7 +142,9 @@ export default function ProfilePage() {
         body: JSON.stringify({ confirmation: deleteConfirmation }),
       });
       if (res.ok || res.status === 204) {
-        window.location.assign("/?deleted=1");
+        // signOut() calls NextAuth's /api/auth/signout which properly
+        // clears the session cookie, then redirects to the homepage.
+        await signOut({ callbackUrl: "/?deleted=1" });
         return;
       }
       const err = await res.json().catch(() => ({}));
