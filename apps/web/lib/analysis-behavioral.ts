@@ -24,6 +24,7 @@ import { OpenAIRetryError, withOpenAIRetry } from "@/lib/openai-retry";
 
 export interface RunBehavioralAnalysisOptions {
   log: pino.Logger;
+  userId?: string;
 }
 
 /**
@@ -64,6 +65,6 @@ export async function runBehavioralAnalysis(
       }
       return validated.data;
     },
-    { service: "behavioral-analysis", log },
+    { service: "behavioral-analysis", log, userId: opts.userId, model: "gpt-5.4-mini" },
   );
 }

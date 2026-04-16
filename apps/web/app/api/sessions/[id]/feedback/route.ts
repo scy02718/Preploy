@@ -131,7 +131,7 @@ export async function POST(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           config: (found.config ?? {}) as any,
         },
-        { log },
+        { log, userId: session.user.id },
       );
     } else {
       feedbackData = await runBehavioralAnalysis(
@@ -141,7 +141,7 @@ export async function POST(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           config: (found.config ?? {}) as any,
         },
-        { log },
+        { log, userId: session.user.id },
       );
     }
   } catch (err) {

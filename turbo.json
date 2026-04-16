@@ -34,7 +34,9 @@
         "NEXT_PUBLIC_SENTRY_DSN",
         "SENTRY_AUTH_TOKEN",
         "NEXT_PUBLIC_BASE_URL",
-        "LOG_LEVEL"
+        "LOG_LEVEL",
+        "OPENAI_PER_USER_DAILY_CAP_USD",
+        "OPENAI_GLOBAL_DAILY_CAP_USD"
       ]
     },
     "lint": {

@@ -64,6 +64,13 @@
       "when": 1776261643845,
       "tag": "0008_sweet_blink",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776309497520,
+      "tag": "0009_serious_bulldozer",
+      "breakpoints": true
     }
   ]
 }
