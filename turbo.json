@@ -36,7 +36,9 @@
         "NEXT_PUBLIC_BASE_URL",
         "LOG_LEVEL",
         "OPENAI_PER_USER_DAILY_CAP_USD",
-        "OPENAI_GLOBAL_DAILY_CAP_USD"
+        "OPENAI_GLOBAL_DAILY_CAP_USD",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN"
       ]
     },
     "lint": {

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     userId: session.user.id,
   });
 
-  const rateLimited = checkRateLimit(session.user.id);
+  const rateLimited = await checkRateLimit(session.user.id);
   if (rateLimited) return rateLimited;
 
   const [user] = await db

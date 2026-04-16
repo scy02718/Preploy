@@ -71,7 +71,7 @@ describe("POST /api/billing/portal (integration)", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockCheckRateLimit.mockReturnValue(null);
+    mockCheckRateLimit.mockResolvedValue(null);
 
     const db = getTestDb();
     // Reset the free user (no customer id) and pro user (has customer id)
@@ -186,7 +186,7 @@ describe("POST /api/billing/portal (integration)", () => {
 
   it("returns 429 when the rate limiter rejects the request", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER_PRO.id } });
-    mockCheckRateLimit.mockReturnValueOnce(
+    mockCheckRateLimit.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: "rate limited" }), {
         status: 429,
         headers: { "Content-Type": "application/json" },

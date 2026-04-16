@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   const userId = session.user.id;
   const log = createRequestLogger({ route: "POST /api/questions/generate", userId });
 
-  const rateLimited = checkRateLimit(userId);
+  const rateLimited = await checkRateLimit(userId);
   if (rateLimited) return rateLimited;
 
   let body: unknown;
