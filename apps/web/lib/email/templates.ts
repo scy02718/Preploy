@@ -5,6 +5,9 @@
  * Each function returns { subject, html } ready for `sendEmail()`.
  */
 
+const BASE_URL =
+  process.env.NEXT_PUBLIC_BASE_URL || "https://preploy.vercel.app";
+
 const FOOTER = `
 <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
 <p style="font-size: 12px; color: #6b7280;">
@@ -28,7 +31,7 @@ export function welcomeEmail(name: string | null) {
           Your free plan includes <strong>3 mock interviews per month</strong>.
           Start your first one now — it takes about 5 minutes.
         </p>
-        <a href="https://preploy.tech/dashboard"
+        <a href="${BASE_URL}/dashboard"
            style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #0f172a; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">
           Go to Dashboard
         </a>
@@ -57,7 +60,7 @@ export function feedbackReadyEmail(
           Review your strengths, areas for improvement, and detailed
           answer-by-answer analysis:
         </p>
-        <a href="https://preploy.tech/dashboard/sessions/${sessionId}/feedback"
+        <a href="${BASE_URL}/dashboard/sessions/${sessionId}/feedback"
            style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #0f172a; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">
           View Feedback
         </a>
@@ -83,7 +86,7 @@ export function freeTierLimitEmail(name: string | null, used: number, limit: num
           <strong>40 sessions per month</strong> — or save 33% with the
           annual plan.
         </p>
-        <a href="https://preploy.tech/profile"
+        <a href="${BASE_URL}/profile"
            style="display: inline-block; margin-top: 16px; padding: 12px 24px; background: #0f172a; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">
           Upgrade to Pro
         </a>

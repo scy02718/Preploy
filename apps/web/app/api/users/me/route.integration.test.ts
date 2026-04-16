@@ -13,8 +13,9 @@ import {
   teardownTestDb,
   getTestDb,
 } from "../../../../tests/setup-db";
-import { users } from "@/lib/schema";
-import { eq } from "drizzle-orm";
+import { users, interviewUsage, deletedUsage } from "@/lib/schema";
+import { eq, and } from "drizzle-orm";
+import { hashEmailMonth, currentMonth, currentFreePeriodStart } from "@/lib/usage";
 
 const mockAuth = vi.fn();
 vi.mock("@/lib/auth", () => ({
@@ -27,7 +28,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { GET, PATCH } from "./route";
+import { GET, PATCH, DELETE } from "./route";
 
 const TEST_USER = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -143,5 +144,84 @@ describe("API /api/users/me (integration)", () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     const res = await PATCH(makePatchRequest({}));
     expect(res.status).toBe(400);
+  });
+
+  // ---- DELETE + anti-abuse carry-forward ----
+
+  const DELETE_USER = {
+    id: "00000000-0000-0000-0000-000000000099",
+    email: "delete-test@example.com",
+    name: "Delete User",
+  };
+
+  function makeDeleteRequest(body: unknown): NextRequest {
+    return new NextRequest("http://localhost:3000/api/users/me", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("DELETE writes a deleted_usage row with correct hash and count (S2)", async () => {
+    const db = getTestDb();
+    // Seed user + usage
+    await db.insert(users).values(DELETE_USER).onConflictDoNothing();
+    const periodStart = currentFreePeriodStart();
+    await db
+      .insert(interviewUsage)
+      .values({ userId: DELETE_USER.id, periodStart, count: 2 })
+      .onConflictDoNothing();
+
+    mockAuth.mockResolvedValue({ user: { id: DELETE_USER.id } });
+    const res = await DELETE(
+      makeDeleteRequest({ confirmation: "DELETE my account and all my data" })
+    );
+    expect(res.status).toBe(204);
+
+    // Verify deleted_usage row exists with correct hash
+    const month = currentMonth();
+    const expectedHash = hashEmailMonth(DELETE_USER.email, month);
+    const [row] = await db
+      .select()
+      .from(deletedUsage)
+      .where(
+        and(
+          eq(deletedUsage.emailHash, expectedHash),
+          eq(deletedUsage.month, month)
+        )
+      );
+    expect(row).toBeDefined();
+    expect(row.usageCount).toBe(2);
+
+    // Clean up
+    await db
+      .delete(deletedUsage)
+      .where(eq(deletedUsage.emailHash, expectedHash));
+  });
+
+  it("DELETE with zero usage does not write a deleted_usage row", async () => {
+    const db = getTestDb();
+    const noUsageUser = {
+      id: "00000000-0000-0000-0000-000000000098",
+      email: "no-usage@example.com",
+      name: "No Usage",
+    };
+    await db.insert(users).values(noUsageUser).onConflictDoNothing();
+
+    mockAuth.mockResolvedValue({ user: { id: noUsageUser.id } });
+    const res = await DELETE(
+      makeDeleteRequest({ confirmation: "DELETE my account and all my data" })
+    );
+    expect(res.status).toBe(204);
+
+    const month = currentMonth();
+    const hash = hashEmailMonth(noUsageUser.email, month);
+    const [row] = await db
+      .select()
+      .from(deletedUsage)
+      .where(
+        and(eq(deletedUsage.emailHash, hash), eq(deletedUsage.month, month))
+      );
+    expect(row).toBeUndefined();
   });
 });
