@@ -6,8 +6,18 @@ import { useSession } from "next-auth/react";
 import { MessageSquare, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/** Public pages where the feedback button should NOT render. */
-const PUBLIC_PATHS = ["/", "/login", "/pricing", "/privacy", "/terms"];
+/** Pages where the feedback button should NOT render. */
+const HIDDEN_PATHS = [
+  "/",
+  "/login",
+  "/pricing",
+  "/privacy",
+  "/terms",
+  // Hide during active interview sessions — the floating button overlaps
+  // the "End Session" controls at the bottom of the screen.
+  "/interview/behavioral/session",
+  "/interview/technical/session",
+];
 
 const FEEDBACK_TYPES = ["Bug", "Feature Request", "Other"] as const;
 
@@ -28,8 +38,8 @@ export function FeedbackButton() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Hide on public pages and when not signed in.
-  if (PUBLIC_PATHS.includes(pathname) || !session?.user) {
+  // Hide on public pages, during interviews, and when not signed in.
+  if (HIDDEN_PATHS.includes(pathname) || !session?.user) {
     return null;
   }
 
