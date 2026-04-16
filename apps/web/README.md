@@ -188,6 +188,7 @@ task definition / secrets manager.
 | `UPSTASH_REDIS_REST_TOKEN` | RUNTIME_ONLY       | Upstash Redis REST token. **Do NOT use deprecated Vercel KV** — go to Upstash directly. |
 | `CRON_SECRET`              | RUNTIME_ONLY       | Bearer token for Vercel Cron endpoints (`/api/admin/cron/*`). Generate with `openssl rand -hex 32`. |
 | `ORPHANED_SESSION_TIMEOUT_HOURS` | RUNTIME_ONLY | How long (hours) before an `in_progress` session is auto-marked `failed` by the cleanup cron (default: `2`). |
+| `RESEND_API_KEY`             | RUNTIME_ONLY       | Resend API key for transactional email (welcome, feedback-ready, upgrade nudge). Create at [resend.com](https://resend.com). Emails silently skipped when unset. |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and
