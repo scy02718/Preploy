@@ -4,7 +4,7 @@ import { sendEmail } from "@/lib/email/send";
 import { createRequestLogger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/api-utils";
 
-const FEEDBACK_RECIPIENT = "support@preploy.tech";
+const FEEDBACK_RECIPIENT = "preploy.dev@gmail.com";
 
 /**
  * POST /api/feedback — submit user feedback from the in-app popup.

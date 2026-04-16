@@ -12,7 +12,7 @@ const FOOTER = `
 <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
 <p style="font-size: 12px; color: #6b7280;">
   You're receiving this because you have a Preploy account.<br/>
-  <a href="mailto:support@preploy.tech" style="color: #6b7280;">Contact support</a>
+  <a href="mailto:preploy.dev@gmail.com" style="color: #6b7280;">Contact support</a>
 </p>
 `;
 
