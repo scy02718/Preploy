@@ -235,6 +235,7 @@ export async function DELETE(request: NextRequest) {
   // the now-invalid JWT. NextAuth v5 uses "authjs.session-token" on HTTP
   // and "__Secure-authjs.session-token" on HTTPS. Clear both to be safe.
   const response = new NextResponse(null, { status: 204 });
+  const isSecure = request.url.startsWith("https");
   for (const name of [
     "authjs.session-token",
     "__Secure-authjs.session-token",
@@ -246,6 +247,7 @@ export async function DELETE(request: NextRequest) {
     response.cookies.set(name, "", {
       expires: new Date(0),
       path: "/",
+      ...(isSecure && { secure: true, sameSite: "lax" as const }),
     });
   }
   return response;
