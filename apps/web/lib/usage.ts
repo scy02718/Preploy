@@ -165,7 +165,33 @@ export async function tryConsumeInterviewSlot(
     return { allowed: false, used: current, limit };
   }
 
-  return { allowed: true, used: rows[0].count, limit };
+  const newCount = rows[0].count;
+
+  // Send a nudge email when a free-tier user hits their last free session
+  // (e.g., 3/3). Fire-and-forget — never block session creation on email.
+  // Only for free users, and only on the exact boundary (not every time).
+  if (plan === "free" && newCount === limit) {
+    // Need the user's email — dynamic import to avoid circular deps.
+    import("@/lib/db")
+      .then(({ db: localDb }) =>
+        import("@/lib/schema").then(async ({ users }) => {
+          const { eq } = await import("drizzle-orm");
+          const [user] = await localDb
+            .select({ email: users.email, name: users.name })
+            .from(users)
+            .where(eq(users.id, userId));
+          if (user?.email) {
+            const { freeTierLimitEmail } = await import("@/lib/email/templates");
+            const { sendEmail } = await import("@/lib/email/send");
+            const { subject, html } = freeTierLimitEmail(user.name, newCount, limit);
+            await sendEmail({ to: user.email, subject, html });
+          }
+        })
+      )
+      .catch(() => {});
+  }
+
+  return { allowed: true, used: newCount, limit };
 }
 
 async function getCurrentPeriodUsageWithDb(

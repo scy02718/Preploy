@@ -182,6 +182,25 @@ export async function POST(
     })
     .returning();
 
+  // Fire-and-forget: send "feedback ready" email so the user gets pulled
+  // back if they closed the tab after the session ended.
+  const userEmail = session.user?.email;
+  const userName = session.user?.name ?? null;
+  if (userEmail) {
+    import("@/lib/email/templates")
+      .then(({ feedbackReadyEmail }) => {
+        const { subject, html } = feedbackReadyEmail(
+          userName,
+          id,
+          feedbackData.overall_score
+        );
+        return import("@/lib/email/send").then(({ sendEmail }) =>
+          sendEmail({ to: userEmail, subject, html })
+        );
+      })
+      .catch(() => {});
+  }
+
   return NextResponse.json(saved, { status: 201 });
 }
 
