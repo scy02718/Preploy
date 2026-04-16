@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getCurrentPeriodUsage } from "@/lib/usage";
 import { getCurrentUserPlan } from "@/lib/user-plan";
-import { FREE_PLAN_MONTHLY_INTERVIEW_LIMIT } from "@/lib/plans";
+import { getPlanLimits } from "@/lib/plans";
 import { createRequestLogger } from "@/lib/logger";
 
 /**
@@ -10,6 +10,9 @@ import { createRequestLogger } from "@/lib/logger";
  *
  * Returns the authenticated user's current period interview usage and plan.
  * Used by the dashboard usage meter and the upgrade prompt dialog.
+ *
+ * Now reads limits from `getPlanLimits(plan)` so both Free (3/mo) and
+ * Pro (40/mo) show their correct quota in the UI.
  */
 export async function GET() {
   const session = await auth();
@@ -23,8 +26,10 @@ export async function GET() {
   });
 
   const plan = await getCurrentUserPlan(session.user.id);
-  const used = plan === "pro" ? 0 : await getCurrentPeriodUsage(session.user.id);
-  const limit = plan === "pro" ? null : FREE_PLAN_MONTHLY_INTERVIEW_LIMIT;
+  const limit = getPlanLimits(plan).monthlyInterviews;
+  // Only skip the DB read if the plan is truly unlimited (limit === null).
+  // Both Free and Pro now have numeric limits, so both hit this path.
+  const used = limit === null ? 0 : await getCurrentPeriodUsage(session.user.id);
 
   log.info({ plan, used, limit }, "fetched current usage");
 
