@@ -35,8 +35,8 @@ export default function TermsPage() {
           <p className="mt-2">
             &ldquo;Preploy&rdquo; refers to the individual operating the service. Questions
             can be sent to{" "}
-            <a href="mailto:support@preploy.app" className="underline hover:text-foreground">
-              support@preploy.app
+            <a href="mailto:preploy.dev@gmail.com" className="underline hover:text-foreground">
+              preploy.dev@gmail.com
             </a>
             .
           </p>
@@ -106,8 +106,8 @@ export default function TermsPage() {
           </p>
           <p className="mt-2">
             If you believe you were charged in error, contact{" "}
-            <a href="mailto:support@preploy.app" className="underline hover:text-foreground">
-              support@preploy.app
+            <a href="mailto:preploy.dev@gmail.com" className="underline hover:text-foreground">
+              preploy.dev@gmail.com
             </a>{" "}
             within 14 days and we will investigate.
           </p>
@@ -207,8 +207,8 @@ export default function TermsPage() {
           <h2 className="text-xl font-semibold mb-3">14. Contact</h2>
           <p>
             For any question about these Terms, email{" "}
-            <a href="mailto:support@preploy.app" className="underline hover:text-foreground">
-              support@preploy.app
+            <a href="mailto:preploy.dev@gmail.com" className="underline hover:text-foreground">
+              preploy.dev@gmail.com
             </a>
             .
           </p>
