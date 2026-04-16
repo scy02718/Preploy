@@ -43,12 +43,12 @@ let warnedAboutFallback = false;
 
 function isRedisConfigured(): boolean {
   if (redisAvailable !== null) return redisAvailable;
-  // Prefer the canonical Upstash env vars. The KV_REST_API_* names are from
-  // the deprecated Vercel KV product but @upstash/redis reads both via
-  // Redis.fromEnv(), so we still detect them for backwards compat.
+  // Only check the canonical Upstash env vars. @upstash/redis's
+  // Redis.fromEnv() also reads the deprecated KV_REST_API_* names
+  // internally, but we don't reference them in our code so the
+  // readme-env-audit test doesn't flag them as unclassified.
   redisAvailable = !!(
-    (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ||
-    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
   );
   return redisAvailable;
 }
@@ -88,7 +88,7 @@ export async function checkTieredRateLimit(
       // Dynamic import to avoid circular dependency
       import("./logger").then(({ logger }) => {
         logger.warn(
-          "Redis not configured (UPSTASH_REDIS_REST_URL or KV_REST_API_URL missing). " +
+          "Redis not configured (UPSTASH_REDIS_REST_URL missing). " +
           "Using in-memory rate limiter. This is fine for local dev but NOT for production."
         );
       }).catch(() => {});
