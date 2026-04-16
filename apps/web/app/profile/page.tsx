@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { PLANS } from "@/lib/plans";
+import { PLANS, PLAN_DEFINITIONS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
 
 interface UserProfile {
@@ -82,19 +82,10 @@ export default function ProfilePage() {
     }
   };
 
-  const handleBillingPortal = async () => {
+  const handleManageBilling = async () => {
     setIsBillingLoading(true);
     try {
-      // Route by ACTUAL plan, not by `stripeCustomerId` existence.
-      // A free user who started checkout but never completed it (e.g.
-      // a misconfigured price ID) has a `stripe_customer_id` row but no
-      // active subscription — they should still see "Upgrade to Pro" and
-      // hit checkout, not the empty Stripe Billing Portal.
-      const endpoint =
-        profile?.plan === "pro"
-          ? "/api/billing/portal"
-          : "/api/billing/checkout";
-      const res = await fetch(endpoint, { method: "POST" });
+      const res = await fetch("/api/billing/portal", { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
@@ -108,6 +99,32 @@ export default function ProfilePage() {
       }
     } catch {
       showMessage("error", "Failed to open billing");
+    } finally {
+      setIsBillingLoading(false);
+    }
+  };
+
+  const handleUpgrade = async (interval: "month" | "year") => {
+    setIsBillingLoading(true);
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interval }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.assign(data.url);
+          return;
+        }
+        showMessage("error", "Checkout returned no URL");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showMessage("error", err.error || "Failed to start checkout");
+      }
+    } catch {
+      showMessage("error", "Failed to start checkout");
     } finally {
       setIsBillingLoading(false);
     }
@@ -295,8 +312,8 @@ export default function ProfilePage() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 {profile.plan === "free"
-                  ? "You're on the Free plan with 3 mock interviews per month. Upgrade below to remove the limit."
-                  : "You're on the Pro plan with unlimited mock interviews. Manage your subscription below."}
+                  ? `You're on the Free plan with ${PLAN_DEFINITIONS.free.limits.monthlyInterviews} mock interviews per month. Upgrade below for ${PLAN_DEFINITIONS.pro.limits.monthlyInterviews}/month.`
+                  : `You're on the Pro plan with ${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month. Manage your subscription below.`}
               </p>
             </CardContent>
           </Card>
@@ -313,7 +330,7 @@ export default function ProfilePage() {
                     on Stripe&apos;s secure portal.
                   </p>
                   <Button
-                    onClick={handleBillingPortal}
+                    onClick={handleManageBilling}
                     disabled={isBillingLoading}
                     data-testid="manage-billing-button"
                     className="w-full"
@@ -324,16 +341,30 @@ export default function ProfilePage() {
               ) : (
                 <>
                   <p className="text-sm text-muted-foreground">
-                    Upgrade to Pro to remove the monthly interview limit and
-                    unlock all features.
+                    Upgrade to Pro for {PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock
+                    interviews per month. Pick monthly or annual — annual saves
+                    about 33%.
                   </p>
                   <Button
-                    onClick={handleBillingPortal}
+                    onClick={() => handleUpgrade("month")}
                     disabled={isBillingLoading}
                     data-testid="upgrade-button"
                     className="w-full"
                   >
-                    {isBillingLoading ? "Loading..." : "Upgrade to Pro"}
+                    {isBillingLoading
+                      ? "Loading..."
+                      : `Upgrade — $${PLAN_DEFINITIONS.pro.priceUsd}/month`}
+                  </Button>
+                  <Button
+                    onClick={() => handleUpgrade("year")}
+                    disabled={isBillingLoading}
+                    data-testid="upgrade-annual-button"
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isBillingLoading
+                      ? "Loading..."
+                      : `Upgrade — $${PLAN_DEFINITIONS.pro.annualMonthlyEquivalentUsd}/month billed annually ($${PLAN_DEFINITIONS.pro.annualTotalUsd}/year)`}
                   </Button>
                 </>
               )}

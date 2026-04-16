@@ -1,13 +1,18 @@
 /**
- * Free-tier interview-usage tracking.
+ * Monthly interview-usage tracking for BOTH free and pro tiers.
  *
- * Free users get FREE_PLAN_MONTHLY_INTERVIEW_LIMIT mock interviews per
- * calendar month. Pro users are unlimited and short-circuit out before
- * any DB read.
+ * - Free users get FREE_PLAN_MONTHLY_INTERVIEW_LIMIT (3) interviews per
+ *   calendar month.
+ * - Pro users get PRO_PLAN_MONTHLY_INTERVIEW_LIMIT (40) interviews per
+ *   calendar month. The monthly cap is the primary cost gate.
+ * - If a plan has `monthlyInterviews: null` in `PLAN_DEFINITIONS`, that
+ *   plan is treated as truly unlimited (short-circuit, no DB read). Not
+ *   currently used by any plan — kept as an escape hatch for a future
+ *   "Enterprise" tier.
  *
  * Usage rows live in `interview_usage(user_id, period_start, count)` with
  * a unique index on `(user_id, period_start)` so the increment is a single
- * indexed UPSERT. Free users' period_start is `date_trunc('month', now())`;
+ * indexed UPSERT. `period_start` is `date_trunc('month', now())` in UTC;
  * old months naturally roll over because the new month produces a new
  * period_start key that doesn't match any existing row.
  */
@@ -15,7 +20,7 @@ import { sql } from "drizzle-orm";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { interviewUsage } from "@/lib/schema";
-import { FREE_PLAN_MONTHLY_INTERVIEW_LIMIT } from "@/lib/plans";
+import { getPlanLimits } from "@/lib/plans";
 import { getCurrentUserPlan } from "@/lib/user-plan";
 
 /**
@@ -58,14 +63,24 @@ export async function getCurrentPeriodUsage(userId: string): Promise<number> {
 
 /**
  * Returns true if the user is allowed to start another interview this period.
- * Pro users always allowed (short-circuit, no DB read).
+ * Applies the user's plan-specific monthly limit; returns true unconditionally
+ * for plans with `monthlyInterviews: null` (truly unlimited, not currently
+ * any tier).
  */
-export async function isWithinFreeLimit(userId: string): Promise<boolean> {
+export async function isWithinMonthlyLimit(userId: string): Promise<boolean> {
   const plan = await getCurrentUserPlan(userId);
-  if (plan === "pro") return true;
+  const limit = getPlanLimits(plan).monthlyInterviews;
+  if (limit === null) return true;
   const used = await getCurrentPeriodUsage(userId);
-  return used < FREE_PLAN_MONTHLY_INTERVIEW_LIMIT;
+  return used < limit;
 }
+
+/**
+ * @deprecated Name is misleading now that Pro users also have a monthly cap.
+ * Kept as an alias for backwards compatibility with any existing callers.
+ * Prefer `isWithinMonthlyLimit`.
+ */
+export const isWithinFreeLimit = isWithinMonthlyLimit;
 
 /**
  * Atomically increments the current period's interview count.
@@ -95,7 +110,8 @@ export async function incrementInterviewUsage(
 /**
  * Read-and-bump used by interview-start endpoints. Returns the new count
  * if the slot was successfully consumed, or `allowed: false` if the user
- * is at the limit. Pro users always allowed (no counter touched).
+ * is at the limit. Applies the user's plan-specific monthly cap from
+ * `PLAN_DEFINITIONS`.
  *
  * **Concurrency-safe** via a single atomic UPSERT with a guarded DO UPDATE:
  *
@@ -107,26 +123,30 @@ export async function incrementInterviewUsage(
  *   RETURNING count;
  *
  * - Brand-new user → INSERT runs, returns count=1.
- * - User at count=2 (limit 3) → conflict, WHERE 2<3 passes, UPDATE to 3,
- *   returns count=3.
- * - User at count=3 → conflict, WHERE 3<3 fails, UPDATE skipped, RETURNING
- *   yields zero rows.
+ * - User at count=39 (pro, limit 40) → conflict, WHERE 39<40 passes, UPDATE
+ *   to 40, returns count=40.
+ * - User at count=40 → conflict, WHERE 40<40 fails, UPDATE skipped,
+ *   RETURNING yields zero rows.
  *
  * Two parallel callers serialize on the row lock taken by the upsert; the
  * second one sees the first's commit and applies the WHERE against the
  * incremented value, so only one can ever cross the threshold.
+ *
+ * If the user's plan has `monthlyInterviews: null` (truly unlimited), the
+ * function short-circuits and returns `{ allowed: true, used: 0, limit: null }`
+ * without touching the counter.
  */
 export async function tryConsumeInterviewSlot(
   userId: string,
   txOrDb: DbOrTx = db
 ): Promise<{ allowed: boolean; used: number; limit: number | null }> {
   const plan = await getCurrentUserPlan(userId);
-  if (plan === "pro") {
+  const limit = getPlanLimits(plan).monthlyInterviews;
+  if (limit === null) {
     return { allowed: true, used: 0, limit: null };
   }
 
   const periodStart = currentFreePeriodStart();
-  const limit = FREE_PLAN_MONTHLY_INTERVIEW_LIMIT;
 
   const rows = await (txOrDb as typeof db)
     .insert(interviewUsage)

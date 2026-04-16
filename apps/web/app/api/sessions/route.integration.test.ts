@@ -450,7 +450,7 @@ describe("API /api/sessions (integration)", () => {
     expect(usage.count).toBe(1);
   });
 
-  it("POST does not gate pro users on monthly count", async () => {
+  it("POST gates pro users at the 40-session monthly cap (not unlimited)", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
     const db = getTestDb();
@@ -460,25 +460,45 @@ describe("API /api/sessions (integration)", () => {
     // Upgrade user to pro
     await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
 
-    // Even with 99 prior usage rows, pro users should pass
+    // Pro user at 39/40 → one more session allowed, then blocked
     const periodStart = new Date(
       Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)
     );
     await db.insert(interviewUsage).values({
       userId: TEST_USER.id,
       periodStart,
-      count: 99,
+      count: 39,
     });
 
-    const res = await POST(makePostRequest({ type: "behavioral" }));
-    expect(res.status).toBe(201);
+    // 40th interview should succeed
+    const res1 = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res1.status).toBe(201);
 
-    // Pro users should NOT have their counter touched
-    const [usage] = await db
+    const [usage1] = await db
       .select()
       .from(interviewUsage)
       .where(eq(interviewUsage.userId, TEST_USER.id));
-    expect(usage.count).toBe(99); // unchanged
+    expect(usage1.count).toBe(40);
+
+    // 41st should be blocked with 402 and the new pro-tier limit in the body
+    const res2 = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res2.status).toBe(402);
+    const data = await res2.json();
+    expect(data.error).toBe("free_tier_limit_reached");
+    expect(data.limit).toBe(40);
+    expect(data.used).toBe(40);
+  });
+
+  it("POST allows a pro user well below the 40-session cap", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { eq } = await import("drizzle-orm");
+    await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+    // Fresh pro user, no prior usage — should succeed
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(201);
   });
 
   it("POST treats a fresh calendar month as 1/3, not 4/3", async () => {

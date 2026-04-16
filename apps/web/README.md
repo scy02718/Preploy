@@ -182,7 +182,8 @@ task definition / secrets manager.
 | `NEXTAUTH_URL`             | RUNTIME_ONLY       | Public URL of the app — used to build Stripe redirect URLs. Alias of `AUTH_URL`. |
 | `STRIPE_SECRET_KEY`        | RUNTIME_ONLY       | Stripe secret API key (`sk_test_...` for dev, `sk_live_...` for prod). Never expose to client. |
 | `STRIPE_WEBHOOK_SECRET`    | RUNTIME_ONLY       | Webhook signing secret from `stripe listen` or Stripe Dashboard. Used to verify inbound events. |
-| `STRIPE_PRO_PRICE_ID`      | RUNTIME_ONLY       | Stripe Price ID for the Pro subscription plan (`price_...`). |
+| `STRIPE_PRO_PRICE_ID`      | RUNTIME_ONLY       | Stripe Price ID for the MONTHLY Pro subscription plan (`price_...`). |
+| `STRIPE_PRO_PRICE_ID_ANNUAL` | RUNTIME_ONLY     | Stripe Price ID for the ANNUAL Pro subscription plan (`price_...`). Separate recurring price on the same Pro product. |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and

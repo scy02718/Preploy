@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
 import { buildBehavioralSystemPrompt } from "@/lib/prompts";
+import { BEHAVIORAL_SESSION_MAX_DURATION_SECONDS } from "@/lib/plans";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
 import { VideoCallLayout } from "@/components/interview/VideoCallLayout";
 import { SessionControls } from "@/components/interview/SessionControls";
@@ -12,7 +13,10 @@ import { SessionControls } from "@/components/interview/SessionControls";
 export default function BehavioralSessionPage() {
   const router = useRouter();
   const [showTranscript, setShowTranscript] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const sessionStartRef = useRef<number | null>(null);
+  const autoEndTriggeredRef = useRef(false);
 
   const {
     sessionId,
@@ -43,6 +47,7 @@ export default function BehavioralSessionPage() {
   useEffect(() => {
     if (sessionId && status === "configuring" && !hasStartedRef.current) {
       hasStartedRef.current = true;
+      sessionStartRef.current = Date.now();
       startSession();
       voice.connect();
     }
@@ -72,6 +77,32 @@ export default function BehavioralSessionPage() {
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [voice.transcript.length]);
+
+  // Wall-clock timer: ticks every 500ms, updates elapsed seconds state, and
+  // auto-ends the session at BEHAVIORAL_SESSION_MAX_DURATION_SECONDS. The
+  // cap is the primary cost gate for behavioral sessions (a runaway session
+  // with continuous voice streaming is the most expensive thing this product
+  // can do). Enforced client-side for v1; the backend spend cap from issue
+  // #68 is the eventual belt-and-suspenders.
+  useEffect(() => {
+    if (!sessionStartRef.current) return;
+    const interval = setInterval(() => {
+      if (!sessionStartRef.current) return;
+      const elapsed = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+      setElapsedSeconds(elapsed);
+      if (
+        elapsed >= BEHAVIORAL_SESSION_MAX_DURATION_SECONDS &&
+        !autoEndTriggeredRef.current
+      ) {
+        autoEndTriggeredRef.current = true;
+        handleEndSession();
+      }
+    }, 500);
+    return () => clearInterval(interval);
+    // handleEndSession is stable via useCallback; including it would create
+    // a recreate-interval loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // End session handler
   const handleEndSession = useCallback(async () => {
@@ -107,8 +138,33 @@ export default function BehavioralSessionPage() {
   // Don't render until we have a session
   if (!sessionId) return null;
 
+  const remainingSeconds = Math.max(
+    0,
+    BEHAVIORAL_SESSION_MAX_DURATION_SECONDS - elapsedSeconds
+  );
+  const remainingMin = Math.floor(remainingSeconds / 60);
+  const remainingSec = remainingSeconds % 60;
+  const isLastMinute = remainingSeconds <= 60 && remainingSeconds > 0;
+  const formattedRemaining = `${remainingMin}:${remainingSec
+    .toString()
+    .padStart(2, "0")}`;
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)] flex-col">
+      {/* Session timer — top-right, counts down from 20:00. Turns destructive
+          red in the last minute so the user knows the session will auto-end. */}
+      <div
+        className={`absolute top-4 right-4 z-10 rounded-md border bg-background/90 px-3 py-1.5 text-sm font-medium shadow backdrop-blur ${
+          isLastMinute
+            ? "border-destructive/60 text-destructive"
+            : "text-muted-foreground"
+        }`}
+        data-testid="session-timer"
+        aria-label={`Time remaining: ${formattedRemaining}`}
+      >
+        {formattedRemaining} left
+      </div>
+
       {/* Video call area */}
       <VideoCallLayout
         isSpeaking={voice.isSpeaking}

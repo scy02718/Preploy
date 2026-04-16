@@ -28,9 +28,14 @@ function resolveBaseUrl(request: NextRequest): string {
 
 /**
  * POST /api/billing/checkout
- * Creates a Stripe Checkout Session for the Pro plan.
+ *
+ * Creates a Stripe Checkout Session for the Pro plan. The caller may
+ * optionally pass `{ "interval": "month" | "year" }` in the request body
+ * to select the monthly ($15/mo) or annual ($120/year, = $10/mo effective)
+ * price. Defaults to "month" if missing or invalid.
+ *
  * Looks up or creates a Stripe customer for the current user, persisting
- * stripe_customer_id on the users row for re-use on subsequent calls.
+ * `stripe_customer_id` on the users row for reuse on subsequent calls.
  */
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -46,11 +51,32 @@ export async function POST(request: NextRequest) {
   const rateLimited = checkRateLimit(session.user.id);
   if (rateLimited) return rateLimited;
 
-  const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
-  if (!proPriceId) {
-    log.error("STRIPE_PRO_PRICE_ID is not configured");
+  // Parse the optional interval from the body. Tolerate missing/empty bodies
+  // since older callers POSTed with no body at all.
+  let interval: "month" | "year" = "month";
+  try {
+    const body = await request.json().catch(() => ({}));
+    if (body && body.interval === "year") interval = "year";
+  } catch {
+    // Empty body is fine — default to monthly.
+  }
+
+  const monthlyPriceId = process.env.STRIPE_PRO_PRICE_ID;
+  const annualPriceId = process.env.STRIPE_PRO_PRICE_ID_ANNUAL;
+  const priceId = interval === "year" ? annualPriceId : monthlyPriceId;
+
+  if (!priceId) {
+    log.error(
+      { interval, hasMonthly: !!monthlyPriceId, hasAnnual: !!annualPriceId },
+      "Stripe price ID not configured for requested interval"
+    );
     return NextResponse.json(
-      { error: "Billing is not configured" },
+      {
+        error:
+          interval === "year"
+            ? "Annual billing is not configured. Try the monthly option."
+            : "Billing is not configured",
+      },
       { status: 500 }
     );
   }
@@ -98,13 +124,16 @@ export async function POST(request: NextRequest) {
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: proPriceId, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${baseUrl}/profile?billing=success`,
     cancel_url: `${baseUrl}/profile?billing=cancelled`,
-    metadata: { userId: user.id },
+    metadata: { userId: user.id, interval },
   });
 
-  log.info({ checkoutSessionId: checkoutSession.id }, "checkout session created");
+  log.info(
+    { checkoutSessionId: checkoutSession.id, interval },
+    "checkout session created"
+  );
 
   return NextResponse.json({ url: checkoutSession.url });
 }
