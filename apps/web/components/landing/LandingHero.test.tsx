@@ -56,17 +56,15 @@ describe("LandingHero", () => {
     expect(screen.getByText("Start a free mock interview")).toBeTruthy();
   });
 
-  it("secondary CTA scrolls to how-it-works section", () => {
+  it("secondary CTA links to /pricing", () => {
     render(<LandingHero />);
     const secondaryCta = screen.getByTestId("secondary-cta");
-    fireEvent.click(secondaryCta);
-    expect(getElementById).toHaveBeenCalledWith("how-it-works");
-    expect(scrollIntoViewMock).toHaveBeenCalledWith({ behavior: "smooth" });
+    expect(secondaryCta.getAttribute("href")).toBe("/pricing");
   });
 
   it("secondary CTA has correct text", () => {
     render(<LandingHero />);
-    expect(screen.getByText("See how it works")).toBeTruthy();
+    expect(screen.getByText("See pricing")).toBeTruthy();
   });
 
   it("renders the Preploy logo", () => {

@@ -25,6 +25,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Optional: previously-shown problems the user wants to exclude. The
+  // prompt will instruct the model not to reuse them or close variants.
+  const excludeQuestions: string[] = Array.isArray(body.excludeQuestions)
+    ? body.excludeQuestions.filter(
+        (q: unknown): q is string => typeof q === "string" && q.length > 0
+      ).slice(0, 20) // cap to prevent prompt stuffing
+    : [];
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -39,18 +47,24 @@ export async function POST(request: NextRequest) {
   // Try up to 2 times (initial + 1 retry)
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      // Build the exclusion clause for the system prompt so the model
+      // avoids repeating previously-shown problems.
+      const exclusionClause =
+        excludeQuestions.length > 0
+          ? `\n\nIMPORTANT: The user has already seen the following problems. Do NOT reuse them or generate close variants:\n${excludeQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`
+          : "";
+
       const completion = await openai.chat.completions.create({
         model: "gpt-5.4-mini",
         messages: [
           {
             role: "system",
-            content:
-              "You are a technical interview problem generator. Generate problems in valid JSON only.",
+            content: `You are a technical interview problem generator. Generate problems in valid JSON only.${exclusionClause}`,
           },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
-        temperature: 0.7,
+        temperature: 0.8, // slightly higher to increase variety on regeneration
       });
 
       const raw = completion.choices[0]?.message?.content;

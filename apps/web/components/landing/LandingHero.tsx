@@ -41,17 +41,16 @@ export function LandingHero() {
         >
           Start a free mock interview
         </Link>
-        <a
-          href="#how-it-works"
-          onClick={handleScrollToHowItWorks}
+        <Link
+          href="/pricing"
           className={cn(
             buttonVariants({ variant: "outline", size: "lg" }),
             "min-w-48"
           )}
           data-testid="secondary-cta"
         >
-          See how it works
-        </a>
+          See pricing
+        </Link>
       </div>
     </section>
   );

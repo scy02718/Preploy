@@ -29,6 +29,13 @@ export default function TechnicalSessionPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState("");
 
+  // Regeneration: users can regenerate the question up to 5 times per
+  // session so they don't get stuck on a duplicate or an unfamiliar topic.
+  const MAX_REGENERATIONS = 5;
+  const [regenerationsLeft, setRegenerationsLeft] = useState(MAX_REGENERATIONS);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [previousProblems, setPreviousProblems] = useState<string[]>([]);
+
   const { startRecording, stopRecording, isRecording, audioLevel } =
     useAudioRecorder();
 
@@ -97,6 +104,46 @@ export default function TechnicalSessionPage() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // Regenerate problem handler — sends all previously-shown problem titles
+  // so the LLM avoids repeats.
+  const handleRegenerate = useCallback(async () => {
+    if (regenerationsLeft <= 0 || isRegenerating) return;
+    setIsRegenerating(true);
+    setProblemError(null);
+
+    // Track the current problem's title for the exclusion list
+    const updatedExclusions = problem?.title
+      ? [...previousProblems, problem.title]
+      : previousProblems;
+    setPreviousProblems(updatedExclusions);
+
+    try {
+      const res = await fetch("/api/problems/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          config: techConfig,
+          excludeQuestions: updatedExclusions,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setProblemError(data.error || "Failed to regenerate problem");
+      } else {
+        const data = await res.json();
+        setProblem(data);
+        setRegenerationsLeft((n) => n - 1);
+      }
+    } catch (err) {
+      setProblemError(
+        err instanceof Error ? err.message : "Failed to regenerate problem"
+      );
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [regenerationsLeft, isRegenerating, problem, previousProblems, techConfig]);
 
   // End session handler
   const handleEndSession = useCallback(async () => {
@@ -230,7 +277,27 @@ export default function TechnicalSessionPage() {
       </p>
     </div>
   ) : problem ? (
-    <ProblemDescription problem={problem} />
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto">
+        <ProblemDescription problem={problem} />
+      </div>
+      <div className="border-t px-4 py-3 flex items-center justify-between">
+        <button
+          onClick={handleRegenerate}
+          disabled={regenerationsLeft <= 0 || isRegenerating}
+          className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title={
+            regenerationsLeft <= 0
+              ? "No regenerations remaining this session"
+              : `Regenerate problem (${regenerationsLeft} left)`
+          }
+        >
+          {isRegenerating
+            ? "Generating..."
+            : `↻ New question (${regenerationsLeft}/${MAX_REGENERATIONS} left)`}
+        </button>
+      </div>
+    </div>
   ) : null;
 
   // Editor panel content
