@@ -20,6 +20,7 @@ import {
 } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { createRequestLogger } from "@/lib/logger";
+import { getCurrentPeriodUsage, recordDeletedUsage } from "@/lib/usage";
 
 // GET /api/users/me — get current user profile
 export async function GET() {
@@ -159,9 +160,12 @@ export async function DELETE(request: NextRequest) {
 
   const userId = session.user.id;
 
-  // Look up user for Stripe cleanup
+  // Look up user for Stripe cleanup + anti-abuse usage carry-forward
   const [user] = await db
-    .select({ stripeCustomerId: users.stripeCustomerId })
+    .select({
+      email: users.email,
+      stripeCustomerId: users.stripeCustomerId,
+    })
     .from(users)
     .where(eq(users.id, userId));
 
@@ -182,6 +186,13 @@ export async function DELETE(request: NextRequest) {
         // Fallback: delete via subquery might not work in all Drizzle versions.
         // Use cascading FK instead — star_story_analyses CASCADE from star_stories.
       });
+
+      // Anti-abuse: carry forward current month's usage so re-creating the
+      // account with the same email won't reset the free-tier quota.
+      const currentUsage = await getCurrentPeriodUsage(userId);
+      if (user.email) {
+        await recordDeletedUsage(user.email, currentUsage, tx);
+      }
 
       await tx.delete(openaiUsage).where(eq(openaiUsage.userId, userId));
       await tx.delete(sessionTemplates).where(eq(sessionTemplates.userId, userId));

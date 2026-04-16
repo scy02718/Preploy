@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { currentFreePeriodStart } from "./usage";
+import { currentFreePeriodStart, hashEmailMonth, currentMonth } from "./usage";
 
 describe("currentFreePeriodStart", () => {
   it("returns the first day of the current UTC month at midnight", () => {
@@ -42,5 +42,54 @@ describe("currentFreePeriodStart", () => {
 
   it("returns a Date object, not a string", () => {
     expect(currentFreePeriodStart()).toBeInstanceOf(Date);
+  });
+});
+
+describe("hashEmailMonth", () => {
+  it("produces consistent output for the same email+month (S1)", () => {
+    const a = hashEmailMonth("user@example.com", "2026-04");
+    const b = hashEmailMonth("user@example.com", "2026-04");
+    expect(a).toBe(b);
+  });
+
+  it("produces different hashes for different months", () => {
+    const apr = hashEmailMonth("user@example.com", "2026-04");
+    const may = hashEmailMonth("user@example.com", "2026-05");
+    expect(apr).not.toBe(may);
+  });
+
+  it("produces different hashes for different emails", () => {
+    const a = hashEmailMonth("alice@example.com", "2026-04");
+    const b = hashEmailMonth("bob@example.com", "2026-04");
+    expect(a).not.toBe(b);
+  });
+
+  it("normalizes email to lowercase (S5 — no raw PII)", () => {
+    const upper = hashEmailMonth("User@Example.COM", "2026-04");
+    const lower = hashEmailMonth("user@example.com", "2026-04");
+    expect(upper).toBe(lower);
+  });
+
+  it("returns a 64-char hex string (SHA-256)", () => {
+    const hash = hashEmailMonth("test@test.com", "2026-01");
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("does not contain the original email (S5 — no PII)", () => {
+    const hash = hashEmailMonth("user@example.com", "2026-04");
+    expect(hash).not.toContain("user");
+    expect(hash).not.toContain("example");
+  });
+});
+
+describe("currentMonth", () => {
+  it("returns YYYY-MM format", () => {
+    const m = currentMonth(new Date(Date.UTC(2026, 3, 16)));
+    expect(m).toBe("2026-04");
+  });
+
+  it("zero-pads single-digit months", () => {
+    const m = currentMonth(new Date(Date.UTC(2026, 0, 1)));
+    expect(m).toBe("2026-01");
   });
 });

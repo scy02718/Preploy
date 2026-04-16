@@ -16,10 +16,11 @@
  * old months naturally roll over because the new month produces a new
  * period_start key that doesn't match any existing row.
  */
+import { createHash } from "crypto";
 import { sql } from "drizzle-orm";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { interviewUsage } from "@/lib/schema";
+import { interviewUsage, deletedUsage } from "@/lib/schema";
 import { getPlanLimits } from "@/lib/plans";
 import { getCurrentUserPlan } from "@/lib/user-plan";
 
@@ -192,6 +193,80 @@ export async function tryConsumeInterviewSlot(
   }
 
   return { allowed: true, used: newCount, limit };
+}
+
+// ---------------------------------------------------------------------------
+// Anti-abuse: carry forward usage across account deletion / re-creation
+// ---------------------------------------------------------------------------
+
+/**
+ * Deterministic hash of an email + month string. The month isolates each
+ * billing period so a hash from January won't collide with February.
+ * Uses SHA-256 — no raw PII stored.
+ */
+export function hashEmailMonth(email: string, month: string): string {
+  return createHash("sha256")
+    .update(`${email.toLowerCase().trim()}:${month}`)
+    .digest("hex");
+}
+
+/** Returns "YYYY-MM" for the given date (UTC). */
+export function currentMonth(now: Date = new Date()): string {
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+/**
+ * Called inside the account-deletion transaction. Reads the user's current
+ * month usage and persists it as a hashed record so re-creation doesn't
+ * reset the quota.
+ */
+export async function recordDeletedUsage(
+  email: string,
+  usageCount: number,
+  txOrDb: DbOrTx = db
+): Promise<void> {
+  if (usageCount <= 0) return; // nothing to carry forward
+  const month = currentMonth();
+  const emailHash = hashEmailMonth(email, month);
+  await (txOrDb as typeof db)
+    .insert(deletedUsage)
+    .values({ emailHash, month, usageCount })
+    .onConflictDoUpdate({
+      target: [deletedUsage.emailHash, deletedUsage.month],
+      set: { usageCount, deletedAt: new Date() },
+    });
+}
+
+/**
+ * Called from the NextAuth `createUser` event. If the new user's email
+ * matches a deleted-usage record for the current month, seed their
+ * interview_usage so they don't get a free quota reset.
+ */
+export async function carryForwardUsage(
+  email: string,
+  userId: string,
+  txOrDb: DbOrTx = db
+): Promise<void> {
+  const month = currentMonth();
+  const emailHash = hashEmailMonth(email, month);
+  const [row] = await (txOrDb as typeof db)
+    .select({ usageCount: deletedUsage.usageCount })
+    .from(deletedUsage)
+    .where(
+      and(eq(deletedUsage.emailHash, emailHash), eq(deletedUsage.month, month))
+    );
+  if (!row || row.usageCount <= 0) return;
+
+  const periodStart = currentFreePeriodStart();
+  await (txOrDb as typeof db)
+    .insert(interviewUsage)
+    .values({ userId, periodStart, count: row.usageCount })
+    .onConflictDoUpdate({
+      target: [interviewUsage.userId, interviewUsage.periodStart],
+      set: { count: sql`GREATEST(${interviewUsage.count}, ${row.usageCount})` },
+    });
 }
 
 async function getCurrentPeriodUsageWithDb(

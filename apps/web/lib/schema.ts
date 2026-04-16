@@ -268,6 +268,30 @@ export const sessionTemplates = pgTable("session_templates", {
     .defaultNow(),
 });
 
+/**
+ * Anti-abuse table: carries forward monthly interview usage when a user
+ * deletes their account so they cannot reset their free-tier quota by
+ * re-creating. Keyed by SHA-256(email + month) — no PII stored.
+ */
+export const deletedUsage = pgTable(
+  "deleted_usage",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    emailHash: text("email_hash").notNull(),
+    month: text("month").notNull(), // YYYY-MM
+    usageCount: integer("usage_count").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("deleted_usage_hash_month_unique").on(
+      table.emailHash,
+      table.month
+    ),
+  ]
+);
+
 // ---- Relations ----
 
 export const usersRelations = relations(users, ({ many }) => ({
