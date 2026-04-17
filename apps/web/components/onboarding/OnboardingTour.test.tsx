@@ -1,49 +1,59 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, act } from "@testing-library/react";
+import React from "react";
 
-// --- Mock react-joyride as a stub that exposes callbacks for testing ---
-type JoyrideCallback = (data: { status: string }) => void;
-
-let capturedCallback: JoyrideCallback | null = null;
-
-vi.mock("react-joyride", () => ({
-  default: vi.fn(
+// --- Hoist the mock fn so it's available before vi.mock factory runs ---
+const { mockJoyrideFn, capturedCallbacks } = vi.hoisted(() => {
+  const capturedCallbacks: Array<(data: { status: string }) => void> = [];
+  const mockJoyrideFn = vi.fn(
     ({
       run,
-      callback,
+      onEvent,
     }: {
       run: boolean;
-      callback: JoyrideCallback;
+      onEvent?: (data: { status: string }) => void;
     }) => {
-      capturedCallback = callback;
-      return run ? <div data-testid="joyride-running">tour-running</div> : null;
+      if (onEvent) capturedCallbacks.push(onEvent);
+      return run
+        ? React.createElement("div", { "data-testid": "joyride-running" }, "tour-running")
+        : null;
     }
-  ),
+  );
+  return { mockJoyrideFn, capturedCallbacks };
+});
+
+// Mock react-joyride with named export { Joyride }
+vi.mock("react-joyride", () => ({
+  Joyride: mockJoyrideFn,
+  STATUS: { FINISHED: "finished", SKIPPED: "skipped" },
 }));
 
-// Mock next/dynamic to render synchronously in tests
+// Mock next/dynamic to render synchronously in tests.
+// Our component calls: import("react-joyride").then(mod => ({ default: mod.Joyride }))
+// The dynamic wrapper needs to resolve immediately for tests.
 vi.mock("next/dynamic", () => ({
-  default: (fn: () => Promise<{ default: unknown }>) => {
-    let Component: React.ComponentType<Record<string, unknown>> | null = null;
+  default: (fn: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>) => {
+    let ResolvedComponent: React.ComponentType<Record<string, unknown>> | null = null;
+    // Start resolving immediately
     fn().then((mod) => {
-      Component = mod.default as React.ComponentType<Record<string, unknown>>;
+      ResolvedComponent = mod.default;
     });
-    return function DynamicComponent(props: Record<string, unknown>) {
-      if (!Component) return null;
-      return <Component {...props} />;
+    // Return a component that will try to render after resolution
+    const DynamicComponent = (props: Record<string, unknown>) => {
+      if (!ResolvedComponent) return null;
+      return React.createElement(ResolvedComponent, props);
     };
+    DynamicComponent.displayName = "DynamicComponent";
+    return DynamicComponent;
   },
 }));
 
 import { OnboardingTour } from "./OnboardingTour";
 
-// We need React for JSX in the mock
-import React from "react";
-
 describe("OnboardingTour", () => {
   beforeEach(() => {
-    capturedCallback = null;
-    vi.clearAllMocks();
+    mockJoyrideFn.mockClear();
+    capturedCallbacks.length = 0;
   });
 
   // 118-E: component renders tour when run=true
@@ -53,15 +63,18 @@ describe("OnboardingTour", () => {
         <OnboardingTour run={true} onFinish={vi.fn()} onSkip={vi.fn()} />
       );
     });
+    // Allow the dynamic import promise to resolve
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    // After async resolution, re-render triggers
     await act(async () => {
       await Promise.resolve();
     });
-    const Joyride = (await import("react-joyride")).default as ReturnType<
-      typeof vi.fn
-    >;
-    const calls = Joyride.mock.calls;
-    expect(calls.length).toBeGreaterThanOrEqual(1);
-    expect(calls[calls.length - 1][0]).toMatchObject({ run: true });
+
+    expect(mockJoyrideFn.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(mockJoyrideFn.mock.calls[mockJoyrideFn.mock.calls.length - 1][0]).toMatchObject({ run: true });
   });
 
   // 118-E: renders nothing / passes run=false when not running
@@ -73,13 +86,14 @@ describe("OnboardingTour", () => {
     });
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
     });
-    const Joyride = (await import("react-joyride")).default as ReturnType<
-      typeof vi.fn
-    >;
-    const calls = Joyride.mock.calls;
-    expect(calls.length).toBeGreaterThanOrEqual(1);
-    expect(calls[calls.length - 1][0]).toMatchObject({ run: false });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockJoyrideFn.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(mockJoyrideFn.mock.calls[mockJoyrideFn.mock.calls.length - 1][0]).toMatchObject({ run: false });
   });
 
   // 118-F: Skip status calls onSkip
@@ -94,11 +108,16 @@ describe("OnboardingTour", () => {
     });
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    // Trigger the skip callback
+    // Trigger the skip callback (use the last captured one)
+    const cb = capturedCallbacks[capturedCallbacks.length - 1];
     act(() => {
-      capturedCallback?.({ status: "skipped" });
+      cb?.({ status: "skipped" });
     });
 
     expect(onSkip).toHaveBeenCalledOnce();
@@ -117,10 +136,15 @@ describe("OnboardingTour", () => {
     });
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
 
+    const cb = capturedCallbacks[capturedCallbacks.length - 1];
     act(() => {
-      capturedCallback?.({ status: "finished" });
+      cb?.({ status: "finished" });
     });
 
     expect(onFinish).toHaveBeenCalledOnce();
@@ -139,10 +163,15 @@ describe("OnboardingTour", () => {
     });
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
 
+    const cb = capturedCallbacks[capturedCallbacks.length - 1];
     act(() => {
-      capturedCallback?.({ status: "running" });
+      cb?.({ status: "running" });
     });
 
     expect(onSkip).not.toHaveBeenCalled();

@@ -1,15 +1,20 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { CallBackProps, Status } from "react-joyride";
+import type { Props as JoyrideProps, EventData, Status } from "react-joyride";
 import { TOUR_STEPS } from "./tour-steps";
 
-// Dynamic import with ssr:false so Joyride never runs during SSR
-const Joyride = dynamic(() => import("react-joyride"), { ssr: false });
+// Dynamic import with ssr:false so Joyride never runs during SSR.
+// We import the named export { Joyride } and re-export it as the default
+// so next/dynamic (which expects a default export) can wrap it.
+const JoyrideDynamic = dynamic(
+  () => import("react-joyride").then((mod) => ({ default: mod.Joyride })),
+  { ssr: false }
+);
 
 // Status string constants from react-joyride
-const STATUS_FINISHED = "finished";
-const STATUS_SKIPPED = "skipped";
+const STATUS_FINISHED: Status = "finished";
+const STATUS_SKIPPED: Status = "skipped";
 
 export interface OnboardingTourProps {
   run: boolean;
@@ -18,32 +23,29 @@ export interface OnboardingTourProps {
 }
 
 export function OnboardingTour({ run, onFinish, onSkip }: OnboardingTourProps) {
-  function handleCallback(data: CallBackProps) {
+  function handleEvent(data: EventData) {
     const { status } = data;
-    const typedStatus = status as Status;
 
-    if (typedStatus === STATUS_FINISHED) {
+    if (status === STATUS_FINISHED) {
       onFinish();
-    } else if (typedStatus === STATUS_SKIPPED) {
+    } else if (status === STATUS_SKIPPED) {
       onSkip();
     }
   }
 
-  return (
-    <Joyride
-      steps={TOUR_STEPS}
-      run={run}
-      continuous
-      showSkipButton
-      showProgress
-      disableOverlayClose={false}
-      spotlightClicks={false}
-      callback={handleCallback}
-      styles={{
-        options: {
-          primaryColor: "hsl(220, 90%, 56%)",
-        },
-      }}
-    />
-  );
+  const joyrideProps: JoyrideProps = {
+    steps: TOUR_STEPS,
+    run,
+    continuous: true,
+    onEvent: handleEvent,
+    options: {
+      primaryColor: "hsl(220, 90%, 56%)",
+      showProgress: true,
+      overlayClickAction: "close",
+      // Show skip + back + close + next buttons
+      buttons: ["back", "close", "primary", "skip"],
+    },
+  };
+
+  return <JoyrideDynamic {...joyrideProps} />;
 }
