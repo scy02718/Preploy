@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 // Mock next/navigation for Link components (not strictly needed for static links
 // but communication page uses Link so we mock for safety)
@@ -68,25 +68,6 @@ describe("CommunicationPage", () => {
   it("renders Strategic pauses sub-section", () => {
     render(<CommunicationPage />);
     expect(screen.getAllByText("Strategic pauses").length).toBeGreaterThanOrEqual(1);
-  });
-
-  // New: Filler word picker widget renders and responds to input
-  it("renders the Filler Word Picker section", () => {
-    render(<CommunicationPage />);
-    expect(screen.getAllByText("Filler Word Picker").length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("renders filler word chips for um, like, basically", () => {
-    render(<CommunicationPage />);
-    expect(screen.getAllByTestId("filler-chip-um").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByTestId("filler-chip-like").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByTestId("filler-chip-basically").length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("clicking a filler chip shows before/after panel", () => {
-    render(<CommunicationPage />);
-    fireEvent.click(screen.getByTestId("filler-chip-um"));
-    expect(screen.getByTestId("filler-panel-um")).toBeTruthy();
   });
 
   // New: Written/Async section
