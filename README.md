@@ -106,4 +106,4 @@ This is a solo-maintained project, but bug reports and PRs are welcome. [Open an
 
 ## License
 
-See [LICENSE](./LICENSE).
+All rights reserved. This source is publicly viewable for reference only — it is not open source and may not be copied, redistributed, or used to build a competing product. See [LICENSE](./LICENSE) for full terms.
