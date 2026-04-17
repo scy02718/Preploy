@@ -14,8 +14,8 @@ describe("DashboardStatTiles", () => {
     vi.clearAllMocks();
   });
 
-  // 110-1: renders monthly text and NOT daily text
-  it("renders 'Sessions this month' label — not 'Today' or 'per day'", async () => {
+  // 110-1 / 118-L: renders "left this month" label (NOT "used")
+  it("118-L: renders 'sessions left this month' label — not 'used'", async () => {
     fetchSpy.mockResolvedValue(
       new Response(JSON.stringify({ plan: "pro", used: 12, limit: 40 }), {
         status: 200,
@@ -33,17 +33,21 @@ describe("DashboardStatTiles", () => {
       );
     });
 
-    // Should contain monthly label
-    const monthlyLabel = screen.getAllByText(/sessions this month/i);
+    // Should contain "left this month"
+    const monthlyLabel = screen.getAllByText(/sessions left this month/i);
     expect(monthlyLabel.length).toBeGreaterThanOrEqual(1);
 
     // Must NOT contain daily language
     expect(screen.queryByText(/today/i)).toBeNull();
     expect(screen.queryByText(/per day/i)).toBeNull();
+
+    // Regression: must NOT contain "used" (case-insensitive)
+    const valueEl = screen.getByTestId("stat-tile-monthly-value");
+    expect(valueEl.textContent?.toLowerCase()).not.toContain("used");
   });
 
-  // 110-1: correct used/limit display
-  it("renders used/limit value from /api/usage/current", async () => {
+  // 118-L: shows remaining count (not used/limit)
+  it("118-L: monthly tile shows remaining count (28 remaining from used:12, limit:40)", async () => {
     fetchSpy.mockResolvedValue(
       new Response(JSON.stringify({ plan: "pro", used: 12, limit: 40 }), {
         status: 200,
@@ -62,12 +66,14 @@ describe("DashboardStatTiles", () => {
     });
 
     const valueEl = screen.getByTestId("stat-tile-monthly-value");
-    expect(valueEl.textContent).toContain("12");
-    expect(valueEl.textContent).toContain("40");
+    // remaining = 40 - 12 = 28
+    expect(valueEl.textContent).toContain("28");
+    // Must NOT show "12" (used) or "40" (limit) in the headline
+    expect(valueEl.textContent).not.toContain("40");
   });
 
-  // 110-1: renders "Unlimited" when limit is null
-  it("renders 'Unlimited' display when limit is null", async () => {
+  // 118-L / 110-1: renders "Unlimited" when limit is null
+  it("118-L: renders 'Unlimited' headline when limit is null", async () => {
     fetchSpy.mockResolvedValue(
       new Response(JSON.stringify({ plan: "unlimited", used: 5, limit: null }), {
         status: 200,
@@ -87,6 +93,9 @@ describe("DashboardStatTiles", () => {
 
     const valueEl = screen.getByTestId("stat-tile-monthly-value");
     expect(valueEl.textContent).toContain("Unlimited");
+    // Description should be "this month" not "sessions left this month"
+    const thisMonthLabel = screen.getAllByText(/this month/i);
+    expect(thisMonthLabel.length).toBeGreaterThanOrEqual(1);
   });
 
   // Renders skeleton while loading

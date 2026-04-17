@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { TemplateManager } from "@/components/profile/TemplateManager";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -226,7 +228,7 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          {/* Right column — Plan + Billing + Templates + Danger Zone */}
+          {/* Right column — Plan + Billing + Templates + Preferences + Danger Zone */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -254,6 +256,14 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="h-20 w-full animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+            <Card className="hidden md:block">
+              <CardHeader>
+                <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-9 w-40 animate-pulse rounded bg-muted" />
               </CardContent>
             </Card>
             <Card>
@@ -454,6 +464,22 @@ export default function ProfilePage() {
           </Card>
 
           <TemplateManager />
+
+          <Card className="hidden md:block" data-testid="preferences-card">
+            <CardHeader>
+              <CardTitle>Preferences</CardTitle>
+              <CardDescription>Personalize your experience</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                data-testid="take-tour-again-button"
+                onClick={() => router.push("/dashboard?tour=1")}
+              >
+                Take the tour again
+              </Button>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

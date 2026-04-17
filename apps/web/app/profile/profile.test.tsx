@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 // Mock next/navigation
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: vi.fn(() => ({ push: mockPush })),
 }));
 
 const baseProfile: {
@@ -229,6 +230,20 @@ describe("ProfilePage", () => {
       const body = JSON.parse(patchMock.mock.calls[0][1].body);
       expect(typeof body.gaze_tracking_enabled).toBe("boolean");
     });
+  });
+
+  // 118-O: Profile "Take the tour again" button routes to /dashboard?tour=1
+  it("118-O: Preferences card renders Take the tour again button that navigates to /dashboard?tour=1", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+
+    mockPush.mockClear();
+    render(<ProfilePage />);
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("take-tour-again-button")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("take-tour-again-button"));
+    expect(mockPush).toHaveBeenCalledWith("/dashboard?tour=1");
   });
 
   it("clicking Manage billing calls /api/billing/portal and redirects", async () => {

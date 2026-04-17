@@ -2,6 +2,7 @@
 
 import { TechnicalSetupForm } from "@/components/interview/TechnicalSetupForm";
 import { SessionQuota } from "@/components/interview/SessionQuota";
+import { SessionCostBanner } from "@/components/interview/SessionCostBanner";
 
 export default function TechnicalSetupPage() {
   return (
@@ -13,6 +14,9 @@ export default function TechnicalSetupPage() {
       </p>
 
       <SessionQuota />
+      <div className="mt-3">
+        <SessionCostBanner />
+      </div>
       <div className="mt-6">
         <TechnicalSetupForm />
       </div>

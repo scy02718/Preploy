@@ -71,12 +71,24 @@ export function DashboardStatTiles({
     );
   }
 
-  const monthlyDisplay =
+  const remaining =
+    usage === null
+      ? null
+      : usage.limit === null
+        ? null
+        : Math.max(0, usage.limit - usage.used);
+
+  const monthlyHeadline =
     usage === null
       ? "--"
       : usage.limit === null
-        ? `${usage.used} / Unlimited`
-        : `${usage.used}/${usage.limit}`;
+        ? "Unlimited"
+        : String(remaining);
+
+  const monthlyDescription =
+    usage === null || usage.limit === null
+      ? "this month"
+      : "sessions left this month";
 
   return (
     <div
@@ -105,11 +117,15 @@ export function DashboardStatTiles({
       </Card>
       <Card data-testid="stat-tile-monthly">
         <CardHeader>
-          <CardTitle className="text-3xl" data-testid="stat-tile-monthly-value">
-            {monthlyDisplay}
+          <CardTitle
+            className="text-3xl"
+            data-testid="stat-tile-monthly-value"
+            data-testid-remaining="stat-tile-monthly-remaining"
+          >
+            {monthlyHeadline}
           </CardTitle>
           <CardDescription title="Resets on the 1st of each month">
-            Sessions this month
+            {monthlyDescription}
           </CardDescription>
         </CardHeader>
       </Card>

@@ -502,7 +502,7 @@ export default function ResumePage() {
 
               {!selectedResumeId && resumes.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Upload a resume first to generate questions
+                  Upload a resume first — unlimited resume analysis, no quota cost.
                 </p>
               )}
             </CardContent>
