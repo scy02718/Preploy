@@ -19,7 +19,7 @@ export function buildProblemGenerationPrompt(
   const typeLabel =
     INTERVIEW_TYPE_LABELS[config.interview_type] ?? "coding problem";
   const difficulty = DIFFICULTY_MAP[config.difficulty] ?? "Medium";
-  const focusAreas = config.focus_areas.join(", ");
+  const filteredFocusAreas = config.focus_areas.filter((a) => a !== "other");
   const language = config.language;
 
   const sections: string[] = [];
@@ -28,9 +28,11 @@ export function buildProblemGenerationPrompt(
     `Generate a single ${difficulty}-difficulty ${typeLabel}.`
   );
 
-  sections.push(
-    `The problem should focus on the following topics: ${focusAreas}.`
-  );
+  if (filteredFocusAreas.length > 0) {
+    sections.push(
+      `The problem should focus on the following topics: ${filteredFocusAreas.join(", ")}.`
+    );
+  }
 
   sections.push(
     `The target programming language is ${language}. Use this language for any code snippets in examples.`

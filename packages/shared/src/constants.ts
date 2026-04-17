@@ -24,6 +24,7 @@ export const FOCUS_AREAS_BY_TYPE = {
     "hash_map",
     "sorting",
     "recursion",
+    "other",
   ],
   system_design: [
     "scalability",
@@ -38,6 +39,7 @@ export const FOCUS_AREAS_BY_TYPE = {
     "networking",
     "monitoring",
     "security",
+    "other",
   ],
   frontend: [
     "react",
@@ -50,6 +52,7 @@ export const FOCUS_AREAS_BY_TYPE = {
     "testing",
     "browser_apis",
     "typescript",
+    "other",
   ],
   backend: [
     "api_design",
@@ -62,6 +65,7 @@ export const FOCUS_AREAS_BY_TYPE = {
     "security",
     "deployment",
     "logging",
+    "other",
   ],
 } as const;
 

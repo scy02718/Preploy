@@ -208,6 +208,17 @@ describe("technicalConfigSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  // 123-I: Zod validator accepts "other" sentinel in focus_areas
+  it("accepts 'other' sentinel in focus_areas", () => {
+    const result = technicalConfigSchema.safeParse({
+      interview_type: "leetcode",
+      focus_areas: ["arrays", "other"],
+      language: "python",
+      difficulty: "medium",
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("createSessionSchema", () => {
