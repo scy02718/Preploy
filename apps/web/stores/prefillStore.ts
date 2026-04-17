@@ -18,6 +18,12 @@ interface PrefillState {
   setBehavioralPrefill: (data: PrefillState["behavioralPrefill"]) => void;
   setTechnicalPrefill: (data: PrefillState["technicalPrefill"]) => void;
   clearPrefill: () => void;
+  /**
+   * Strip the `resume_id` field from any prefill entry that references the
+   * given resumeId. If the prefill object has no remaining fields after
+   * stripping, it is set to null.
+   */
+  clearResumeReference: (resumeId: string) => void;
 }
 
 export const usePrefillStore = create<PrefillState>((set) => ({
@@ -27,4 +33,29 @@ export const usePrefillStore = create<PrefillState>((set) => ({
   setBehavioralPrefill: (data) => set({ behavioralPrefill: data }),
   setTechnicalPrefill: (data) => set({ technicalPrefill: data }),
   clearPrefill: () => set({ behavioralPrefill: null, technicalPrefill: null }),
+
+  clearResumeReference: (resumeId: string) =>
+    set((state) => {
+      let { behavioralPrefill, technicalPrefill } = state;
+
+      if (behavioralPrefill?.resume_id === resumeId) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { resume_id: _removed, ...rest } = behavioralPrefill;
+        behavioralPrefill =
+          Object.keys(rest).length > 0
+            ? (rest as PrefillState["behavioralPrefill"])
+            : null;
+      }
+
+      if (technicalPrefill?.resume_id === resumeId) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { resume_id: _removed, ...rest } = technicalPrefill;
+        technicalPrefill =
+          Object.keys(rest).length > 0
+            ? (rest as PrefillState["technicalPrefill"])
+            : null;
+      }
+
+      return { behavioralPrefill, technicalPrefill };
+    }),
 }));
