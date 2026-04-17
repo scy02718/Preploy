@@ -3,12 +3,18 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 // Mock next/navigation with the canonical vi.hoisted() + vi.mock() pattern
 // so the factory receives a hoisted ref before the import graph is evaluated.
-const { mockPush } = vi.hoisted(() => ({
+const { mockPush, mockSetBehavioralPrefill } = vi.hoisted(() => ({
   mockPush: vi.fn(),
+  mockSetBehavioralPrefill: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
   usePathname: () => "/star",
+}));
+vi.mock("@/stores/prefillStore", () => ({
+  usePrefillStore: (
+    selector: (s: { setBehavioralPrefill: typeof mockSetBehavioralPrefill }) => unknown,
+  ) => selector({ setBehavioralPrefill: mockSetBehavioralPrefill }),
 }));
 
 import StarPrepPage from "./page";
@@ -161,6 +167,37 @@ describe("StarPrepPage", () => {
     await waitFor(() => {
       expect(screen.getAllByText("Practice this question").length).toBeGreaterThanOrEqual(1);
     });
+  });
+
+  it("Practice this question pre-fills behavioral setup with story questions", async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ stories: MOCK_STORIES, pagination: { total: 2, page: 1, limit: 20, totalPages: 1 } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => MOCK_DETAIL,
+      });
+
+    render(<StarPrepPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Led microservices migration").length).toBeGreaterThanOrEqual(1);
+    });
+
+    fireEvent.click(screen.getAllByText("Led microservices migration")[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Practice this question").length).toBeGreaterThanOrEqual(1);
+    });
+
+    fireEvent.click(screen.getAllByText("Practice this question")[0]);
+
+    expect(mockSetBehavioralPrefill).toHaveBeenCalledWith({
+      expected_questions: ["Tell me about a technical challenge"],
+    });
+    expect(mockPush).toHaveBeenCalledWith("/interview/behavioral/setup");
   });
 
   // ---------------------------------------------------------------------------
