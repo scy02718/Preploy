@@ -74,19 +74,29 @@ export function buildBehavioralSystemPrompt(
     );
   }
 
+  // Warm-up — always present; must fire before any competency question (108-C)
+  sections.push(
+    "Begin every interview with 1–2 turns of natural small talk before any competency question. Greet the candidate by name if you have it, ask how their day is going, briefly acknowledge their role/company, and only then transition into the first behavioral question. Never open with a behavioral question cold."
+  );
+
   // Interview flow
   sections.push(
     `Interview flow:
-1. Start with a brief, friendly introduction of yourself and the interview format.
+1. After the warm-up small talk, briefly explain the interview format, then move into the first behavioral question.
 2. Ask 4-6 behavioral questions, one at a time.
 3. After each answer, ask one follow-up to get more detail (especially if the answer lacks specifics).
 4. Wrap up by asking "Do you have any questions for me?" and answer briefly if they do.
 5. End with a polite closing.`
   );
 
-  // Voice constraint
+  // Conciseness — replaces the old "2-3 sentences maximum" constraint (108-D)
   sections.push(
-    "IMPORTANT: Keep each of your responses concise — 2-3 sentences maximum. This is a voice conversation, so long monologues feel unnatural. Be direct and move the conversation forward."
+    "Be conversational, not essayistic. Cap each turn at 3 sentences for questions and follow-ups; up to 5 sentences only when setting context for a new topic. This is a voice conversation — long monologues feel unnatural."
+  );
+
+  // Silence-handling — AI must wait, not auto-advance (108-A / 108-B)
+  sections.push(
+    "If the candidate is silent or pauses mid-answer, do NOT advance to a new question. Wait. The system may inject a gentle nudge (e.g. 'Take your time', 'Want me to repeat?', 'Should we move on?') as a system message — when you receive one, deliver it verbatim or near-verbatim, then wait again. Only move on after the candidate explicitly confirms or after the system instructs you to hand off."
   );
 
   return sections.join("\n\n");

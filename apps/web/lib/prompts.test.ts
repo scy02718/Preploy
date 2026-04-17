@@ -110,8 +110,39 @@ describe("buildBehavioralSystemPrompt", () => {
 
   it("always includes the concise responses constraint", () => {
     const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
-    expect(prompt).toContain("2-3 sentences maximum");
+    // Updated wording per #108 — old "2-3 sentences maximum" replaced
+    expect(prompt).toContain("3 sentences for questions");
     expect(prompt).toContain("voice conversation");
+  });
+
+  // 108-C: warm-up small talk must always be present (snapshot assertion)
+  it("always includes the warm-up small-talk instruction (108-C)", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).toContain("1–2 turns of natural small talk");
+    expect(prompt).toContain("Never open with a behavioral question cold");
+  });
+
+  // 108-D: conciseness cap — 3 sentences for questions, 5 for context
+  it("always includes the 3-sentence cap for questions (108-D)", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).toContain("3 sentences for questions");
+  });
+
+  it("always includes the 5-sentence context-setting allowance (108-D)", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).toContain("5 sentences only when setting context");
+  });
+
+  // 108-A / 108-B: silence guidance must be present
+  it("always includes the do-NOT-advance silence guidance (108-A/B)", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).toContain("do NOT advance to a new question");
+  });
+
+  // Regression guard: warm-up present even with empty/minimal config
+  it("warm-up section present even when company, JD, and resume are all omitted", () => {
+    const prompt = buildBehavioralSystemPrompt({ interview_style: 0.5, difficulty: 0.5 });
+    expect(prompt).toContain("1–2 turns of natural small talk");
   });
 
   it("always includes interview flow instructions", () => {
