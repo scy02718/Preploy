@@ -564,9 +564,9 @@ export default function ResumePage() {
                     onClick={() => {
                       setBehavioralPrefill({
                         expected_questions: questions.map((q) => q.question),
-                        company: company || undefined,
+                        company_name: company || undefined,
                         resume_id: selectedResumeId ?? undefined,
-                      } as Record<string, unknown> as Parameters<typeof setBehavioralPrefill>[0]);
+                      });
                       router.push("/interview/behavioral/setup");
                     }}
                   >
