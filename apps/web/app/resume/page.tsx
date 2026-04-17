@@ -33,7 +33,7 @@ interface GeneratedQuestion {
 
 export default function ResumePage() {
   const router = useRouter();
-  const { setBehavioralPrefill } = usePrefillStore();
+  const { setBehavioralPrefill, clearResumeReference } = usePrefillStore();
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -44,6 +44,11 @@ export default function ResumePage() {
   const [role, setRole] = useState("");
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Delete state
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const showMessage = useCallback((type: "success" | "error", text: string) => {
@@ -137,6 +142,35 @@ export default function ResumePage() {
     }
   };
 
+  const handleDeleteResume = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/resume/${id}`, { method: "DELETE" });
+      if (res.status === 204) {
+        const updatedResumes = resumes.filter((r) => r.id !== id);
+        setResumes(updatedResumes);
+
+        // If the deleted resume was selected, fall to the next one or null
+        if (selectedResumeId === id) {
+          setSelectedResumeId(updatedResumes.length > 0 ? updatedResumes[0].id : null);
+        }
+
+        // Clear any prefill that referenced this resume
+        clearResumeReference(id);
+
+        setPendingDeleteId(null);
+        showMessage("success", "Resume deleted");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showMessage("error", (err as { error?: string }).error || "Failed to delete resume");
+      }
+    } catch {
+      showMessage("error", "Failed to delete resume");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleGenerateQuestions = async () => {
     if (!selectedResumeId) return;
     setIsGenerating(true);
@@ -182,6 +216,25 @@ export default function ResumePage() {
             <CardContent className="space-y-4 p-6">
               <div className="h-32 w-full animate-pulse rounded bg-muted" />
               <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+              {/* Resume list skeleton rows — mirror post-load layout with delete button */}
+              <div className="space-y-2 pt-2">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-md border px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                      <div className="space-y-1">
+                        <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                      </div>
+                    </div>
+                    {/* Delete button placeholder */}
+                    <div className="h-7 w-7 animate-pulse rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -295,28 +348,73 @@ export default function ResumePage() {
               ) : (
                 <div className="space-y-2">
                   {resumes.map((resume) => (
-                    <button
-                      key={resume.id}
-                      onClick={() => setSelectedResumeId(resume.id)}
-                      className={`flex w-full items-center justify-between rounded-md border px-4 py-3 text-left transition-colors ${
-                        selectedResumeId === resume.id
-                          ? "border-primary bg-primary/5"
-                          : "hover:bg-accent"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{resume.filename}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(resume.createdAt).toLocaleDateString()}
-                          </p>
+                    <div key={resume.id} className="space-y-0">
+                      <div
+                        className={`flex w-full items-center justify-between rounded-md border px-4 py-3 transition-colors ${
+                          selectedResumeId === resume.id
+                            ? "border-primary bg-primary/5"
+                            : "hover:bg-accent"
+                        } ${pendingDeleteId === resume.id ? "rounded-b-none border-b-0" : ""}`}
+                      >
+                        <button
+                          onClick={() => setSelectedResumeId(resume.id)}
+                          className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                        >
+                          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{resume.filename}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(resume.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {selectedResumeId === resume.id && (
+                            <Badge variant="secondary">Selected</Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`Delete ${resume.filename}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPendingDeleteId(
+                                pendingDeleteId === resume.id ? null : resume.id
+                              );
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      {selectedResumeId === resume.id && (
-                        <Badge variant="secondary" className="shrink-0">Selected</Badge>
+
+                      {/* Inline confirm strip */}
+                      {pendingDeleteId === resume.id && (
+                        <div className="flex items-center justify-between gap-3 rounded-b-md border border-t-0 border-destructive/50 bg-destructive/5 px-4 py-3">
+                          <p className="text-sm text-destructive">
+                            Delete this resume? This can&apos;t be undone.
+                          </p>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              disabled={isDeleting}
+                              onClick={() => handleDeleteResume(resume.id)}
+                            >
+                              {isDeleting ? "Deleting..." : "Delete"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={isDeleting}
+                              onClick={() => setPendingDeleteId(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
                       )}
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
