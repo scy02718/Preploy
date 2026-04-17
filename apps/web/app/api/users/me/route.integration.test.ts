@@ -77,6 +77,15 @@ describe("API /api/users/me (integration)", () => {
     expect(data.plan).toBe("free");
   });
 
+  it("GET returns gazeTrackingEnabled field", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(typeof data.gazeTrackingEnabled).toBe("boolean");
+    expect(data.gazeTrackingEnabled).toBe(false);
+  });
+
   // ---- PATCH ----
 
   it("PATCH returns 401 when unauthenticated", async () => {
@@ -144,6 +153,56 @@ describe("API /api/users/me (integration)", () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     const res = await PATCH(makePatchRequest({}));
     expect(res.status).toBe(400);
+  });
+
+  it("PATCH updates gaze_tracking_enabled to true and persists", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(makePatchRequest({ gaze_tracking_enabled: true }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.gazeTrackingEnabled).toBe(true);
+
+    const db = getTestDb();
+    const [row] = await db
+      .select({ gazeTrackingEnabled: users.gazeTrackingEnabled })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.gazeTrackingEnabled).toBe(true);
+
+    // Reset
+    await db
+      .update(users)
+      .set({ gazeTrackingEnabled: false })
+      .where(eq(users.id, TEST_USER.id));
+  });
+
+  it("PATCH updates gaze_tracking_enabled to false and persists", async () => {
+    const db = getTestDb();
+    // Set to true first
+    await db
+      .update(users)
+      .set({ gazeTrackingEnabled: true })
+      .where(eq(users.id, TEST_USER.id));
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(makePatchRequest({ gaze_tracking_enabled: false }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.gazeTrackingEnabled).toBe(false);
+
+    const [row] = await db
+      .select({ gazeTrackingEnabled: users.gazeTrackingEnabled })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.gazeTrackingEnabled).toBe(false);
+  });
+
+  it("PATCH rejects non-boolean gaze_tracking_enabled", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(makePatchRequest({ gaze_tracking_enabled: "yes" }));
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/boolean/i);
   });
 
   // ---- DELETE + anti-abuse carry-forward ----

@@ -17,10 +17,12 @@ import {
   starStoryAnalyses,
   starStories,
   openaiUsage,
+  gazeSamples,
 } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import { createRequestLogger } from "@/lib/logger";
 import { getCurrentPeriodUsage, recordDeletedUsage } from "@/lib/usage";
+import { patchUserMeSchema } from "@/lib/validations";
 
 // GET /api/users/me — get current user profile
 export async function GET() {
@@ -38,6 +40,7 @@ export async function GET() {
       plan: users.plan,
       stripeCustomerId: users.stripeCustomerId,
       disabledAt: users.disabledAt,
+      gazeTrackingEnabled: users.gazeTrackingEnabled,
       createdAt: users.createdAt,
     })
     .from(users)
@@ -64,29 +67,17 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const updates: Record<string, unknown> = {};
-
-  // Name update
-  if (typeof body.name === "string") {
-    const name = body.name.trim();
-    if (name.length === 0 || name.length > 200) {
-      return NextResponse.json(
-        { error: "Name must be between 1 and 200 characters" },
-        { status: 400 }
-      );
-    }
-    updates.name = name;
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Image URL update
-  if (typeof body.image === "string") {
-    updates.image = body.image.trim() || null;
-  }
-
-  // `plan` is intentionally not in the allowlist above. Reject any
-  // attempt to send it so a confused client doesn't get a silent 200.
-  if ("plan" in body) {
+  // `plan` is intentionally not in the allowlist. Reject any attempt to
+  // send it so a confused client doesn't get a silent 200. Check the raw
+  // body BEFORE Zod parsing (which strips unknown keys).
+  if (rawBody && typeof rawBody === "object" && "plan" in rawBody) {
     return NextResponse.json(
       {
         error:
@@ -94,6 +85,29 @@ export async function PATCH(request: NextRequest) {
       },
       { status: 403 }
     );
+  }
+
+  const parsed = patchUserMeSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
+      { status: 400 }
+    );
+  }
+
+  const body = parsed.data;
+  const updates: Record<string, unknown> = {};
+
+  if (body.name !== undefined) {
+    updates.name = body.name;
+  }
+
+  if (body.image !== undefined) {
+    updates.image = body.image || null;
+  }
+
+  if (body.gaze_tracking_enabled !== undefined) {
+    updates.gazeTrackingEnabled = body.gaze_tracking_enabled;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -114,6 +128,7 @@ export async function PATCH(request: NextRequest) {
       image: users.image,
       plan: users.plan,
       disabledAt: users.disabledAt,
+      gazeTrackingEnabled: users.gazeTrackingEnabled,
     });
 
   return NextResponse.json(updated);
@@ -213,6 +228,7 @@ export async function DELETE(request: NextRequest) {
         await tx.delete(sessionFeedback).where(eq(sessionFeedback.sessionId, id));
         await tx.delete(transcripts).where(eq(transcripts.sessionId, id));
         await tx.delete(codeSnapshots).where(eq(codeSnapshots.sessionId, id));
+        await tx.delete(gazeSamples).where(eq(gazeSamples.sessionId, id));
       }
 
       await tx.delete(starStories).where(eq(starStories.userId, userId));

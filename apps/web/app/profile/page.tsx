@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { signOut } from "next-auth/react";
 import { PLANS, PLAN_DEFINITIONS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
@@ -19,6 +20,7 @@ interface UserProfile {
   plan: PlanId;
   stripeCustomerId: string | null;
   disabledAt: string | null;
+  gazeTrackingEnabled: boolean;
   createdAt: string;
 }
 
@@ -33,6 +35,7 @@ export default function ProfilePage() {
   const [isSavingName, setIsSavingName] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBillingLoading, setIsBillingLoading] = useState(false);
+  const [isTogglingGaze, setIsTogglingGaze] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -54,6 +57,36 @@ export default function ProfilePage() {
     }
     fetchProfile();
   }, []);
+
+  const handleToggleGaze = async (enabled: boolean) => {
+    setIsTogglingGaze(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gaze_tracking_enabled: enabled }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile((p) =>
+          p ? { ...p, gazeTrackingEnabled: data.gazeTrackingEnabled } : p
+        );
+        showMessage(
+          "success",
+          enabled
+            ? "Gaze & presence analysis enabled"
+            : "Gaze & presence analysis disabled"
+        );
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showMessage("error", err.error || "Failed to update setting");
+      }
+    } catch {
+      showMessage("error", "Failed to update setting");
+    } finally {
+      setIsTogglingGaze(false);
+    }
+  };
 
   const showMessage = useCallback((type: "success" | "error", text: string) => {
     setMessage({ type, text });
@@ -166,7 +199,7 @@ export default function ProfilePage() {
         <div className="h-8 w-32 animate-pulse rounded bg-muted" />
         <div className="h-4 w-72 animate-pulse rounded bg-muted" />
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Left column — Profile Information */}
+          {/* Left column — Profile Information + Gaze & Presence */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -179,6 +212,16 @@ export default function ProfilePage() {
                 <div className="h-10 w-full animate-pulse rounded bg-muted" />
                 <div className="h-4 w-28 animate-pulse rounded bg-muted" />
                 <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <div className="h-5 w-48 animate-pulse rounded bg-muted" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-12 animate-pulse rounded bg-muted" />
               </CardContent>
             </Card>
           </div>
@@ -258,7 +301,7 @@ export default function ProfilePage() {
       )}
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Left column — Profile Info */}
+        {/* Left column — Profile Info + Gaze & Presence */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -302,6 +345,38 @@ export default function ProfilePage() {
                     day: "numeric",
                   })}
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Gaze &amp; Presence Analysis</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Analyze your gaze and head pose during behavioral practice
+                sessions to get insights on presence and eye contact. All
+                processing happens on your device — no video leaves your
+                browser.{" "}
+                <a
+                  href="/privacy#gaze-presence-analysis"
+                  className="underline hover:text-foreground"
+                >
+                  Privacy details
+                </a>
+              </p>
+              <div className="flex items-center gap-3">
+                <Switch
+                  id="gaze-tracking-toggle"
+                  checked={profile.gazeTrackingEnabled}
+                  onCheckedChange={handleToggleGaze}
+                  disabled={isTogglingGaze}
+                  data-testid="gaze-tracking-switch"
+                />
+                <Label htmlFor="gaze-tracking-toggle" className="cursor-pointer">
+                  {profile.gazeTrackingEnabled ? "Enabled" : "Disabled"}
+                </Label>
               </div>
             </CardContent>
           </Card>

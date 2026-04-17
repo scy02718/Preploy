@@ -8,6 +8,7 @@ import {
   jsonb,
   integer,
   real,
+  boolean,
   primaryKey,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -56,6 +57,7 @@ export const users = pgTable("users", {
   planPeriodEnd: timestamp("plan_period_end", { withTimezone: true }),
   pastDueAt: timestamp("past_due_at", { withTimezone: true }),
   disabledAt: timestamp("disabled_at", { withTimezone: true }),
+  gazeTrackingEnabled: boolean("gaze_tracking_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -292,6 +294,17 @@ export const deletedUsage = pgTable(
   ]
 );
 
+export const gazeSamples = pgTable("gaze_samples", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sessionId: uuid("session_id")
+    .notNull()
+    .references(() => interviewSessions.id, { onDelete: "cascade" }),
+  samples: jsonb("samples").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // ---- Relations ----
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -329,6 +342,7 @@ export const interviewSessionsRelations = relations(
       references: [sessionFeedback.sessionId],
     }),
     codeSnapshots: many(codeSnapshots),
+    gazeSamples: many(gazeSamples),
     sourceStarStory: one(starStories, {
       fields: [interviewSessions.sourceStarStoryId],
       references: [starStories.id],
@@ -464,5 +478,12 @@ export const openaiUsageRelations = relations(openaiUsage, ({ one }) => ({
   user: one(users, {
     fields: [openaiUsage.userId],
     references: [users.id],
+  }),
+}));
+
+export const gazeSamplesRelations = relations(gazeSamples, ({ one }) => ({
+  session: one(interviewSessions, {
+    fields: [gazeSamples.sessionId],
+    references: [interviewSessions.id],
   }),
 }));

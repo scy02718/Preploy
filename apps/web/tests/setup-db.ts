@@ -26,6 +26,7 @@ export async function cleanupTestDb() {
   await db.delete(schema.sessionFeedback);
   await db.delete(schema.transcripts);
   await db.delete(schema.codeSnapshots);
+  await db.delete(schema.gazeSamples);
   await db.delete(schema.interviewSessions);
   await db.delete(schema.starStories);
   await db.delete(schema.interviewUsage);

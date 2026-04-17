@@ -44,3 +44,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# MediaPipe: large binary assets built from node_modules + downloaded model.
+# Run scripts/setup-mediapipe.sh after npm install.
+/public/mediapipe/wasm/
+/public/mediapipe/face_landmarker.task

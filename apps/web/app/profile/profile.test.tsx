@@ -14,6 +14,7 @@ const baseProfile: {
   plan: "free" | "pro" | "max";
   stripeCustomerId: string | null;
   disabledAt: null;
+  gazeTrackingEnabled: boolean;
   createdAt: string;
 } = {
   id: "user-1",
@@ -23,6 +24,7 @@ const baseProfile: {
   plan: "free",
   stripeCustomerId: null,
   disabledAt: null,
+  gazeTrackingEnabled: false,
   createdAt: "2026-01-01T00:00:00Z",
 };
 
@@ -186,6 +188,46 @@ describe("ProfilePage", () => {
       expect(assignSpy).toHaveBeenCalledWith(
         "https://checkout.stripe.com/test"
       );
+    });
+  });
+
+  it("renders the Gaze & Presence Analysis card", async () => {
+    render(<ProfilePage />);
+    await vi.waitFor(() => {
+      expect(
+        screen.getAllByText(/Gaze.*Presence Analysis/i).length
+      ).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("toggling gaze switch calls PATCH /api/users/me with gaze_tracking_enabled", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    const patchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...baseProfile, gazeTrackingEnabled: true }),
+    });
+    global.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (typeof url === "string" && url.includes("/api/templates")) {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (typeof url === "string" && url.includes("/api/users/me")) {
+        if (init?.method === "PATCH") return patchMock(url, init);
+        return Promise.resolve({ ok: true, json: async () => baseProfile });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    }) as unknown as typeof fetch;
+
+    render(<ProfilePage />);
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("gaze-tracking-switch")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("gaze-tracking-switch"));
+
+    await vi.waitFor(() => {
+      expect(patchMock).toHaveBeenCalledOnce();
+      const body = JSON.parse(patchMock.mock.calls[0][1].body);
+      expect(typeof body.gaze_tracking_enabled).toBe("boolean");
     });
   });
 
