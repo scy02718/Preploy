@@ -176,6 +176,10 @@ export const sessionFeedback = pgTable("session_feedback", {
   codeQualityScore: real("code_quality_score"),
   explanationQualityScore: real("explanation_quality_score"),
   timelineAnalysis: jsonb("timeline_analysis"),
+  gazeConsistencyScore: real("gaze_consistency_score"),
+  gazeDistribution: jsonb("gaze_distribution"),
+  gazeCoverage: real("gaze_coverage"),
+  gazeTimeline: jsonb("gaze_timeline"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

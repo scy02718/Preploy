@@ -21,6 +21,7 @@ import {
   transcripts,
   codeSnapshots,
   sessionFeedback,
+  gazeSamples,
 } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
@@ -111,6 +112,7 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const db = getTestDb();
     await db.delete(sessionFeedback);
     await db.delete(codeSnapshots);
+    await db.delete(gazeSamples);
     await db.delete(transcripts);
     await db.delete(interviewSessions);
 
@@ -500,5 +502,92 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
 
     // The retry loop in withOpenAIRetry attempts twice before throwing.
     expect(mockChatCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it("POST for behavioral session with gaze samples persists gaze columns", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    // Seed gaze samples for this session (center-looking samples spanning > 50% of a 10s session)
+    const db = getTestDb();
+    const centerSamples = Array.from({ length: 12 }, (_, i) => ({
+      t: i * 500,
+      gaze_x: 0,
+      gaze_y: 0,
+      head_yaw: 0,
+      head_pitch: 0,
+      confidence: 0.9,
+    }));
+    await db.insert(gazeSamples).values({
+      sessionId: behavioralSessionId,
+      samples: centerSamples,
+    });
+
+    // Update session duration so coverage calculation works
+    await db
+      .update(interviewSessions)
+      .set({ durationSeconds: 10 })
+      .where(eq(interviewSessions.id, behavioralSessionId));
+
+    const res = await POST(
+      makePostRequest(behavioralSessionId),
+      makeParams(behavioralSessionId)
+    );
+    expect(res.status).toBe(201);
+
+    // Verify gaze columns were persisted in the DB
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, behavioralSessionId));
+    expect(row).toBeDefined();
+    expect(row.gazeConsistencyScore).not.toBeNull();
+    expect(row.gazeConsistencyScore).toBe(100); // all center samples → 100
+    expect(row.gazeCoverage).not.toBeNull();
+    expect(row.gazeDistribution).not.toBeNull();
+    expect(row.gazeTimeline).not.toBeNull();
+  });
+
+  it("GET returns gaze fields in response after they are persisted", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    // Seed feedback with gaze columns populated
+    const db = getTestDb();
+    await db.insert(sessionFeedback).values({
+      sessionId: behavioralSessionId,
+      overallScore: 7.5,
+      summary: "Great job",
+      strengths: ["a"],
+      weaknesses: ["b"],
+      answerAnalyses: [],
+      gazeConsistencyScore: 82.5,
+      gazeDistribution: {
+        center_pct: 82.5,
+        up_pct: 5,
+        down_pct: 5,
+        left_pct: 5,
+        right_pct: 2.5,
+        off_screen_pct: 0,
+      },
+      gazeCoverage: 0.88,
+      gazeTimeline: [
+        { bucket_start_s: 0, dominant_zone: "center", center_pct: 90 },
+      ],
+    });
+
+    const res = await GET(
+      makeGetRequest(behavioralSessionId),
+      makeParams(behavioralSessionId)
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.gazeConsistencyScore).toBe(82.5);
+    expect(body.gazeCoverage).toBe(0.88);
+    expect(body.gazeDistribution).not.toBeNull();
+    expect(body.gazeDistribution.center_pct).toBe(82.5);
+    expect(body.gazeTimeline).toHaveLength(1);
   });
 });
