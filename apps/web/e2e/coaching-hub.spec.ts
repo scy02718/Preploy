@@ -58,8 +58,8 @@ test.describe("Coaching Hub @smoke", () => {
     ).toBeVisible();
   });
 
-  // 116-F + 116-H: Clicking Technical tab changes URL and shows LeetCode content
-  test("clicking Technical tab navigates and shows LeetCode and System Design content", async ({
+  // 116-F + 116-H: Clicking Technical tab changes URL and shows LeetCode carousel content
+  test("clicking Technical tab navigates and shows format carousel with LeetCode content", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -68,12 +68,23 @@ test.describe("Coaching Hub @smoke", () => {
     await hubNav(page).getByRole("link", { name: "Technical" }).click();
     await expect(page).toHaveURL(/\/coaching\/technical/);
 
-    // 116-H: Old LeetCode content visible
+    // 116-H: Page heading and carousel are present
+    await expect(
+      page.getByText("What Interviewers Grade For").first()
+    ).toBeVisible();
+
+    // The carousel arrow navigation should be visible
+    await expect(
+      page.getByRole("button", { name: "Next format" })
+    ).toBeVisible();
+
+    // 116-H: LeetCode content is shown on the first (default) carousel slide
     await expect(
       page.getByText("Problem-Solving Framework").first()
     ).toBeVisible();
 
-    // 116-H: Old System Design content also visible on same page
+    // 116-H: Navigating to system_design slide via pill shows System Design Framework
+    await page.getByTestId("carousel-pill-system_design").click();
     await expect(
       page.getByText("System Design Framework").first()
     ).toBeVisible();
