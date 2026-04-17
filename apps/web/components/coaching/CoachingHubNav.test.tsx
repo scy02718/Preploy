@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import React, { useState, useContext, createContext } from "react";
 
 // --- Mock next/navigation ---------------------------------------------------
 const mockPathname = vi.hoisted(() => vi.fn(() => "/coaching/hiring-overview"));
@@ -10,33 +10,44 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-// --- Mock DropdownMenu (Base UI in jsdom has layout limitations) -------------
-const mockDropdownOpen = vi.hoisted(() => ({ value: false }));
+// --- Context for the stateful dropdown mock ---------------------------------
+type DropdownCtxType = { open: boolean; setOpen: (v: boolean) => void };
+const DropdownCtx = createContext<DropdownCtxType>({
+  open: false,
+  setOpen: () => {},
+});
 
+// --- Mock DropdownMenu using React state so open/close actually re-renders --
 vi.mock("@/components/ui/dropdown-menu", () => ({
-  DropdownMenu: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dropdown-root">{children}</div>
-  ),
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <DropdownCtx.Provider value={{ open, setOpen }}>
+        <div data-testid="dropdown-root">{children}</div>
+      </DropdownCtx.Provider>
+    );
+  },
   DropdownMenuTrigger: ({
     children,
-    onClick,
     ...props
-  }: React.HTMLAttributes<HTMLButtonElement>) => (
-    <button
-      data-testid="dropdown-trigger"
-      onClick={(e) => {
-        mockDropdownOpen.value = true;
-        onClick?.(e as React.MouseEvent<HTMLButtonElement>);
-      }}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-  DropdownMenuContent: ({ children }: { children: React.ReactNode }) =>
-    mockDropdownOpen.value ? (
+  }: React.HTMLAttributes<HTMLButtonElement>) => {
+    const { setOpen } = useContext(DropdownCtx);
+    return (
+      <button
+        data-testid="dropdown-trigger"
+        onClick={() => setOpen(true)}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  },
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => {
+    const { open } = useContext(DropdownCtx);
+    return open ? (
       <div data-testid="dropdown-content">{children}</div>
-    ) : null,
+    ) : null;
+  },
   DropdownMenuItem: ({
     children,
     onClick,
@@ -53,9 +64,7 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
 import { CoachingHubNav } from "./CoachingHubNav";
 
 describe("CoachingHubNav", () => {
-  // Before each test, reset the dropdown state
   beforeEach(() => {
-    mockDropdownOpen.value = false;
     vi.clearAllMocks();
   });
 
@@ -63,7 +72,7 @@ describe("CoachingHubNav", () => {
   it("renders all 4 tabs as links with correct href attributes", () => {
     mockPathname.mockReturnValue("/coaching/hiring-overview");
     const { container } = render(<CoachingHubNav />);
-    const links = container.querySelectorAll('a');
+    const links = container.querySelectorAll("a");
     const hrefs = Array.from(links).map((l) => l.getAttribute("href"));
     expect(hrefs).toContain("/coaching/hiring-overview");
     expect(hrefs).toContain("/coaching/behavioral");
@@ -75,7 +84,9 @@ describe("CoachingHubNav", () => {
   it("applies active class when pathname is /coaching/hiring-overview", () => {
     mockPathname.mockReturnValue("/coaching/hiring-overview");
     const { container } = render(<CoachingHubNav />);
-    const hiringLink = container.querySelector('a[href="/coaching/hiring-overview"]');
+    const hiringLink = container.querySelector(
+      'a[href="/coaching/hiring-overview"]'
+    );
     expect(hiringLink?.className).toContain("bg-accent");
     expect(hiringLink?.className).toContain("text-accent-foreground");
   });
@@ -84,11 +95,15 @@ describe("CoachingHubNav", () => {
   it("applies active class when pathname is /coaching/behavioral", () => {
     mockPathname.mockReturnValue("/coaching/behavioral");
     const { container } = render(<CoachingHubNav />);
-    const behavioralLink = container.querySelector('a[href="/coaching/behavioral"]');
+    const behavioralLink = container.querySelector(
+      'a[href="/coaching/behavioral"]'
+    );
     expect(behavioralLink?.className).toContain("bg-accent");
     expect(behavioralLink?.className).toContain("text-accent-foreground");
     // Other tabs should NOT have active class
-    const hiringLink = container.querySelector('a[href="/coaching/hiring-overview"]');
+    const hiringLink = container.querySelector(
+      'a[href="/coaching/hiring-overview"]'
+    );
     expect(hiringLink?.className).not.toContain("bg-accent");
   });
 
@@ -100,9 +115,8 @@ describe("CoachingHubNav", () => {
     expect(trigger.textContent).toContain("Technical");
   });
 
-  // 116-E: Mobile picker opens and lists all 4 destinations
-  it("mobile picker opens to list all 4 destinations when clicked", async () => {
-    const user = userEvent.setup();
+  // 116-E: Mobile picker opens and lists all 4 destinations when clicked
+  it("mobile picker opens to list all 4 destinations when clicked", () => {
     mockPathname.mockReturnValue("/coaching/behavioral");
     render(<CoachingHubNav />);
 
@@ -111,7 +125,7 @@ describe("CoachingHubNav", () => {
 
     // Click trigger
     const trigger = screen.getByTestId("dropdown-trigger");
-    await user.click(trigger);
+    fireEvent.click(trigger);
 
     // After click: content shows all 4 items
     expect(screen.getByTestId("dropdown-content")).toBeInTheDocument();
@@ -124,11 +138,13 @@ describe("CoachingHubNav", () => {
     expect(itemTexts).toContain("Communication");
   });
 
-  // Active class applies correctly even when pathname includes trailing info
+  // Active class applies correctly even when pathname has a deeper path
   it("active class applies correctly on /coaching/behavioral/extra-path", () => {
     mockPathname.mockReturnValue("/coaching/behavioral/extra-path");
     const { container } = render(<CoachingHubNav />);
-    const behavioralLink = container.querySelector('a[href="/coaching/behavioral"]');
+    const behavioralLink = container.querySelector(
+      'a[href="/coaching/behavioral"]'
+    );
     expect(behavioralLink?.className).toContain("bg-accent");
   });
 });
