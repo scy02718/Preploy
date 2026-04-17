@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getScoreColor } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { BadgeGrid } from "@/components/dashboard/BadgeGrid";
 import { ScoreTrendChart, ScoreTrendPoint } from "@/components/dashboard/ScoreTrendChart";
 import { WeakAreas, WeakArea } from "@/components/dashboard/WeakAreas";
 import { MonthlyUsageMeter } from "@/components/dashboard/MonthlyUsageMeter";
+import { DashboardStatTiles } from "@/components/dashboard/DashboardStatTiles";
 
 const ONBOARDING_DISMISSED_KEY = "preploy_onboarding_dismissed";
 
@@ -85,13 +86,6 @@ export default function DashboardPage() {
   const [totalSessions, setTotalSessions] = useState(0);
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [thisWeek, setThisWeek] = useState(0);
-  const [quota, setQuota] = useState<{
-    plan: string;
-    planName: string;
-    used: number;
-    limit: number;
-    remaining: number;
-  } | null>(null);
   const [userStats, setUserStats] = useState<{
     currentStreak: number;
     longestStreak: number;
@@ -107,19 +101,15 @@ export default function DashboardPage() {
     };
   } | null>(null);
 
-  // Fetch stats + quota once on mount
+  // Fetch stats once on mount (quota tile is now owned by DashboardStatTiles)
   useEffect(() => {
     async function fetchStats() {
       try {
-        // Fetch quota + user stats + progress in parallel
-        const [quotaRes, statsRes, progressRes] = await Promise.all([
-          fetch("/api/sessions/quota"),
+        // Fetch user stats + progress in parallel
+        const [statsRes, progressRes] = await Promise.all([
           fetch("/api/users/stats"),
           fetch("/api/users/progress"),
         ]);
-        if (quotaRes.ok) {
-          setQuota(await quotaRes.json());
-        }
         if (statsRes.ok) {
           setUserStats(await statsRes.json());
         }
@@ -210,7 +200,7 @@ export default function DashboardPage() {
         View your interview history and track your progress.
       </p>
 
-      {/* Free-tier monthly usage meter (renders nothing for Pro users). */}
+      {/* Free-tier monthly usage meter (renders nothing for truly unlimited plans). */}
       <div className="mb-6">
         <MonthlyUsageMeter />
       </div>
@@ -254,53 +244,14 @@ export default function DashboardPage() {
             </button>
           </CardContent>
         </Card>
-      ) : isStatsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="space-y-2">
-                <div className="h-9 w-16 animate-pulse rounded bg-muted" />
-                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl">{totalSessions}</CardTitle>
-              <CardDescription>Total Sessions</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl">
-                {avgScore !== null ? avgScore.toFixed(1) : "--"}
-              </CardTitle>
-              <CardDescription>Average Score</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl">{thisWeek}</CardTitle>
-              <CardDescription>This Week</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl">
-                {quota ? `${quota.remaining}/${quota.limit}` : "--"}
-              </CardTitle>
-              <CardDescription>
-                Sessions Today
-                {quota && (
-                  <span className="ml-1 text-xs">({quota.planName} plan)</span>
-                )}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
+        /* Stat tiles: skeleton while loading, real data after */
+        <DashboardStatTiles
+          totalSessions={totalSessions}
+          avgScore={avgScore}
+          thisWeek={thisWeek}
+          isLoading={isStatsLoading}
+        />
       )}
 
       {/* Streak + Badges row */}

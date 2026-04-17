@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { FeedbackDialog } from "@/components/shared/FeedbackButton";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -69,6 +70,7 @@ function formatRelativeDate(dateString: string): string {
 export function Sidebar() {
   const pathname = usePathname();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
     async function fetchSessions() {
@@ -114,6 +116,16 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Feedback trigger — opens the dialog, not navigation */}
+        <button
+          onClick={() => setFeedbackOpen(true)}
+          data-testid="sidebar-feedback-button"
+          className="flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-accent/50 w-full text-left"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Feedback
+        </button>
       </nav>
 
       <Separator className="my-4" />
@@ -150,6 +162,12 @@ export function Sidebar() {
           ))
         )}
       </div>
+
+      {/* Controlled feedback dialog — rendered here so it's scoped to the Sidebar */}
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </aside>
   );
 }

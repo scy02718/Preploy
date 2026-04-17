@@ -157,10 +157,10 @@ export default function PricingPage() {
           </Link>{" "}
           or email{" "}
           <a
-            href="mailto:support@preploy.tech"
+            href="mailto:preploy.dev@gmail.com"
             className="underline hover:text-foreground"
           >
-            support@preploy.tech
+            preploy.dev@gmail.com
           </a>
           .
         </p>
