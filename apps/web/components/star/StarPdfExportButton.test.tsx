@@ -127,9 +127,10 @@ describe("StarPdfExportButton", () => {
     const deferred = new Promise<void>((res) => { resolve = res; });
 
     const { pdf } = await import("@react-pdf/renderer");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(pdf).mockReturnValueOnce({
       toBlob: vi.fn().mockReturnValue(deferred.then(() => new Blob(["pdf"]))),
-    });
+    } as any);
 
     render(<StarPdfExportButton story={STORY} analyses={ANALYSES} />);
 

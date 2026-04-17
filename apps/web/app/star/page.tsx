@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { getScoreColor } from "@/lib/utils";
+import { StarPdfExportButton } from "@/components/star/StarPdfExportButton";
+import { slugify } from "@/lib/slugify";
 import {
   Star,
   Plus,
@@ -20,6 +22,7 @@ import {
   PlayCircle,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
 
 interface StarStory {
@@ -179,6 +182,8 @@ export default function StarPrepPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
+  const [exportAllProgress, setExportAllProgress] = useState<{ done: number; total: number } | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [questionInput, setQuestionInput] = useState("");
 
@@ -345,6 +350,66 @@ export default function StarPrepPage() {
     );
   }
 
+  async function handleExportAll() {
+    if (exportingAll || stories.length === 0) return;
+    setExportingAll(true);
+    setExportAllProgress({ done: 0, total: stories.length });
+    try {
+      // Fetch each story's analyses in chunks of 5 for bounded concurrency
+      const CHUNK = 5;
+      const bundle: Array<{ story: StarStory; analyses: StarAnalysis[] }> = [];
+      for (let i = 0; i < stories.length; i += CHUNK) {
+        const chunk = stories.slice(i, i + CHUNK);
+        const results = await Promise.all(
+          chunk.map(async (s) => {
+            try {
+              const res = await fetch(`/api/star/${s.id}`);
+              if (res.ok) {
+                const data: StoryDetail = await res.json();
+                return { story: s, analyses: data.analyses };
+              }
+            } catch {
+              // Fall back to story-only if detail fetch fails
+            }
+            return { story: s, analyses: [] };
+          })
+        );
+        bundle.push(...results);
+        setExportAllProgress({ done: Math.min(i + CHUNK, stories.length), total: stories.length });
+      }
+
+      const { pdf } = await import("@react-pdf/renderer");
+      const { StarStoriesBundlePDF } = await import("@/components/star/StarStoryPDF");
+
+      const date = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
+      const blob = await pdf(
+        <StarStoriesBundlePDF stories={bundle} date={date} />
+      ).toBlob();
+
+      const today = new Date().toISOString().slice(0, 10);
+      const filename = `star-stories-${slugify(today)}.pdf`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export all failed:", err);
+    } finally {
+      setExportingAll(false);
+      setExportAllProgress(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
@@ -357,10 +422,34 @@ export default function StarPrepPage() {
             Craft and refine behavioral interview stories with AI feedback before your mock session.
           </p>
         </div>
-        <Button onClick={openCreate} disabled={showForm && !editing}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Story
-        </Button>
+        <div className="flex gap-2">
+          {stories.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleExportAll}
+              disabled={exportingAll}
+              aria-label="Export all stories as PDF"
+            >
+              {exportingAll ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {exportAllProgress
+                    ? `Exporting ${exportAllProgress.done} of ${exportAllProgress.total}...`
+                    : "Exporting..."}
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export all
+                </>
+              )}
+            </Button>
+          )}
+          <Button onClick={openCreate} disabled={showForm && !editing}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Story
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -577,6 +666,10 @@ export default function StarPrepPage() {
                       </p>
                     </div>
                     <div className="flex gap-2 shrink-0">
+                      <StarPdfExportButton
+                        story={selectedDetail.story}
+                        analyses={selectedDetail.analyses}
+                      />
                       <Button
                         size="sm"
                         variant="outline"
