@@ -6,8 +6,16 @@ import {
   transcripts,
   codeSnapshots,
   sessionFeedback,
+  gazeSamples,
 } from "@/lib/schema";
 import { eq, and, asc } from "drizzle-orm";
+import type { GazeSample } from "@/lib/gaze-types";
+import {
+  computeGazeConsistencyScore,
+  computeGazeDistribution,
+  computeCoverage,
+  bucketSamplesForTimeline,
+} from "@/lib/gaze-metrics";
 import { setSentryUser, setSentryContext } from "@/lib/sentry-utils";
 import { isTechnicalFeedbackComplete } from "@/lib/feedback-utils";
 import { createRequestLogger } from "@/lib/logger";
@@ -164,6 +172,42 @@ export async function POST(
     );
   }
 
+  // Compute gaze metrics if samples exist for this session
+  const gazeRows = await db
+    .select()
+    .from(gazeSamples)
+    .where(eq(gazeSamples.sessionId, id));
+
+  let gazeConsistencyScore: number | null = null;
+  let gazeDistribution = null;
+  let gazeCoverage: number | null = null;
+  let gazeTimeline = null;
+
+  if (gazeRows.length > 0) {
+    // Flatten all sample arrays from all gaze rows
+    const allSamples: GazeSample[] = gazeRows.flatMap(
+      (row) => (row.samples as GazeSample[]) ?? []
+    );
+
+    if (allSamples.length > 0) {
+      // Estimate session duration from durationSeconds or from sample span
+      const sessionDurationMs =
+        found.durationSeconds != null && found.durationSeconds > 0
+          ? found.durationSeconds * 1000
+          : allSamples[allSamples.length - 1].t + 1000;
+
+      gazeCoverage = computeCoverage(allSamples, sessionDurationMs);
+      gazeConsistencyScore = computeGazeConsistencyScore(allSamples, sessionDurationMs);
+      gazeDistribution = computeGazeDistribution(allSamples);
+      gazeTimeline = bucketSamplesForTimeline(allSamples);
+
+      log.info(
+        { sessionId: id, sampleCount: allSamples.length, gazeCoverage, gazeConsistencyScore },
+        "gaze metrics computed"
+      );
+    }
+  }
+
   // Save to database
   const [saved] = await db
     .insert(sessionFeedback)
@@ -179,6 +223,10 @@ export async function POST(
         explanationQualityScore: (feedbackData as TechnicalFeedbackResponse).explanation_quality_score,
         timelineAnalysis: (feedbackData as TechnicalFeedbackResponse).timeline_analysis,
       }),
+      gazeConsistencyScore,
+      gazeDistribution,
+      gazeCoverage,
+      gazeTimeline,
     })
     .returning();
 

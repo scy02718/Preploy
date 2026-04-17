@@ -9,6 +9,8 @@ import { StrengthsWeaknesses } from "./StrengthsWeaknesses";
 import { AnswerBreakdown } from "./AnswerBreakdown";
 import { CodeQualityCard } from "./CodeQualityCard";
 import { TimelineView, type TimelineEvent } from "./TimelineView";
+import { GazePresenceCard } from "./GazePresenceCard";
+import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
 
 interface AnswerAnalysis {
   question: string;
@@ -27,6 +29,10 @@ interface FeedbackData {
   codeQualityScore?: number;
   explanationQualityScore?: number;
   timelineAnalysis?: TimelineEvent[];
+  gazeConsistencyScore?: number | null;
+  gazeDistribution?: GazeDistribution | null;
+  gazeCoverage?: number | null;
+  gazeTimeline?: GazeTimelineBucket[] | null;
 }
 
 interface FeedbackDashboardProps {
@@ -124,6 +130,17 @@ export function FeedbackDashboard({
         strengths={feedback.strengths}
         weaknesses={feedback.weaknesses}
       />
+
+      {/* Gaze presence card — behavioral only, when gaze tracking was active
+          (gazeCoverage !== null is the reliable signal that the pipeline ran) */}
+      {!isTechnical && feedback.gazeCoverage != null && (
+        <GazePresenceCard
+          gazeConsistencyScore={feedback.gazeConsistencyScore ?? null}
+          gazeDistribution={feedback.gazeDistribution ?? null}
+          gazeCoverage={feedback.gazeCoverage}
+          gazeTimeline={feedback.gazeTimeline ?? null}
+        />
+      )}
 
       {/* Breakdown + Timeline side-by-side for technical, full-width for behavioral */}
       {isTechnical &&

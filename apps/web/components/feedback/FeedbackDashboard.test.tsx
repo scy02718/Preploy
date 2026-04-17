@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FeedbackDashboard } from "./FeedbackDashboard";
+import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
 
 const BEHAVIORAL_FEEDBACK = {
   overallScore: 7.5,
@@ -120,5 +121,45 @@ describe("FeedbackDashboard", () => {
       <FeedbackDashboard feedback={BEHAVIORAL_FEEDBACK} sessionId="test-id" />
     );
     expect(screen.getAllByText("Export PDF").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("behavioral session with gaze data renders GazePresenceCard", () => {
+    const gazeDistribution: GazeDistribution = {
+      center_pct: 75,
+      up_pct: 5,
+      down_pct: 10,
+      left_pct: 5,
+      right_pct: 5,
+      off_screen_pct: 0,
+    };
+    const gazeTimeline: GazeTimelineBucket[] = [
+      { bucket_start_s: 0, dominant_zone: "center", center_pct: 80 },
+    ];
+    render(
+      <FeedbackDashboard
+        feedback={{
+          ...BEHAVIORAL_FEEDBACK,
+          gazeConsistencyScore: 78,
+          gazeDistribution,
+          gazeCoverage: 0.9,
+          gazeTimeline,
+        }}
+        sessionId="test-id"
+        sessionType="behavioral"
+      />
+    );
+    // GazePresenceCard renders "Eye Contact" as the CardTitle
+    expect(screen.getAllByText("Eye Contact").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("behavioral session without gaze data omits GazePresenceCard", () => {
+    render(
+      <FeedbackDashboard
+        feedback={BEHAVIORAL_FEEDBACK}
+        sessionId="test-id"
+        sessionType="behavioral"
+      />
+    );
+    expect(screen.queryByText("Eye Contact")).toBeNull();
   });
 });

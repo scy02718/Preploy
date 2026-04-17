@@ -85,6 +85,13 @@
       "when": 1776428463810,
       "tag": "0011_gorgeous_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776431359834,
+      "tag": "0012_illegal_rocket_raccoon",
+      "breakpoints": true
     }
   ]
 }

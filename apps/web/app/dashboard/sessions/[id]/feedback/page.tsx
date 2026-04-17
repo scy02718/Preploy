@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FeedbackDashboard } from "@/components/feedback/FeedbackDashboard";
 import type { TimelineEvent } from "@/components/feedback/TimelineView";
+import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
 
 interface FeedbackData {
   overallScore: number;
@@ -20,6 +21,10 @@ interface FeedbackData {
   codeQualityScore?: number;
   explanationQualityScore?: number;
   timelineAnalysis?: TimelineEvent[];
+  gazeConsistencyScore?: number | null;
+  gazeDistribution?: GazeDistribution | null;
+  gazeCoverage?: number | null;
+  gazeTimeline?: GazeTimelineBucket[] | null;
 }
 
 const MAX_POLL_ATTEMPTS = 40; // 40 × 3s = 2 minutes max
@@ -99,6 +104,10 @@ export default function FeedbackPage() {
             undefined,
           timelineAnalysis:
             data.timelineAnalysis ?? data.timeline_analysis ?? undefined,
+          gazeConsistencyScore: data.gazeConsistencyScore ?? undefined,
+          gazeDistribution: data.gazeDistribution ?? undefined,
+          gazeCoverage: data.gazeCoverage ?? undefined,
+          gazeTimeline: data.gazeTimeline ?? undefined,
         });
         setIsLoading(false);
         // Done — no more polling
@@ -154,6 +163,19 @@ export default function FeedbackPage() {
             <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
             <div className="h-4 w-3/5 animate-pulse rounded bg-muted" />
           </div>
+        </div>
+
+        {/* Gaze card skeleton */}
+        <div className="rounded-lg border p-6 space-y-4">
+          <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 animate-pulse rounded-full bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+          <div className="h-6 w-full animate-pulse rounded bg-muted" />
         </div>
 
         {/* Breakdown skeleton */}
