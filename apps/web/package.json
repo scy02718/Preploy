@@ -17,7 +17,8 @@
     "db:push": "drizzle-kit push",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test --grep @smoke",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "postinstall": "bash scripts/setup-mediapipe.sh"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
