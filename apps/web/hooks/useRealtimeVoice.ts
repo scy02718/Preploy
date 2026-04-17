@@ -89,7 +89,7 @@ export function useRealtimeVoice(
         item: {
           type: "message",
           role: "system",
-          content: [{ type: "text", text }],
+          content: [{ type: "input_text", text }],
         },
       })
     );

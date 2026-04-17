@@ -70,7 +70,7 @@ export function buildBehavioralSystemPrompt(
   // Resume context
   if (config.resume_text?.trim()) {
     sections.push(
-      `The candidate's resume is provided below. Reference their specific experience, projects, and achievements when asking follow-up questions. This makes the interview feel more realistic and personalized.\n\n--- RESUME ---\n${config.resume_text.trim().slice(0, 3000)}\n--- END RESUME ---`
+      `The candidate's resume is provided below for context ONLY. Use it to ask targeted follow-up questions about their experience. CRITICAL: You are the interviewer — NEVER answer questions on the candidate's behalf. NEVER speak as the candidate. NEVER paraphrase or recite the candidate's experience as if you lived it. Your ONLY role is to ask questions and probe deeper. If the candidate gives a vague answer, ask them to elaborate — do NOT fill in details from the resume yourself.\n\n--- RESUME (interviewer reference only) ---\n${config.resume_text.trim().slice(0, 3000)}\n--- END RESUME ---`
     );
   }
 
