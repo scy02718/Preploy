@@ -76,6 +76,13 @@ export function useRealtimeVoice(
   const silencePhaseRef = useRef<"idle" | "nudge_pending" | "handoff_pending">(
     "idle"
   );
+  // Deferred arm: when response.done fires while TTS is still playing,
+  // we defer arming until playback finishes so the nudge timer starts
+  // from silence, not from mid-speech.
+  const pendingWatchdogArmRef = useRef(false);
+  // Stable ref so drainQueue can call armSilenceWatchdog without a
+  // dependency cycle (drainQueue → armSilenceWatchdog → clearSilenceWatchdog)
+  const armSilenceWatchdogRef = useRef<() => void>(() => {});
 
   // ── Silence watchdog helpers ─────────────────────────────────────────────
 
@@ -109,6 +116,7 @@ export function useRealtimeVoice(
       handoffTimerRef.current = null;
     }
     silencePhaseRef.current = "idle";
+    pendingWatchdogArmRef.current = false;
   }, []);
 
   /** Arm the watchdog from "now": nudge at SILENCE_NUDGE_MS, hand-off at SILENCE_HANDOFF_MS. */
@@ -130,6 +138,7 @@ export function useRealtimeVoice(
       clearSilenceWatchdog();
     }, SILENCE_HANDOFF_MS);
   }, [clearSilenceWatchdog, sendSilenceNudge]);
+  armSilenceWatchdogRef.current = armSilenceWatchdog;
 
   // ── End silence watchdog helpers ─────────────────────────────────────────
 
@@ -193,6 +202,11 @@ export function useRealtimeVoice(
       // Only clear speaking if no new audio has been queued
       if (audioQueueRef.current.length === 0) {
         isSpeakingRef.current = false; setIsSpeaking(false);
+        // If response.done fired while we were still speaking, arm now
+        if (pendingWatchdogArmRef.current) {
+          pendingWatchdogArmRef.current = false;
+          armSilenceWatchdogRef.current();
+        }
       }
     }, remainingMs + 100);
   }, [ensurePlaybackContext]);
@@ -250,9 +264,15 @@ export function useRealtimeVoice(
               ]);
             }
             currentAssistantTextRef.current = "";
-            // Arm watchdog: if the user doesn't speak soon we'll nudge them
+            // Arm watchdog once the user is silent. If TTS is still playing,
+            // defer until playback finishes so the timer starts from actual
+            // silence — not from mid-speech.
             if (!isListening) {
-              armSilenceWatchdog();
+              if (isSpeakingRef.current) {
+                pendingWatchdogArmRef.current = true;
+              } else {
+                armSilenceWatchdog();
+              }
             }
             break;
 
