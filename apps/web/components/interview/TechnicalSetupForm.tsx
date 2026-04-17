@@ -72,49 +72,36 @@ export function TechnicalSetupForm() {
 
   const techConfig = config as TechnicalSessionConfig;
 
-  // Local UI state for Other focus-area handling
-  const [otherChecked, setOtherChecked] = useState(false);
-  const [otherText, setOtherText] = useState("");
+  // Derive Other focus-area state from the store directly (no local useState
+  // needed — avoids violating react-hooks/set-state-in-effect).
+  const otherChecked = (techConfig.focus_areas ?? []).includes("other");
+  const otherText = (() => {
+    const instructions = techConfig.additional_instructions ?? "";
+    const segment = instructions
+      .split("\n\n")
+      .find((seg) => seg.startsWith(OTHER_PREFIX));
+    return segment ? segment.slice(OTHER_PREFIX.length) : "";
+  })();
 
   useEffect(() => {
     setType("technical");
   }, [setType]);
 
-  // Hydration: parse otherChecked + otherText from store when config changes
-  // (template load, prefill reload, etc.)
-  useEffect(() => {
-    const focusAreas = (config as TechnicalSessionConfig).focus_areas ?? [];
-    const instructions = (config as TechnicalSessionConfig).additional_instructions ?? "";
-    const checked = focusAreas.includes("other");
-    setOtherChecked(checked);
-    if (checked) {
-      const segment = instructions
-        .split("\n\n")
-        .find((seg) => seg.startsWith(OTHER_PREFIX));
-      setOtherText(segment ? segment.slice(OTHER_PREFIX.length) : "");
-    } else {
-      setOtherText("");
-    }
-  }, [config]);
-
   const toggleFocusArea = (area: string) => {
     if (area === "other") {
       const current = techConfig.focus_areas ?? [];
       if (current.includes("other")) {
-        // Uncheck: remove sentinel, clear text, strip segment from instructions
+        // Uncheck: remove sentinel, strip segment from instructions
         const newAreas = current.filter((a) => a !== "other");
         const baseInstructions = stripOtherSegment(
           techConfig.additional_instructions ?? ""
         );
-        setOtherChecked(false);
-        setOtherText("");
         setConfig({
           focus_areas: newAreas,
           additional_instructions: baseInstructions || undefined,
         });
       } else {
-        // Check: add sentinel, do NOT inject segment yet (text is still empty)
-        setOtherChecked(true);
+        // Check: add sentinel only (text is still empty — no segment injected yet)
         setConfig({ focus_areas: [...current, "other"] });
       }
       return;
@@ -128,7 +115,6 @@ export function TechnicalSetupForm() {
   };
 
   const handleOtherTextChange = (text: string) => {
-    setOtherText(text);
     const baseInstructions = stripOtherSegment(
       techConfig.additional_instructions ?? ""
     );
