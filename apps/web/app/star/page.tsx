@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { getScoreColor } from "@/lib/utils";
 import { StarPdfExportButton } from "@/components/star/StarPdfExportButton";
 import { slugify } from "@/lib/slugify";
+import { usePrefillStore } from "@/stores/prefillStore";
 import {
   Star,
   Plus,
@@ -174,6 +175,7 @@ function AnalysisCard({ analysis }: { analysis: StarAnalysis }) {
 
 export default function StarPrepPage() {
   const router = useRouter();
+  const setBehavioralPrefill = usePrefillStore((s) => s.setBehavioralPrefill);
   const [stories, setStories] = useState<StarStory[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<StoryDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -341,13 +343,17 @@ export default function StarPrepPage() {
   }
 
   function handlePractice(story: StarStory) {
-    const firstQuestion = story.expectedQuestions[0] ?? "";
-    const params = new URLSearchParams();
-    if (firstQuestion) params.set("question", firstQuestion);
-    params.set("source_star_story_id", story.id);
-    router.push(
-      `/interview/behavioral/setup?${params.toString()}`
-    );
+    // Pre-fill the behavioral setup form with this story's expected questions
+    // via prefillStore. The setup form consumes the store in its mount effect
+    // and applies the fields via setConfig. URL query params were used here
+    // before but were never read downstream.
+    const questions = story.expectedQuestions.length
+      ? story.expectedQuestions
+      : [];
+    setBehavioralPrefill({
+      expected_questions: questions,
+    });
+    router.push("/interview/behavioral/setup");
   }
 
   async function handleExportAll() {

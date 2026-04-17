@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FillerWordPicker } from "@/components/coaching/FillerWordPicker";
-import type { FillerWord } from "@/components/coaching/FillerWordPicker";
 
 function Section({
   title,
@@ -33,63 +31,6 @@ function Tip({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-const FILLER_WORDS: FillerWord[] = [
-  {
-    word: "um",
-    before:
-      "\"I, um, worked on a project where we had to, um, redesign the whole system.\"",
-    after:
-      "\"I worked on a project where we had to redesign the whole system.\"",
-    tip:
-      "Replace with a brief pause. A two-second pause feels comfortable to the listener — far more than it feels to you.",
-  },
-  {
-    word: "uh",
-    before:
-      "\"The, uh, approach I took was to, uh, start with the database schema.\"",
-    after:
-      "\"The approach I took was to start with the database schema.\"",
-    tip:
-      "\"Uh\" often signals you haven't finished the thought before speaking. Practice slowing down your sentence starts.",
-  },
-  {
-    word: "like",
-    before:
-      "\"It was like a really complex problem and we had to like rethink everything.\"",
-    after:
-      "\"It was a genuinely complex problem and we had to rethink the entire approach.\"",
-    tip:
-      "\"Like\" as a filler dilutes specificity. Cut it and replace vague words (\"really complex\") with concrete ones.",
-  },
-  {
-    word: "you know",
-    before:
-      "\"We optimised the query, you know, so it would scale better, you know?\"",
-    after:
-      "\"We optimised the query so it would scale to 10x the current load.\"",
-    tip:
-      "\"You know\" often closes gaps where a specific detail belongs. Add the detail instead of the filler.",
-  },
-  {
-    word: "basically",
-    before:
-      "\"I basically rewrote the service and it basically solved the latency issue.\"",
-    after:
-      "\"I rewrote the service, which reduced P99 latency by 40%.\"",
-    tip:
-      "\"Basically\" hedges unnecessarily. You did the work — own it without qualification.",
-  },
-  {
-    word: "right",
-    before:
-      "\"So we need to handle the edge case, right? And we do that by, right, checking the input first.\"",
-    after:
-      "\"We handle the edge case by checking the input before processing.\"",
-    tip:
-      "\"Right?\" as a verbal tic can read as seeking validation. State your reasoning with confidence.",
-  },
-];
 
 export default function CommunicationPage() {
   return (
@@ -186,15 +127,6 @@ export default function CommunicationPage() {
             </p>
           </div>
         </div>
-      </Section>
-
-      {/* New: Filler word picker widget */}
-      <Section title="Filler Word Picker">
-        <p>
-          Select a filler word to see a before/after example and a tip for
-          upgrading your delivery.
-        </p>
-        <FillerWordPicker fillers={FILLER_WORDS} />
       </Section>
 
       {/* New: Written/Async communication */}

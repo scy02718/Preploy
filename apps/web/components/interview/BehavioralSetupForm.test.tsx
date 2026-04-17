@@ -26,12 +26,21 @@ vi.mock("@/stores/interviewStore", () => {
     setConfig: mockSetConfig,
     setType: mockSetType,
     createSession: mockCreateSession,
+    quotaError: null,
+    clearQuotaError: vi.fn(),
   });
   useInterviewStore.getState = () => ({ error: null });
   return { useInterviewStore };
 });
 
-// Mock fetch for question generation and user profile
+vi.mock("@/stores/prefillStore", () => ({
+  usePrefillStore: () => ({
+    behavioralPrefill: null,
+    clearPrefill: vi.fn(),
+  }),
+}));
+
+// Mock fetch for question generation and user profile (gaze preference)
 const mockFetch = vi.fn().mockImplementation((url: string) => {
   if (typeof url === "string" && url.includes("/api/users/me")) {
     return Promise.resolve({ ok: true, json: async () => ({ gazeTrackingEnabled: false }) });

@@ -7,11 +7,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-const { mockSetType, mockSetConfig, mockCreateSession, configOverride } = vi.hoisted(() => ({
+const { mockSetType, mockSetConfig, mockCreateSession, configOverride, prefillOverride } = vi.hoisted(() => ({
   mockSetType: vi.fn(),
   mockSetConfig: vi.fn(),
   mockCreateSession: vi.fn(),
   configOverride: { value: {} as Record<string, unknown> },
+  prefillOverride: { value: null as null | { interview_type?: string; focus_areas?: string[]; additional_instructions?: string; resume_id?: string } },
 }));
 
 vi.mock("@/stores/interviewStore", () => {
@@ -39,10 +40,19 @@ vi.mock("@/stores/interviewStore", () => {
   return { useInterviewStore };
 });
 
+const mockClearPrefill = vi.fn();
+vi.mock("@/stores/prefillStore", () => ({
+  usePrefillStore: () => ({
+    technicalPrefill: prefillOverride.value,
+    clearPrefill: mockClearPrefill,
+  }),
+}));
+
 describe("TechnicalSetupForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     configOverride.value = {};
+    prefillOverride.value = null;
   });
 
   it("renders interview type options", () => {
@@ -179,5 +189,42 @@ describe("TechnicalSetupForm", () => {
     // With "other" checked and no text, submit should be disabled
     const buttons = screen.getAllByRole("button", { name: /start interview/i });
     expect(buttons[0]).toBeDisabled();
+  });
+
+  // Prefill consumption tests
+  it("applies interview_type from technicalPrefill on mount", () => {
+    prefillOverride.value = { interview_type: "system_design" };
+    render(<TechnicalSetupForm />);
+    expect(mockSetConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ interview_type: "system_design", focus_areas: [] })
+    );
+  });
+
+  it("applies focus_areas from technicalPrefill on mount", () => {
+    prefillOverride.value = { focus_areas: ["arrays", "graphs"] };
+    render(<TechnicalSetupForm />);
+    expect(mockSetConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ focus_areas: ["arrays", "graphs"] })
+    );
+  });
+
+  it("applies additional_instructions from technicalPrefill on mount", () => {
+    prefillOverride.value = { additional_instructions: "Focus on DP" };
+    render(<TechnicalSetupForm />);
+    expect(mockSetConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ additional_instructions: "Focus on DP" })
+    );
+  });
+
+  it("calls clearPrefill after applying technicalPrefill", () => {
+    prefillOverride.value = { interview_type: "frontend" };
+    render(<TechnicalSetupForm />);
+    expect(mockClearPrefill).toHaveBeenCalledOnce();
+  });
+
+  it("does not call clearPrefill when technicalPrefill is null", () => {
+    prefillOverride.value = null;
+    render(<TechnicalSetupForm />);
+    expect(mockClearPrefill).not.toHaveBeenCalled();
   });
 });

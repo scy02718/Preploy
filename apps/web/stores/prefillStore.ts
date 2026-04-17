@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { TechnicalInterviewType } from "@interview-assistant/shared";
 
 interface PrefillState {
   /** Pre-fill data for behavioral setup */
@@ -10,6 +11,7 @@ interface PrefillState {
 
   /** Pre-fill data for technical setup */
   technicalPrefill: {
+    interview_type?: TechnicalInterviewType;
     focus_areas?: string[];
     additional_instructions?: string;
     resume_id?: string;
