@@ -99,3 +99,29 @@ export const listStarStoriesQuerySchema = z.object({
     .pipe(z.number().int().min(1).max(100)),
 });
 export type ListStarStoriesQuery = z.infer<typeof listStarStoriesQuerySchema>;
+
+// ---- User profile PATCH schema ----
+
+export const patchUserMeSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  image: z.string().trim().optional(),
+  gaze_tracking_enabled: z.boolean().optional(),
+});
+export type PatchUserMeInput = z.infer<typeof patchUserMeSchema>;
+
+// ---- Gaze tracking schemas ----
+
+export const gazeSampleSchema = z.object({
+  t: z.number().int().nonnegative(),
+  gaze_x: z.number().min(-1).max(1),
+  gaze_y: z.number().min(-1).max(1),
+  head_yaw: z.number().min(-180).max(180),
+  head_pitch: z.number().min(-90).max(90),
+  confidence: z.number().min(0).max(1),
+});
+export type GazeSampleInput = z.infer<typeof gazeSampleSchema>;
+
+export const gazeSamplesBodySchema = z.object({
+  samples: z.array(gazeSampleSchema).min(1).max(3600),
+});
+export type GazeSamplesBody = z.infer<typeof gazeSamplesBodySchema>;

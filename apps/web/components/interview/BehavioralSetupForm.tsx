@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +30,7 @@ export function BehavioralSetupForm() {
   const [questionInput, setQuestionInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gazeTrackingEnabled, setGazeTrackingEnabled] = useState(false);
 
   // Company question generation state
   const [generatedQuestions, setGeneratedQuestions] = useState<CompanyQuestion[]>([]);
@@ -36,6 +38,27 @@ export function BehavioralSetupForm() {
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const { behavioralPrefill, clearPrefill } = usePrefillStore();
+
+  // Fetch user's global gaze tracking preference
+  useEffect(() => {
+    async function fetchGazePref() {
+      try {
+        const res = await fetch("/api/users/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.gazeTrackingEnabled) {
+            setGazeTrackingEnabled(true);
+            // Default per-session to true when global setting is on
+            setConfig({ gaze_enabled: true });
+          }
+        }
+      } catch {
+        // Silent
+      }
+    }
+    fetchGazePref();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setType("behavioral");
@@ -349,6 +372,27 @@ export function BehavioralSetupForm() {
           </Card>
         </div>
       </div>
+
+      {/* Gaze & presence analysis opt-in (shown only when user has it enabled globally) */}
+      {gazeTrackingEnabled && (
+        <div className="flex items-center gap-3 rounded-md border px-4 py-3">
+          <Checkbox
+            id="gaze-session-enabled"
+            checked={behavioralConfig.gaze_enabled ?? true}
+            onCheckedChange={(checked) =>
+              setConfig({ gaze_enabled: checked === true })
+            }
+            data-testid="gaze-session-checkbox"
+          />
+          <Label htmlFor="gaze-session-enabled" className="cursor-pointer">
+            <span className="font-medium">Analyze gaze presence for this session</span>
+            <span className="block text-xs text-muted-foreground">
+              Provides insights to help you project confidence and maintain eye
+              contact. Processed on your device.
+            </span>
+          </Label>
+        </div>
+      )}
 
       {/* Error */}
       {error && (

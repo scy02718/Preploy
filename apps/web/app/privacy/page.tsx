@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="max-w-2xl mx-auto px-4 py-24">
-      <p className="text-sm text-muted-foreground mb-2">Last updated: 2026-04-17</p>
+      <p className="text-sm text-muted-foreground mb-2">Last updated: 2026-04-17 (gaze analysis section added)</p>
       <h1 className="text-3xl font-bold tracking-tight mb-2">Privacy Policy</h1>
       <p className="text-sm text-amber-600 dark:text-amber-400 mb-8 border border-amber-300 dark:border-amber-700 rounded px-3 py-2">
         Draft v1. This policy has not been reviewed by a lawyer. It will be
@@ -54,6 +54,7 @@ export default function PrivacyPage() {
             <li><strong>Usage counters</strong> — how many practice interviews you have run in the current billing period.</li>
             <li><strong>Billing metadata</strong> — Stripe customer and subscription IDs, current plan, subscription dates. We never store full payment card numbers; Stripe handles all card data.</li>
             <li><strong>Achievements</strong> — badges earned through platform usage.</li>
+            <li><strong>Gaze & presence data</strong> — if you opt in to gaze & presence analysis, numerical coordinates (gaze direction, head pose angles, and timestamps) collected during behavioral practice sessions. No video, images, or raw camera data are ever transmitted. This feature is off by default and can be disabled at any time from your profile settings.</li>
             <li><strong>Error reports</strong> — if Sentry is configured, anonymized stack traces and request metadata may be sent when the app encounters an unexpected error.</li>
           </ul>
         </section>
@@ -146,6 +147,49 @@ export default function PrivacyPage() {
             we have collected such information, please contact us and we will
             delete it.
           </p>
+        </section>
+
+        <section id="gaze-presence-analysis">
+          <h2 className="text-xl font-semibold mb-3">Gaze &amp; Presence Analysis</h2>
+          <p className="mb-3">
+            Preploy offers an optional gaze &amp; presence analysis feature that
+            can help you look more confident and maintain natural eye contact
+            during behavioral practice sessions. This feature is <strong>off by
+            default</strong> and requires your explicit opt-in from your profile
+            settings.
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>
+              <strong>How it works:</strong> When enabled, your browser uses the
+              on-device face landmark model to analyze your gaze direction and
+              head pose in real time. All camera frame processing happens
+              entirely in your browser — no video, images, or raw camera data
+              ever leave your device.
+            </li>
+            <li>
+              <strong>What is transmitted:</strong> Only numerical coordinates
+              (gaze direction, head pose angles, and timestamps) are sent to our
+              servers at the end of a session, alongside other session data.
+            </li>
+            <li>
+              <strong>Storage and deletion:</strong> Gaze coordinates are stored
+              with your session record and are permanently deleted when you
+              delete the session or your account.
+            </li>
+            <li>
+              <strong>Control:</strong> You can toggle this feature on or off at
+              any time from your profile settings page. You can also disable it
+              per-session during interview setup. Disabling the feature stops
+              all camera analysis immediately; any previously stored coordinates
+              remain until you delete the session.
+            </li>
+            <li>
+              <strong>Accessibility:</strong> The on-device model may not
+              perform equally well for all users, lighting conditions, or camera
+              setups. This feature is not required for any core functionality of
+              Preploy.
+            </li>
+          </ul>
         </section>
 
         <section>

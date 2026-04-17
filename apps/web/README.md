@@ -59,6 +59,26 @@ cookies: [], origins: [] }`.
 The suite must pass 10 consecutive CI runs before branch-protection is flipped
 to require E2E (tracked as a follow-up task after #41 merges).
 
+## Gaze tracking assets (MediaPipe)
+
+The gaze capture pipeline uses MediaPipe Face Landmarker, which requires WASM
+runtime files and a model weight file served from `public/mediapipe/`. These are
+**not** committed to git (they're ~15 MB of binaries). Run the setup script
+after `npm install`:
+
+```bash
+cd apps/web
+bash scripts/setup-mediapipe.sh
+```
+
+This copies WASM files from `node_modules/@mediapipe/tasks-vision/wasm/` and
+downloads `face_landmarker.task` from Google's model storage. The files land in
+`public/mediapipe/` which is gitignored. You only need to run this once (or
+after deleting `public/mediapipe/`).
+
+If you don't need gaze tracking locally, you can skip this step — the feature is
+opt-in and the app works without it.
+
 ## Health check
 
 The app exposes a public health endpoint at `GET /api/health`:

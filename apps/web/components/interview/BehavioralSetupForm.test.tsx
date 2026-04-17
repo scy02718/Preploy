@@ -31,8 +31,13 @@ vi.mock("@/stores/interviewStore", () => {
   return { useInterviewStore };
 });
 
-// Mock fetch for question generation
-const mockFetch = vi.fn();
+// Mock fetch for question generation and user profile
+const mockFetch = vi.fn().mockImplementation((url: string) => {
+  if (typeof url === "string" && url.includes("/api/users/me")) {
+    return Promise.resolve({ ok: true, json: async () => ({ gazeTrackingEnabled: false }) });
+  }
+  return Promise.resolve({ ok: false, json: async () => ({}) });
+});
 global.fetch = mockFetch;
 
 describe("BehavioralSetupForm", () => {
@@ -111,5 +116,29 @@ describe("BehavioralSetupForm", () => {
     expect(
       screen.getAllByText(/enter a company name/i).length
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not show gaze checkbox when user has gaze tracking disabled", async () => {
+    // Default fetch mock returns gazeTrackingEnabled: false
+    render(<BehavioralSetupForm />);
+    await vi.waitFor(() => {
+      expect(screen.queryByTestId("gaze-session-checkbox")).toBeNull();
+    });
+  });
+
+  it("shows gaze checkbox when user has gaze tracking enabled", async () => {
+    vi.mocked(mockFetch).mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/api/users/me")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ gazeTrackingEnabled: true }),
+        });
+      }
+      return Promise.resolve({ ok: false, json: async () => ({}) });
+    });
+    render(<BehavioralSetupForm />);
+    await vi.waitFor(() => {
+      expect(screen.getByTestId("gaze-session-checkbox")).toBeTruthy();
+    });
   });
 });

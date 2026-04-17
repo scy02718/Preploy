@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
+import { useGazeCapture } from "@/hooks/useGazeCapture";
 import { buildBehavioralSystemPrompt } from "@/lib/prompts";
 import { BEHAVIORAL_SESSION_MAX_DURATION_SECONDS } from "@/lib/plans";
 import type { BehavioralSessionConfig } from "@interview-assistant/shared";
@@ -18,6 +19,9 @@ export default function BehavioralSessionPage() {
   const sessionStartRef = useRef<number | null>(null);
   const autoEndTriggeredRef = useRef(false);
 
+  // Video element ref for gaze capture
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+
   const {
     sessionId,
     config,
@@ -27,13 +31,31 @@ export default function BehavioralSessionPage() {
     addTranscriptEntry,
   } = useInterviewStore();
 
+  const behavioralConfig = config as BehavioralSessionConfig;
+  // gaze_enabled is set during session setup; defaults to false
+  const gazeSessionEnabled = behavioralConfig.gaze_enabled === true;
+
   // Build system prompt from config
   const systemPrompt = useMemo(
-    () => buildBehavioralSystemPrompt(config as BehavioralSessionConfig),
+    () => buildBehavioralSystemPrompt(behavioralConfig),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [config]
   );
 
   const voice = useRealtimeVoice({ systemPrompt });
+
+  // Gaze capture — only active if user opted in for this session
+  const sessionStartTime = sessionStartRef.current ?? Date.now();
+  const gaze = useGazeCapture({
+    videoElement,
+    enabled: gazeSessionEnabled,
+    sessionStartTime,
+  });
+
+  // Wire the webcam video element from VideoCallLayout once it's available.
+  const handleWebcamReady = useCallback((el: HTMLVideoElement) => {
+    setVideoElement(el);
+  }, []);
 
   // Redirect to setup if no session
   useEffect(() => {
@@ -120,6 +142,22 @@ export default function BehavioralSessionPage() {
       } catch (err) {
         console.error("Failed to save transcript:", err);
       }
+
+      // Save gaze samples if enabled for this session
+      if (gazeSessionEnabled) {
+        const samples = gaze.flush();
+        if (samples.length > 0) {
+          try {
+            await fetch(`/api/sessions/${sessionId}/gaze-samples`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ samples }),
+            });
+          } catch (err) {
+            console.error("Failed to save gaze samples:", err);
+          }
+        }
+      }
     }
 
     await endSession();
@@ -138,7 +176,7 @@ export default function BehavioralSessionPage() {
       .catch((err) => console.error("Failed to check badges:", err));
 
     router.push(`/dashboard/sessions/${sessionId}/feedback`);
-  }, [voice, sessionId, endSession, router]);
+  }, [voice, sessionId, endSession, router, gazeSessionEnabled, gaze]);
 
   // Don't render until we have a session
   if (!sessionId) return null;
@@ -170,11 +208,19 @@ export default function BehavioralSessionPage() {
         {formattedRemaining} left
       </div>
 
+      {/* Gaze loading indicator — shown briefly while MediaPipe initializes */}
+      {gazeSessionEnabled && gaze.isLoading && (
+        <div className="absolute top-4 left-4 z-10 rounded-md border bg-background/90 px-3 py-1.5 text-xs text-muted-foreground shadow backdrop-blur">
+          Loading presence analysis...
+        </div>
+      )}
+
       {/* Video call area */}
       <VideoCallLayout
         isSpeaking={voice.isSpeaking}
         isListening={voice.isListening}
         aiAudioLevel={voice.isSpeaking ? 0.5 : 0}
+        onWebcamReady={gazeSessionEnabled ? handleWebcamReady : undefined}
       />
 
       {/* Transcript overlay */}

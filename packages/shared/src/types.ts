@@ -47,6 +47,7 @@ export interface BehavioralSessionConfig {
   difficulty: number; // 0.0 = easy, 1.0 = hard
   resume_id?: string;
   resume_text?: string; // populated at session start, not stored in DB
+  gaze_enabled?: boolean; // per-session opt-in (only shown when user has gaze_tracking_enabled)
 }
 
 export interface TechnicalSessionConfig {
