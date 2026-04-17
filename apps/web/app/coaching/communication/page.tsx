@@ -1,4 +1,10 @@
+"use client";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FillerWordPicker } from "@/components/coaching/FillerWordPicker";
+import type { FillerWord } from "@/components/coaching/FillerWordPicker";
 
 function Section({
   title,
@@ -28,9 +34,67 @@ function Tip({ children }: { children: React.ReactNode }) {
   );
 }
 
+const FILLER_WORDS: FillerWord[] = [
+  {
+    word: "um",
+    before:
+      "\"I, um, worked on a project where we had to, um, redesign the whole system.\"",
+    after:
+      "\"I worked on a project where we had to redesign the whole system.\"",
+    tip:
+      "Replace with a brief pause. A two-second pause feels comfortable to the listener — far more than it feels to you.",
+  },
+  {
+    word: "uh",
+    before:
+      "\"The, uh, approach I took was to, uh, start with the database schema.\"",
+    after:
+      "\"The approach I took was to start with the database schema.\"",
+    tip:
+      "\"Uh\" often signals you haven't finished the thought before speaking. Practice slowing down your sentence starts.",
+  },
+  {
+    word: "like",
+    before:
+      "\"It was like a really complex problem and we had to like rethink everything.\"",
+    after:
+      "\"It was a genuinely complex problem and we had to rethink the entire approach.\"",
+    tip:
+      "\"Like\" as a filler dilutes specificity. Cut it and replace vague words (\"really complex\") with concrete ones.",
+  },
+  {
+    word: "you know",
+    before:
+      "\"We optimised the query, you know, so it would scale better, you know?\"",
+    after:
+      "\"We optimised the query so it would scale to 10x the current load.\"",
+    tip:
+      "\"You know\" often closes gaps where a specific detail belongs. Add the detail instead of the filler.",
+  },
+  {
+    word: "basically",
+    before:
+      "\"I basically rewrote the service and it basically solved the latency issue.\"",
+    after:
+      "\"I rewrote the service, which reduced P99 latency by 40%.\"",
+    tip:
+      "\"Basically\" hedges unnecessarily. You did the work — own it without qualification.",
+  },
+  {
+    word: "right",
+    before:
+      "\"So we need to handle the edge case, right? And we do that by, right, checking the input first.\"",
+    after:
+      "\"We handle the edge case by checking the input before processing.\"",
+    tip:
+      "\"Right?\" as a verbal tic can read as seeking validation. State your reasoning with confidence.",
+  },
+];
+
 export default function CommunicationPage() {
   return (
     <div className="space-y-6">
+      {/* Migrated content */}
       <Section title="Communication Fundamentals">
         <p>
           Technical skill gets you the interview. Communication skill gets you
@@ -79,6 +143,107 @@ export default function CommunicationPage() {
           <Tip>If you run out of time, summarize what you&apos;d do next: &quot;Given more time, I&apos;d optimize this by...&quot;</Tip>
         </div>
       </Section>
+
+      {/* New: Voice Delivery */}
+      <Section title="Voice Delivery">
+        <p>
+          Your voice carries signals beyond your words. Interviewers notice pace,
+          clarity, and how you handle silence. You don&apos;t need a broadcast voice —
+          you need a clear, confident one.
+        </p>
+        <div className="space-y-3">
+          <div className="rounded-md border p-3">
+            <p className="font-semibold text-primary">Pace</p>
+            <p className="text-muted-foreground">
+              Target roughly 150 words per minute — conversational but not rushed.
+              If you notice yourself speeding up, it&apos;s usually a sign of anxiety.
+              Slow down intentionally after you finish a point.
+            </p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="font-semibold text-primary">Filler words</p>
+            <p className="text-muted-foreground">
+              &quot;Um&quot;, &quot;like&quot;, &quot;you know&quot;, &quot;basically&quot;, and &quot;right&quot; are the most common.
+              They surface under pressure. The fix is practice — not elimination
+              through willpower, but building the habit of pausing instead.
+            </p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="font-semibold text-primary">Strategic pauses</p>
+            <p className="text-muted-foreground">
+              Silence between thoughts is powerful, not awkward. A two-second
+              pause after a question shows you&apos;re thinking, not scrambling. Don&apos;t
+              fill every moment of silence — let your answers breathe.
+            </p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="font-semibold text-primary">Tone and clarity</p>
+            <p className="text-muted-foreground">
+              Project confidence by ending declarative sentences on a level or
+              falling tone — not a rising one. Upward inflection on statements
+              can make confident claims sound like questions. Record yourself once
+              to hear how you actually sound.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* New: Filler word picker widget */}
+      <Section title="Filler Word Picker">
+        <p>
+          Select a filler word to see a before/after example and a tip for
+          upgrading your delivery.
+        </p>
+        <FillerWordPicker fillers={FILLER_WORDS} />
+      </Section>
+
+      {/* New: Written/Async communication */}
+      <Section title="Written & Async Communication">
+        <p>
+          Some interview loops include a take-home or expect follow-up
+          communication. These are scored too.
+        </p>
+        <div className="space-y-2">
+          <Tip>
+            After an in-person or video interview, send a short thank-you email
+            within 24 hours. One paragraph — genuine, specific, not generic.
+          </Tip>
+          <Tip>
+            For take-home projects: include a README that explains your decisions.
+            Reviewers read the README before the code.
+          </Tip>
+          <Tip>
+            Commit messages matter in take-home submissions. &quot;initial commit&quot;
+            followed by &quot;fix&quot; followed by &quot;fix2&quot; signals sloppy process.
+          </Tip>
+          <Tip>
+            Call out edge-case coverage in your README or submission email. Don&apos;t
+            assume reviewers will find it — tell them where to look.
+          </Tip>
+        </div>
+      </Section>
+
+      {/* Cross-links */}
+      <Card>
+        <CardContent className="pt-4 text-sm">
+          <p className="mb-3 text-muted-foreground">
+            Communication is scored in every session — behavioral and technical
+            alike. Pair this page with hands-on practice.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/coaching/behavioral" className="flex-1">
+              <Button variant="outline" className="w-full">
+                Behavioral Coaching
+              </Button>
+            </Link>
+            <Link href="/coaching/technical" className="flex-1">
+              <Button variant="outline" className="w-full">
+                Technical Coaching
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
