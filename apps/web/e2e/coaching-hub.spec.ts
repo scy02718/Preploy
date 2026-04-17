@@ -8,7 +8,13 @@
  * Story trace: 116-A, 116-B, 116-F, 116-G, 116-H, 116-I
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+// The hub nav has aria-label="Coaching hub navigation" to distinguish it from
+// the global Header nav, which also contains "Behavioral" and "Technical" links
+// pointing at /interview/*/setup. Always scope hub-nav locators via this label
+// so Playwright's strict mode doesn't match both navs.
+const hubNav = (page: Page) => page.getByLabel("Coaching hub navigation");
 
 test.describe("Coaching Hub @smoke", () => {
   // 116-A: /coaching redirects to /coaching/hiring-overview
@@ -28,11 +34,12 @@ test.describe("Coaching Hub @smoke", () => {
       page.getByRole("heading", { name: /Interview Coaching/i })
     ).toBeVisible();
 
-    // All 4 tabs should be visible in the desktop rail
-    await expect(page.getByRole("link", { name: "Hiring Overview" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Behavioral" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Technical" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Communication" })).toBeVisible();
+    // All 4 tabs should be visible in the desktop hub rail
+    const nav = hubNav(page);
+    await expect(nav.getByRole("link", { name: "Hiring Overview" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Behavioral" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Technical" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Communication" })).toBeVisible();
   });
 
   // 116-F + 116-G: Clicking Behavioral tab changes URL and shows STAR Method content
@@ -42,7 +49,7 @@ test.describe("Coaching Hub @smoke", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/coaching/hiring-overview");
 
-    await page.getByRole("link", { name: "Behavioral" }).click();
+    await hubNav(page).getByRole("link", { name: "Behavioral" }).click();
     await expect(page).toHaveURL(/\/coaching\/behavioral/);
 
     // 116-G: Old Behavioral content visible
@@ -58,7 +65,7 @@ test.describe("Coaching Hub @smoke", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/coaching/hiring-overview");
 
-    await page.getByRole("link", { name: "Technical" }).click();
+    await hubNav(page).getByRole("link", { name: "Technical" }).click();
     await expect(page).toHaveURL(/\/coaching\/technical/);
 
     // 116-H: Old LeetCode content visible
@@ -79,7 +86,7 @@ test.describe("Coaching Hub @smoke", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/coaching/hiring-overview");
 
-    await page.getByRole("link", { name: "Communication" }).click();
+    await hubNav(page).getByRole("link", { name: "Communication" }).click();
     await expect(page).toHaveURL(/\/coaching\/communication/);
 
     // 116-I: Old Communication content visible
@@ -95,7 +102,7 @@ test.describe("Coaching Hub @smoke", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/coaching/behavioral");
 
-    await page.getByRole("link", { name: "Hiring Overview" }).click();
+    await hubNav(page).getByRole("link", { name: "Hiring Overview" }).click();
     await expect(page).toHaveURL(/\/coaching\/hiring-overview/);
 
     // Coming Soon placeholder should be visible
