@@ -2,6 +2,7 @@
 
 import { BehavioralSetupForm } from "@/components/interview/BehavioralSetupForm";
 import { SessionQuota } from "@/components/interview/SessionQuota";
+import { SessionCostBanner } from "@/components/interview/SessionCostBanner";
 
 export default function BehavioralSetupPage() {
   return (
@@ -13,6 +14,9 @@ export default function BehavioralSetupPage() {
       </p>
 
       <SessionQuota />
+      <div className="mt-3">
+        <SessionCostBanner />
+      </div>
       <div className="mt-6">
         <BehavioralSetupForm />
       </div>
