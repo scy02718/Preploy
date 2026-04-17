@@ -95,8 +95,8 @@ test.describe("Coaching Hub @smoke", () => {
     ).toBeVisible();
   });
 
-  // 116-F: Clicking Hiring Overview from another tab goes back and shows Coming Soon
-  test("clicking Hiring Overview tab navigates back and shows coming soon placeholder", async ({
+  // 116-F + 113: Clicking Hiring Overview from another tab goes back and shows funnel content
+  test("clicking Hiring Overview tab navigates back and shows funnel heading", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -105,7 +105,7 @@ test.describe("Coaching Hub @smoke", () => {
     await hubNav(page).getByRole("link", { name: "Hiring Overview" }).click();
     await expect(page).toHaveURL(/\/coaching\/hiring-overview/);
 
-    // Coming Soon placeholder should be visible
-    await expect(page.getByText(/Coming soon/i).first()).toBeVisible();
+    // Hiring Overview funnel content should be visible (replaced ComingSoon stub in #113)
+    await expect(page.getByText(/How Hiring Works/i).first()).toBeVisible();
   });
 });
