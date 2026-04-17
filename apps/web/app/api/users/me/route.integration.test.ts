@@ -283,4 +283,98 @@ describe("API /api/users/me (integration)", () => {
       );
     expect(row).toBeUndefined();
   });
+
+  // ---- Tour timestamp fields (118-I, 118-J) ----
+
+  it("118-I: GET returns tourCompletedAt: null and tourSkippedAt: null for a fresh user", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveProperty("tourCompletedAt");
+    expect(data).toHaveProperty("tourSkippedAt");
+    expect(data.tourCompletedAt).toBeNull();
+    expect(data.tourSkippedAt).toBeNull();
+  });
+
+  it("118-I: PATCH with tour_completed_at persists and GET reflects it", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const patchRes = await PATCH(
+      makePatchRequest({ tour_completed_at: "2026-01-01T00:00:00Z" })
+    );
+    expect(patchRes.status).toBe(200);
+    const patchData = await patchRes.json();
+    expect(patchData.tourCompletedAt).toBeTruthy();
+
+    // Verify persisted
+    const db = getTestDb();
+    const [row] = await db
+      .select({ tourCompletedAt: users.tourCompletedAt })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.tourCompletedAt).not.toBeNull();
+
+    // GET also reflects it
+    const getRes = await GET();
+    const getData = await getRes.json();
+    expect(getData.tourCompletedAt).toBeTruthy();
+
+    // Reset
+    await db
+      .update(users)
+      .set({ tourCompletedAt: null })
+      .where(eq(users.id, TEST_USER.id));
+  });
+
+  it("118-I: PATCH with tour_skipped_at persists", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const patchRes = await PATCH(
+      makePatchRequest({ tour_skipped_at: "2026-06-15T12:00:00Z" })
+    );
+    expect(patchRes.status).toBe(200);
+    const patchData = await patchRes.json();
+    expect(patchData.tourSkippedAt).toBeTruthy();
+
+    const db = getTestDb();
+    const [row] = await db
+      .select({ tourSkippedAt: users.tourSkippedAt })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.tourSkippedAt).not.toBeNull();
+
+    // Reset
+    await db
+      .update(users)
+      .set({ tourSkippedAt: null })
+      .where(eq(users.id, TEST_USER.id));
+  });
+
+  it("118-I: PATCH with tour_completed_at: null resets the column (re-trigger path)", async () => {
+    const db = getTestDb();
+    // Seed a completed timestamp
+    await db
+      .update(users)
+      .set({ tourCompletedAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(users.id, TEST_USER.id));
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(makePatchRequest({ tour_completed_at: null }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.tourCompletedAt).toBeNull();
+
+    const [row] = await db
+      .select({ tourCompletedAt: users.tourCompletedAt })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.tourCompletedAt).toBeNull();
+  });
+
+  it("118-J: PATCH with tour_completed_at: 'not-a-date' returns 400", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(
+      makePatchRequest({ tour_completed_at: "not-a-date" })
+    );
+    expect(res.status).toBe(400);
+  });
 });

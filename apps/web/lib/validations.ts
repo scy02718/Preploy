@@ -106,6 +106,8 @@ export const patchUserMeSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   image: z.string().trim().optional(),
   gaze_tracking_enabled: z.boolean().optional(),
+  tour_completed_at: z.coerce.date().nullable().optional(),
+  tour_skipped_at: z.coerce.date().nullable().optional(),
 });
 export type PatchUserMeInput = z.infer<typeof patchUserMeSchema>;
 

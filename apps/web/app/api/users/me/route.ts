@@ -41,6 +41,8 @@ export async function GET() {
       stripeCustomerId: users.stripeCustomerId,
       disabledAt: users.disabledAt,
       gazeTrackingEnabled: users.gazeTrackingEnabled,
+      tourCompletedAt: users.tourCompletedAt,
+      tourSkippedAt: users.tourSkippedAt,
       createdAt: users.createdAt,
     })
     .from(users)
@@ -110,6 +112,14 @@ export async function PATCH(request: NextRequest) {
     updates.gazeTrackingEnabled = body.gaze_tracking_enabled;
   }
 
+  if (body.tour_completed_at !== undefined) {
+    updates.tourCompletedAt = body.tour_completed_at;
+  }
+
+  if (body.tour_skipped_at !== undefined) {
+    updates.tourSkippedAt = body.tour_skipped_at;
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
       { error: "No valid fields to update" },
@@ -129,6 +139,8 @@ export async function PATCH(request: NextRequest) {
       plan: users.plan,
       disabledAt: users.disabledAt,
       gazeTrackingEnabled: users.gazeTrackingEnabled,
+      tourCompletedAt: users.tourCompletedAt,
+      tourSkippedAt: users.tourSkippedAt,
     });
 
   return NextResponse.json(updated);
