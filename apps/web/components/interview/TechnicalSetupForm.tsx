@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useInterviewStore } from "@/stores/interviewStore";
+import { usePrefillStore } from "@/stores/prefillStore";
 import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
 import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
@@ -70,6 +71,8 @@ export function TechnicalSetupForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { technicalPrefill, clearPrefill } = usePrefillStore();
+
   const techConfig = config as TechnicalSessionConfig;
 
   // Derive Other focus-area state from the store directly (no local useState
@@ -85,7 +88,22 @@ export function TechnicalSetupForm() {
 
   useEffect(() => {
     setType("technical");
-  }, [setType]);
+    if (technicalPrefill) {
+      if (technicalPrefill.interview_type) {
+        setConfig({ interview_type: technicalPrefill.interview_type, focus_areas: [] });
+      }
+      if (technicalPrefill.focus_areas?.length) {
+        setConfig({ focus_areas: technicalPrefill.focus_areas });
+      }
+      if (technicalPrefill.additional_instructions) {
+        setConfig({ additional_instructions: technicalPrefill.additional_instructions });
+      }
+      if (technicalPrefill.resume_id) {
+        setConfig({ resume_id: technicalPrefill.resume_id });
+      }
+      clearPrefill();
+    }
+  }, [setType, technicalPrefill, clearPrefill, setConfig]);
 
   const toggleFocusArea = (area: string) => {
     if (area === "other") {

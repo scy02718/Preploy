@@ -78,17 +78,17 @@ describe("TechnicalPage", () => {
     expect(screen.getAllByTestId("practice-backend").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("clicking practice-leetcode pre-fills store and navigates to setup", () => {
+  it("clicking practice-leetcode pre-fills store with interview_type and navigates to setup", () => {
     render(<TechnicalPage />);
     fireEvent.click(screen.getAllByTestId("practice-leetcode")[0]);
-    expect(mockSetTechnicalPrefill).toHaveBeenCalledWith({ focus_areas: ["leetcode"] });
+    expect(mockSetTechnicalPrefill).toHaveBeenCalledWith({ interview_type: "leetcode" });
     expect(mockPush).toHaveBeenCalledWith("/interview/technical/setup");
   });
 
-  it("clicking practice-frontend pre-fills store and navigates to setup", () => {
+  it("clicking practice-frontend pre-fills store with interview_type and navigates to setup", () => {
     render(<TechnicalPage />);
     fireEvent.click(screen.getAllByTestId("practice-frontend")[0]);
-    expect(mockSetTechnicalPrefill).toHaveBeenCalledWith({ focus_areas: ["frontend"] });
+    expect(mockSetTechnicalPrefill).toHaveBeenCalledWith({ interview_type: "frontend" });
     expect(mockPush).toHaveBeenCalledWith("/interview/technical/setup");
   });
 

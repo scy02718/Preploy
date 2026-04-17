@@ -7,6 +7,7 @@ import { ChooseYourLineWidget } from "@/components/coaching/ChooseYourLineWidget
 import type { ChoiceItem } from "@/components/coaching/ChooseYourLineWidget";
 import { usePrefillStore } from "@/stores/prefillStore";
 import { useRouter } from "next/navigation";
+import type { TechnicalInterviewType } from "@interview-assistant/shared";
 
 function Section({
   title,
@@ -68,16 +69,16 @@ const CHOOSE_YOUR_LINE_CHOICES: ChoiceItem[] = [
 
 function PracticeButton({
   label,
-  focusArea,
+  interviewType,
 }: {
   label: string;
-  focusArea: string;
+  interviewType: TechnicalInterviewType;
 }) {
   const setTechnicalPrefill = usePrefillStore((s) => s.setTechnicalPrefill);
   const router = useRouter();
 
   function handleClick() {
-    setTechnicalPrefill({ focus_areas: [focusArea] });
+    setTechnicalPrefill({ interview_type: interviewType });
     router.push("/interview/technical/setup");
   }
 
@@ -86,7 +87,7 @@ function PracticeButton({
       variant="outline"
       size="sm"
       onClick={handleClick}
-      data-testid={`practice-${focusArea}`}
+      data-testid={`practice-${interviewType}`}
     >
       {label}
     </Button>
@@ -207,7 +208,7 @@ export default function TechnicalPage() {
           </div>
         </Section>
 
-        <PracticeButton label="Practice LeetCode Interview" focusArea="leetcode" />
+        <PracticeButton label="Practice LeetCode Interview" interviewType="leetcode" />
       </div>
 
       {/* ---- System Design section ---- */}
@@ -261,7 +262,7 @@ export default function TechnicalPage() {
           </div>
         </Section>
 
-        <PracticeButton label="Practice System Design Interview" focusArea="system_design" />
+        <PracticeButton label="Practice System Design Interview" interviewType="system_design" />
       </div>
 
       {/* ---- Frontend section ---- */}
@@ -298,7 +299,7 @@ export default function TechnicalPage() {
           </div>
         </Section>
 
-        <PracticeButton label="Practice Frontend Interview" focusArea="frontend" />
+        <PracticeButton label="Practice Frontend Interview" interviewType="frontend" />
       </div>
 
       {/* ---- Backend section ---- */}
@@ -335,7 +336,7 @@ export default function TechnicalPage() {
           </div>
         </Section>
 
-        <PracticeButton label="Practice Backend Interview" focusArea="backend" />
+        <PracticeButton label="Practice Backend Interview" interviewType="backend" />
       </div>
 
       {/* All-formats practice CTA */}
