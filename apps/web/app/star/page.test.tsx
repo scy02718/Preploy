@@ -145,6 +145,20 @@ describe("StarPrepPage", () => {
     });
   });
 
+  // 118-N: STAR empty state mentions "no quota cost"
+  it("118-N: empty state mentions 'no quota cost'", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ stories: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 0 } }),
+    });
+
+    render(<StarPrepPage />);
+    await waitFor(() => {
+      const elements = screen.getAllByText(/no quota cost/i);
+      expect(elements.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   it("shows Practice this question button in detail view", async () => {
     global.fetch = vi.fn()
       .mockResolvedValueOnce({

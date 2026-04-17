@@ -46,6 +46,13 @@ describe("PlannerPage", () => {
     expect(emptyTexts.length).toBeGreaterThanOrEqual(1);
   });
 
+  // 118-N: Planner empty state mentions "no quota cost"
+  it("118-N: empty state mentions 'no quota cost'", async () => {
+    render(<PlannerPage />);
+    const elements = await screen.findAllByText(/no quota cost/i);
+    expect(elements.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("renders the no plan selected message", async () => {
     render(<PlannerPage />);
     const noSelection = await screen.findAllByText("No Plan Selected");

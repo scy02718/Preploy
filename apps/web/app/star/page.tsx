@@ -470,7 +470,7 @@ export default function StarPrepPage() {
                 <StorySkeleton />
               ) : stories.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No stories yet. Click &quot;New Story&quot; to get started.
+                  No stories yet. Click &quot;New Story&quot; to get started — unlimited STAR practice, no quota cost.
                 </p>
               ) : (
                 <div className="space-y-2">

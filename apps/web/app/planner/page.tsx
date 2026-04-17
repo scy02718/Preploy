@@ -296,7 +296,7 @@ export default function PlannerPage() {
                 </div>
               ) : plans.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No plans yet. Create your first plan to get started.
+                  No plans yet. Create your first plan to get started — unlimited prep plans, no quota cost.
                 </p>
               ) : (
                 <div className="space-y-2">

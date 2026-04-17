@@ -87,6 +87,20 @@ describe("ResumePage", () => {
     });
   });
 
+  // 118-N: empty state nudge mentions "no quota cost"
+  it("118-N: empty state nudge mentions 'no quota cost'", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ resumes: [] }),
+    }) as unknown as typeof fetch;
+
+    render(<ResumePage />);
+    await vi.waitFor(() => {
+      const elements = screen.getAllByText(/no quota cost/i);
+      expect(elements.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   it("shows loading skeleton initially", () => {
     // Make fetch hang
     global.fetch = vi.fn().mockReturnValue(new Promise(() => {})) as unknown as typeof fetch;
