@@ -23,16 +23,14 @@ function StageCard({
   index: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  // When IntersectionObserver is unavailable (e.g. jsdom in tests), start visible.
+  const [visible, setVisible] = useState(
+    () => typeof IntersectionObserver === "undefined"
+  );
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    // Fallback for environments without IntersectionObserver (e.g. jsdom in tests)
-    if (typeof IntersectionObserver === "undefined") {
-      setVisible(true);
-      return;
-    }
+    if (!el || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
