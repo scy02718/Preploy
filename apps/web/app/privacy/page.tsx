@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="max-w-2xl mx-auto px-4 py-24">
-      <p className="text-sm text-muted-foreground mb-2">Last updated: 2026-04-16</p>
+      <p className="text-sm text-muted-foreground mb-2">Last updated: 2026-04-17</p>
       <h1 className="text-3xl font-bold tracking-tight mb-2">Privacy Policy</h1>
       <p className="text-sm text-amber-600 dark:text-amber-400 mb-8 border border-amber-300 dark:border-amber-700 rounded px-3 py-2">
         Draft v1. This policy has not been reviewed by a lawyer. It will be
@@ -82,6 +82,7 @@ export default function PrivacyPage() {
           <ul className="list-disc pl-5 space-y-3">
             <li><strong>Supabase</strong> — hosts our PostgreSQL database. All data listed above is stored on Supabase-managed infrastructure.</li>
             <li><strong>Vercel</strong> — hosts the web application, serves pages via CDN, runs serverless functions, and stores application logs. Servers are located in the US (primary region: iad1). Vercel may receive request metadata including your IP address and browser user agent.</li>
+            <li><strong>Vercel Web Analytics and Speed Insights</strong> — Vercel&rsquo;s first-party analytics products run on the same platform that hosts the application. Web Analytics records aggregated pageview counts, referrer, anonymized country (derived from IP and not stored), device type, and browser family. Speed Insights records anonymized real-user performance timings (Core Web Vitals: LCP, INP, CLS, FCP, TTFB). Neither product sets tracking cookies nor collects IP addresses, email, or any other personally identifying information. Vercel operates these as data processors on our behalf.</li>
             <li><strong>OpenAI</strong> — receives audio chunks (for transcription), interview questions, and your answers/code for feedback generation. OpenAI&rsquo;s API data usage policy applies; by default, API inputs are not used to train OpenAI models.</li>
             <li><strong>Google</strong> — used solely for sign-in (OAuth 2.0). Google provides your name, email, and profile picture. We do not share your interview data back to Google.</li>
             <li><strong>Stripe</strong> — handles all payment processing for Pro subscriptions. Stripe receives your name, email, and payment method details. Preploy never sees or stores your full card number.</li>
@@ -99,9 +100,11 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold mb-3">Cookies and local storage</h2>
           <p>
             We use a single essential cookie for authentication (your NextAuth
-            session). We do not use tracking cookies, advertising cookies, or
-            third-party analytics cookies. Your browser may cache static assets
-            we serve; that caching is not personalized.
+            session). Our analytics processor (Vercel Web Analytics) operates
+            in cookie-less, anonymous mode — it does not set any tracking
+            cookies. We do not use third-party advertising cookies. Your
+            browser may cache static assets we serve; that caching is not
+            personalized.
           </p>
         </section>
 
