@@ -29,6 +29,9 @@ import type {
   Difficulty,
 } from "@interview-assistant/shared";
 
+/** Prefix used to embed the user's Other topic inside additional_instructions. */
+const OTHER_PREFIX = "Other focus area: ";
+
 const INTERVIEW_TYPES: { value: TechnicalInterviewType; label: string }[] = [
   { value: "leetcode", label: "LeetCode-style" },
   { value: "system_design", label: "System Design" },
@@ -43,10 +46,20 @@ const DIFFICULTIES: { value: Difficulty; label: string }[] = [
 ];
 
 function formatFocusArea(area: string): string {
+  if (area === "other") return "Other";
   return area
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+/** Strip any existing Other-prefix segment from an additional_instructions string. */
+function stripOtherSegment(instructions: string): string {
+  return instructions
+    .split("\n\n")
+    .filter((seg) => !seg.startsWith(OTHER_PREFIX))
+    .join("\n\n")
+    .trim();
 }
 
 export function TechnicalSetupForm() {
@@ -57,18 +70,71 @@ export function TechnicalSetupForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const techConfig = config as TechnicalSessionConfig;
+
+  // Local UI state for Other focus-area handling
+  const [otherChecked, setOtherChecked] = useState(false);
+  const [otherText, setOtherText] = useState("");
+
   useEffect(() => {
     setType("technical");
   }, [setType]);
 
-  const techConfig = config as TechnicalSessionConfig;
+  // Hydration: parse otherChecked + otherText from store when config changes
+  // (template load, prefill reload, etc.)
+  useEffect(() => {
+    const focusAreas = (config as TechnicalSessionConfig).focus_areas ?? [];
+    const instructions = (config as TechnicalSessionConfig).additional_instructions ?? "";
+    const checked = focusAreas.includes("other");
+    setOtherChecked(checked);
+    if (checked) {
+      const segment = instructions
+        .split("\n\n")
+        .find((seg) => seg.startsWith(OTHER_PREFIX));
+      setOtherText(segment ? segment.slice(OTHER_PREFIX.length) : "");
+    } else {
+      setOtherText("");
+    }
+  }, [config]);
 
   const toggleFocusArea = (area: string) => {
+    if (area === "other") {
+      const current = techConfig.focus_areas ?? [];
+      if (current.includes("other")) {
+        // Uncheck: remove sentinel, clear text, strip segment from instructions
+        const newAreas = current.filter((a) => a !== "other");
+        const baseInstructions = stripOtherSegment(
+          techConfig.additional_instructions ?? ""
+        );
+        setOtherChecked(false);
+        setOtherText("");
+        setConfig({
+          focus_areas: newAreas,
+          additional_instructions: baseInstructions || undefined,
+        });
+      } else {
+        // Check: add sentinel, do NOT inject segment yet (text is still empty)
+        setOtherChecked(true);
+        setConfig({ focus_areas: [...current, "other"] });
+      }
+      return;
+    }
+
     const current = techConfig.focus_areas ?? [];
     const updated = current.includes(area)
       ? current.filter((a) => a !== area)
       : [...current, area];
     setConfig({ focus_areas: updated });
+  };
+
+  const handleOtherTextChange = (text: string) => {
+    setOtherText(text);
+    const baseInstructions = stripOtherSegment(
+      techConfig.additional_instructions ?? ""
+    );
+    const otherSegment = text.trim() ? OTHER_PREFIX + text.trim() : "";
+    const merged = [baseInstructions, otherSegment].filter(Boolean).join("\n\n");
+    setConfig({ additional_instructions: merged || undefined });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,6 +158,10 @@ export function TechnicalSetupForm() {
       );
     }
   };
+
+  // Submit is disabled when Other is checked but no topic is typed
+  const isOtherInvalid = otherChecked && !otherText.trim();
+  const noFocusAreas = (techConfig.focus_areas ?? []).length === 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -159,6 +229,21 @@ export function TechnicalSetupForm() {
                   );
                 })}
               </div>
+              {otherChecked && (
+                <div className="space-y-1 pt-1">
+                  <Textarea
+                    rows={2}
+                    maxLength={200}
+                    placeholder="Specify a topic…"
+                    value={otherText}
+                    onChange={(e) => handleOtherTextChange(e.target.value)}
+                    aria-label="Other focus area description"
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {otherText.length}/200
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 {(techConfig.focus_areas ?? []).length} selected
               </p>
@@ -265,9 +350,7 @@ export function TechnicalSetupForm() {
         type="submit"
         size="lg"
         className="w-full"
-        disabled={
-          isSubmitting || (techConfig.focus_areas ?? []).length === 0
-        }
+        disabled={isSubmitting || noFocusAreas || isOtherInvalid}
       >
         {isSubmitting ? "Creating Session..." : "Start Interview"}
       </Button>
