@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  VAD_THRESHOLD,
+  VAD_PREFIX_PADDING_MS,
+  VAD_SILENCE_DURATION_MS,
+  SILENCE_NUDGE_MS,
+  SILENCE_HANDOFF_MS,
+} from "@/lib/realtime-config";
 
 export interface TranscriptEntry {
   speaker: "user" | "assistant";
@@ -61,6 +68,70 @@ export function useRealtimeVoice(
   const nextPlayTimeRef = useRef(0);
   const scheduleDrainRef = useRef(false);
   const speakingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Silence watchdog — arms after user or assistant turn ends; fires nudge
+  // at SILENCE_NUDGE_MS and hand-off at SILENCE_HANDOFF_MS (108-A/E)
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handoffTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silencePhaseRef = useRef<"idle" | "nudge_pending" | "handoff_pending">(
+    "idle"
+  );
+
+  // ── Silence watchdog helpers ─────────────────────────────────────────────
+
+  /** Send a system message nudge / hand-off and trigger a response. */
+  const sendSilenceNudge = useCallback((text: string) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(
+      JSON.stringify({
+        type: "conversation.item.create",
+        item: {
+          type: "message",
+          role: "system",
+          content: [{ type: "text", text }],
+        },
+      })
+    );
+    ws.send(JSON.stringify({ type: "response.create" }));
+    // Upgrade phase so the next timer (handoff) takes effect
+    silencePhaseRef.current = "handoff_pending";
+  }, []);
+
+  /** Clear both watchdog timers and reset the phase cursor to idle. */
+  const clearSilenceWatchdog = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (handoffTimerRef.current) {
+      clearTimeout(handoffTimerRef.current);
+      handoffTimerRef.current = null;
+    }
+    silencePhaseRef.current = "idle";
+  }, []);
+
+  /** Arm the watchdog from "now": nudge at SILENCE_NUDGE_MS, hand-off at SILENCE_HANDOFF_MS. */
+  const armSilenceWatchdog = useCallback(() => {
+    // Always reset before re-arming so we don't stack timers
+    clearSilenceWatchdog();
+    silencePhaseRef.current = "nudge_pending";
+
+    silenceTimerRef.current = setTimeout(() => {
+      sendSilenceNudge(
+        "The candidate has been silent for ~10 seconds. Gently nudge them — for example, 'Take your time' or 'Want me to repeat the question?' Keep it to one sentence."
+      );
+    }, SILENCE_NUDGE_MS);
+
+    handoffTimerRef.current = setTimeout(() => {
+      sendSilenceNudge(
+        "The candidate has been silent for ~60 seconds. Acknowledge politely and move to the next question, e.g. 'Let\u2019s come back to this later \u2014 next\u2026'"
+      );
+      clearSilenceWatchdog();
+    }, SILENCE_HANDOFF_MS);
+  }, [clearSilenceWatchdog, sendSilenceNudge]);
+
+  // ── End silence watchdog helpers ─────────────────────────────────────────
 
   const ensurePlaybackContext = useCallback(() => {
     if (!playbackContextRef.current) {
@@ -163,7 +234,8 @@ export function useRealtimeVoice(
             currentAssistantTextRef.current += msg.delta;
             break;
 
-          // GA event names
+          // GA event names — assistant finished speaking; arm watchdog if
+          // the user is not currently speaking (108-A)
           case "response.output_audio_transcript.done":
           // Beta fallback
           case "response.audio_transcript.done":
@@ -178,6 +250,10 @@ export function useRealtimeVoice(
               ]);
             }
             currentAssistantTextRef.current = "";
+            // Arm watchdog: if the user doesn't speak soon we'll nudge them
+            if (!isListening) {
+              armSilenceWatchdog();
+            }
             break;
 
           case "conversation.item.input_audio_transcription.completed":
@@ -194,12 +270,17 @@ export function useRealtimeVoice(
             currentUserTextRef.current = "";
             break;
 
+          // User started speaking — cancel any pending nudge / hand-off (108-A)
           case "input_audio_buffer.speech_started":
             setIsListening(true);
+            clearSilenceWatchdog();
             break;
 
+          // User paused without completing their turn — re-arm so we don't
+          // interrupt too early (108-B: "wait at least 5s before any response")
           case "input_audio_buffer.speech_stopped":
             setIsListening(false);
+            armSilenceWatchdog();
             break;
 
           case "error":
@@ -211,7 +292,7 @@ export function useRealtimeVoice(
         console.error("Failed to parse WebSocket message:", err);
       }
     },
-    [drainQueue]
+    [drainQueue, isListening, armSilenceWatchdog, clearSilenceWatchdog]
   );
 
   const connect = useCallback(async () => {
@@ -288,9 +369,11 @@ export function useRealtimeVoice(
                 },
                 turn_detection: {
                   type: "server_vad",
-                  threshold: 0.5,
-                  prefix_padding_ms: 300,
-                  silence_duration_ms: 500,
+                  threshold: VAD_THRESHOLD,
+                  prefix_padding_ms: VAD_PREFIX_PADDING_MS,
+                  silence_duration_ms: VAD_SILENCE_DURATION_MS,
+                  create_response: true,
+                  interrupt_response: true,
                 },
               },
               output: {
@@ -384,6 +467,9 @@ export function useRealtimeVoice(
   const disconnect = useCallback(() => {
     shouldReconnectRef.current = false;
 
+    // Cancel silence watchdog before tearing down
+    clearSilenceWatchdog();
+
     // Close WebSocket
     if (wsRef.current) {
       wsRef.current.close();
@@ -419,7 +505,7 @@ export function useRealtimeVoice(
     setIsConnected(false);
     setIsListening(false);
     isSpeakingRef.current = false; setIsSpeaking(false);
-  }, []);
+  }, [clearSilenceWatchdog]);
 
   // Keep audio context alive when tab loses focus
   useEffect(() => {
