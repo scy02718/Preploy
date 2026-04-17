@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -206,12 +206,16 @@ export default function DashboardPage() {
         <MonthlyUsageMeter />
       </div>
 
-      {/* Onboarding tour launcher — desktop only, 600ms delay, auto-starts for new users */}
-      <OnboardingTourLauncher
-        totalSessions={totalSessions}
-        isStatsLoading={isStatsLoading}
-      />
-
+      {/* Onboarding tour launcher — desktop only, 600ms delay, auto-starts for new users.
+          Wrapped in Suspense because the launcher uses useSearchParams() to read
+          ?tour=1, which would otherwise force the dashboard out of static prerendering
+          (Next.js App Router CSR-bailout rule). */}
+      <Suspense fallback={null}>
+        <OnboardingTourLauncher
+          totalSessions={totalSessions}
+          isStatsLoading={isStatsLoading}
+        />
+      </Suspense>
       {/* Welcome card for first-time users OR stats grid for returning users */}
       {!isStatsLoading && totalSessions === 0 && !onboardingDismissed ? (
         <Card className="mb-8" data-testid="welcome-card">
