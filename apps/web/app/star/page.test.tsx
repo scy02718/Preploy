@@ -162,4 +162,64 @@ describe("StarPrepPage", () => {
       expect(screen.getAllByText("Practice this question").length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // 119-A: Export PDF visible in story detail view
+  // ---------------------------------------------------------------------------
+  it("shows Export PDF button when a story is selected (119-A)", async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ stories: MOCK_STORIES, pagination: { total: 2, page: 1, limit: 20, totalPages: 1 } }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => MOCK_DETAIL,
+      });
+
+    render(<StarPrepPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Led microservices migration").length).toBeGreaterThanOrEqual(1);
+    });
+
+    fireEvent.click(screen.getAllByText("Led microservices migration")[0]);
+
+    await waitFor(() => {
+      // StarPdfExportButton renders "Export PDF" text
+      expect(screen.getAllByText("Export PDF").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // 119-B: Export all visible with >= 1 story
+  // ---------------------------------------------------------------------------
+  it("shows Export all button when at least one story exists (119-B)", async () => {
+    render(<StarPrepPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Led microservices migration").length).toBeGreaterThanOrEqual(1);
+    });
+
+    expect(screen.getAllByText("Export all").length).toBeGreaterThanOrEqual(1);
+  });
+
+  // ---------------------------------------------------------------------------
+  // 119-C: Export all hidden when zero stories
+  // ---------------------------------------------------------------------------
+  it("hides Export all button when there are no stories (119-C)", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ stories: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 0 } }),
+    });
+
+    render(<StarPrepPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/No stories yet/).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // "Export all" button must not be present
+    expect(screen.queryByText("Export all")).toBeNull();
+  });
 });
