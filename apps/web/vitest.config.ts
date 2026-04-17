@@ -23,9 +23,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./"),
-      // Point the shared package to this worktree's copy so vitest picks up
-      // changes committed here rather than the main repo's symlinked version.
-      "@interview-assistant/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
     },
   },
 });
