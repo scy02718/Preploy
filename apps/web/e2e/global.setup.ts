@@ -50,23 +50,27 @@ setup("authenticate test user", async () => {
   }
 
   // 2. Seed the test user into the DB (idempotent upsert)
+  //    Also sets tour_skipped_at so the onboarding tour never triggers
+  //    during E2E tests (avoids spotlight interference with smoke flows).
   let sql: ReturnType<typeof postgres> | null = null;
   try {
     sql = postgres(DB_URL, { prepare: false });
     await sql`
-      INSERT INTO users (id, email, name, plan, created_at, updated_at)
+      INSERT INTO users (id, email, name, plan, tour_skipped_at, created_at, updated_at)
       VALUES (
         ${E2E_USER.id}::uuid,
         ${E2E_USER.email},
         ${E2E_USER.name},
         'free',
+        '2026-01-01T00:00:00Z'::timestamptz,
         now(),
         now()
       )
       ON CONFLICT (id) DO UPDATE
-        SET email      = EXCLUDED.email,
-            name       = EXCLUDED.name,
-            updated_at = now()
+        SET email           = EXCLUDED.email,
+            name            = EXCLUDED.name,
+            tour_skipped_at = '2026-01-01T00:00:00Z'::timestamptz,
+            updated_at      = now()
     `;
     console.log("[global.setup] Test user seeded:", E2E_USER.email);
   } catch (err) {
