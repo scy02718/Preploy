@@ -117,4 +117,34 @@ describe("buildProblemGenerationPrompt", () => {
     const prompt = buildProblemGenerationPrompt(baseConfig);
     expect(prompt).not.toContain("background");
   });
+
+  it("filters the 'other' sentinel out of the focus-areas line", () => {
+    const prompt = buildProblemGenerationPrompt({
+      ...baseConfig,
+      focus_areas: ["arrays", "other"],
+    });
+    expect(prompt).toContain("topics: arrays.");
+    expect(prompt).not.toContain("other");
+  });
+
+  it("renders the user-typed Other topic via additional_instructions", () => {
+    const prompt = buildProblemGenerationPrompt({
+      ...baseConfig,
+      focus_areas: ["arrays", "other"],
+      additional_instructions: "Other focus area: GPU shaders",
+    });
+    expect(prompt).toContain("Other focus area: GPU shaders");
+    expect(prompt).toContain("Additional instructions from the user:");
+  });
+
+  it("produces a valid prompt when only 'other' is selected", () => {
+    const prompt = buildProblemGenerationPrompt({
+      ...baseConfig,
+      focus_areas: ["other"],
+    });
+    // When only 'other' is selected, the topics line should be omitted entirely
+    expect(prompt).not.toContain("focus on the following topics");
+    // The bare word "other" should not appear as a topic in the prompt
+    expect(prompt).not.toContain("topics: other");
+  });
 });
