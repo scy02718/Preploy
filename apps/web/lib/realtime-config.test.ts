@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   VAD_THRESHOLD,
-  VAD_SILENCE_DURATION_MS,
   SILENCE_NUDGE_MS,
   SILENCE_HANDOFF_MS,
   MID_ANSWER_PAUSE_MIN_MS,

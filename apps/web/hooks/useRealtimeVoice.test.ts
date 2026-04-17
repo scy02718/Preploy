@@ -2,8 +2,8 @@
  * Silence-watchdog unit tests for useRealtimeVoice (story #108).
  *
  * Strategy:
- *  - Mock WebSocket globally with a recording MockWebSocket that captures
- *    every send() call in an array for later inspection.
+ *  - Mock WebSocket globally with a recording class that captures every
+ *    send() call in an array for later inspection.
  *  - Mock fetch (token endpoint) and getUserMedia so connect() succeeds.
  *  - Call connect(), trigger ws.onopen to finish setup, then simulate
  *    WebSocket events through ws.onmessage({data: JSON.stringify(...)}).
@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
-// ── MockWebSocket (must be defined before vi.stubGlobal) ──────────────────────
+// ── MockWebSocket ────────────────────────────────────────────────────────────
 
 class MockWebSocket {
   static OPEN = 1;
@@ -36,67 +36,62 @@ class MockWebSocket {
   }
 }
 
-// Track the latest instance so tests can reach into it
-let mockWs: MockWebSocket;
+// Track the latest instance created by the hook so tests can inspect it
+let mockWs: MockWebSocket = new MockWebSocket();
 
-// Subclass that records itself — used as the global WebSocket constructor
-class TrackingWebSocket extends MockWebSocket {
-  constructor(_url: string, _protocols?: string | string[]) {
+// Factory wrapped as a class so `new WebSocket(...)` doesn't throw.
+// We override the global with this to intercept each construction.
+class SpyWebSocket extends MockWebSocket {
+  constructor(
+    _url: string | URL,
+    _protocols?: string | string[] | undefined
+  ) {
     super();
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    mockWs = this;
+    // Assign the newly constructed instance to the shared variable.
+    // We do this by mutating the outer `mockWs` binding via the module scope.
+    SpyWebSocket.latest = this; // eslint-disable-line @typescript-eslint/no-use-before-define
   }
+
+  static latest: MockWebSocket = new MockWebSocket();
 }
-// Copy static OPEN / CLOSED so the hook's `ws.readyState !== WebSocket.OPEN` check works
-TrackingWebSocket.OPEN = MockWebSocket.OPEN;
-TrackingWebSocket.CLOSED = MockWebSocket.CLOSED;
+// Copy the static OPEN/CLOSED constants so the hook's WebSocket.OPEN check works
+SpyWebSocket.OPEN = MockWebSocket.OPEN;
+SpyWebSocket.CLOSED = MockWebSocket.CLOSED;
 
-// ── Global mocks ─────────────────────────────────────────────────────────────
-
-// WebSocket constructor
-vi.stubGlobal("WebSocket", TrackingWebSocket);
-
-// Stub AudioContext and related Web Audio APIs (jsdom doesn't implement them)
-const mockAnalyser = {
-  fftSize: 1024,
-  smoothingTimeConstant: 0.8,
-  connect: vi.fn(),
-};
-const mockAudioCtx = {
-  sampleRate: 24000,
-  currentTime: 0,
-  state: "running",
-  createAnalyser: vi.fn(() => mockAnalyser),
-  createBuffer: vi.fn(() => ({
-    getChannelData: () => new Float32Array(0),
-    duration: 0,
-  })),
-  createBufferSource: vi.fn(() => ({
-    buffer: null,
-    connect: vi.fn(),
-    start: vi.fn(),
-  })),
-  createMediaStreamSource: vi.fn(() => ({ connect: vi.fn() })),
-  audioWorklet: {
-    addModule: vi.fn().mockResolvedValue(undefined),
+// Keep the module-level reference in sync with SpyWebSocket.latest
+Object.defineProperty(SpyWebSocket, "latest", {
+  get() {
+    return mockWs;
   },
-  close: vi.fn(),
-  resume: vi.fn(),
-  destination: {},
-};
+  set(v: MockWebSocket) {
+    mockWs = v;
+  },
+});
+
+vi.stubGlobal("WebSocket", SpyWebSocket);
+
+// ── Stub Web Audio (jsdom doesn't implement it) ───────────────────────────────
 
 class MockAudioContext {
-  sampleRate = mockAudioCtx.sampleRate;
-  currentTime = mockAudioCtx.currentTime;
-  state = mockAudioCtx.state;
-  createAnalyser = mockAudioCtx.createAnalyser;
-  createBuffer = mockAudioCtx.createBuffer;
-  createBufferSource = mockAudioCtx.createBufferSource;
-  createMediaStreamSource = mockAudioCtx.createMediaStreamSource;
-  audioWorklet = mockAudioCtx.audioWorklet;
-  close = mockAudioCtx.close;
-  resume = mockAudioCtx.resume;
-  destination = mockAudioCtx.destination;
+  sampleRate = 24000;
+  currentTime = 0;
+  state = "running";
+  destination = {};
+  createAnalyser() {
+    return { fftSize: 1024, smoothingTimeConstant: 0.8, connect: vi.fn() };
+  }
+  createBuffer() {
+    return { getChannelData: () => new Float32Array(0), duration: 0 };
+  }
+  createBufferSource() {
+    return { buffer: null, connect: vi.fn(), start: vi.fn() };
+  }
+  createMediaStreamSource() {
+    return { connect: vi.fn() };
+  }
+  audioWorklet = { addModule: vi.fn().mockResolvedValue(undefined) };
+  close = vi.fn();
+  resume = vi.fn();
 }
 vi.stubGlobal("AudioContext", MockAudioContext);
 
@@ -106,53 +101,15 @@ class MockAudioWorkletNode {
 }
 vi.stubGlobal("AudioWorkletNode", MockAudioWorkletNode);
 
-// ── Import hook (after mocks are in place) ───────────────────────────────────
+// ── Import hook (after all global mocks are registered) ──────────────────────
 
 import { useRealtimeVoice } from "./useRealtimeVoice";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Per-test setup / teardown ─────────────────────────────────────────────────
 
 const MOCK_STREAM = {
   getTracks: () => [{ stop: vi.fn() }],
 } as unknown as MediaStream;
-
-/** Boot the hook: call connect() and fire onopen to complete setup. */
-async function openHook(
-  result: { current: ReturnType<typeof useRealtimeVoice> }
-) {
-  // connect() is async (fetch + getUserMedia), so await inside act
-  await act(async () => {
-    await result.current.connect();
-  });
-
-  // Fire ws.onopen synchronously so the session.update send goes out
-  await act(async () => {
-    if (mockWs?.onopen) {
-      mockWs.onopen(new Event("open"));
-    }
-    // Let the audioWorklet.addModule promise settle
-    await Promise.resolve();
-  });
-}
-
-/** Deliver a fake WebSocket server event to the hook's onmessage handler. */
-function deliver(type: string, extra: Record<string, unknown> = {}) {
-  act(() => {
-    if (mockWs?.onmessage) {
-      mockWs.onmessage({
-        data: JSON.stringify({ type, ...extra }),
-      } as MessageEvent);
-    }
-  });
-}
-
-/** Parsed sends recorded AFTER the initial session.update preamble. */
-function extraSends(): ReturnType<typeof JSON.parse>[] {
-  // The very first send is always the session.update — skip it
-  return mockWs.sends.slice(1).map((s) => JSON.parse(s));
-}
-
-// ── Test lifecycle ────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -176,13 +133,47 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Boot the hook: call connect() and fire ws.onopen so session.update goes out. */
+async function openHook(
+  result: { current: ReturnType<typeof useRealtimeVoice> }
+) {
+  await act(async () => {
+    await result.current.connect();
+  });
+  await act(async () => {
+    if (mockWs?.onopen) {
+      mockWs.onopen(new Event("open"));
+    }
+    await Promise.resolve(); // let audioWorklet.addModule promise settle
+  });
+}
+
+/** Deliver a fake server event to the hook's message handler. */
+function deliver(type: string, extra: Record<string, unknown> = {}) {
+  act(() => {
+    if (mockWs?.onmessage) {
+      mockWs.onmessage({
+        data: JSON.stringify({ type, ...extra }),
+      } as MessageEvent);
+    }
+  });
+}
+
+/**
+ * Parsed sends after the initial session.update.
+ * The very first send on ws.open is always the session.update preamble.
+ */
+function extraSends(): Record<string, unknown>[] {
+  return mockWs.sends.slice(1).map((s) => JSON.parse(s) as Record<string, unknown>);
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
   /**
-   * Test 1 — 108-B / 108-F:
-   * No send before the 10s nudge threshold.
-   * After speech_stopped, advancing 9.9s must produce zero new sends.
+   * 108-B / 108-F — No send within the first 9.9s after speech_stopped.
    */
   it("produces no send before 10s after speech_stopped (108-B / 108-F)", async () => {
     const { result } = renderHook(() =>
@@ -193,17 +184,16 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
 
     deliver("input_audio_buffer.speech_stopped");
 
-    act(() => {
-      vi.advanceTimersByTime(9_900);
-    });
+    act(() => { vi.advanceTimersByTime(9_900); });
 
+    // Watchdog must not have fired yet
     expect(mockWs.sends.length).toBe(countAfterSetup);
   });
 
   /**
-   * Test 2 — 108-A:
-   * At exactly 10s+, the nudge pair fires:
-   *   conversation.item.create (with nudge text) + response.create.
+   * 108-A — At 10s+, nudge pair fires:
+   *   [0] conversation.item.create (with nudge text)
+   *   [1] response.create
    */
   it("sends nudge pair at 10s mark after speech_stopped (108-A / 108-E)", async () => {
     const { result } = renderHook(() =>
@@ -212,10 +202,7 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
     await openHook(result);
 
     deliver("input_audio_buffer.speech_stopped");
-
-    act(() => {
-      vi.advanceTimersByTime(10_100); // just past 10s nudge
-    });
+    act(() => { vi.advanceTimersByTime(10_100); });
 
     const sends = extraSends();
     expect(sends.length).toBeGreaterThanOrEqual(2);
@@ -223,9 +210,8 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
     const [itemCreate, responseCreate] = sends;
     expect(itemCreate.type).toBe("conversation.item.create");
 
-    const nudgeText: string = itemCreate.item?.content?.[0]?.text ?? "";
-    // The nudge must mention one of these concepts (loose match lets the
-    // prompt wording evolve without breaking the test)
+    const item = itemCreate.item as { content?: Array<{ text?: string }> };
+    const nudgeText = item?.content?.[0]?.text ?? "";
     expect(
       nudgeText.toLowerCase().includes("repeat the question") ||
         nudgeText.toLowerCase().includes("take your time") ||
@@ -236,9 +222,7 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
   });
 
   /**
-   * Test 3 — 108-A:
-   * speech_started before the nudge fires clears the watchdog.
-   * No sends must appear even after 10s would have elapsed.
+   * 108-A — speech_started before the nudge clears the watchdog; no sends fire.
    */
   it("cancels watchdog when speech_started fires before the nudge threshold (108-A)", async () => {
     const { result } = renderHook(() =>
@@ -248,24 +232,17 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
     const countAfterSetup = mockWs.sends.length;
 
     deliver("input_audio_buffer.speech_stopped");
-    act(() => {
-      vi.advanceTimersByTime(5_000); // 5s in — before the nudge
-    });
+    act(() => { vi.advanceTimersByTime(5_000); }); // 5s — below nudge threshold
 
-    // User resumes speaking → watchdog cleared
-    deliver("input_audio_buffer.speech_started");
+    deliver("input_audio_buffer.speech_started"); // user resumes speaking
 
-    act(() => {
-      vi.advanceTimersByTime(5_500); // 10.5s total — would have crossed 10s threshold
-    });
+    act(() => { vi.advanceTimersByTime(5_500); }); // 10.5s total — would cross threshold
 
     expect(mockWs.sends.length).toBe(countAfterSetup);
   });
 
   /**
-   * Test 4 — 108-E:
-   * After the 10s nudge, advancing to 60s fires the hand-off pair:
-   *   conversation.item.create (hand-off text) + response.create.
+   * 108-E — At 60s+, hand-off pair fires after the earlier nudge.
    */
   it("sends hand-off pair at 60s mark after speech_stopped (108-E)", async () => {
     const { result } = renderHook(() =>
@@ -275,26 +252,20 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
 
     deliver("input_audio_buffer.speech_stopped");
 
-    // Cross the 10s nudge mark first
-    act(() => {
-      vi.advanceTimersByTime(10_100);
-    });
+    act(() => { vi.advanceTimersByTime(10_100); }); // cross the 10s nudge
     const countAfterNudge = mockWs.sends.length;
 
-    // Advance past the 60s hand-off
-    act(() => {
-      vi.advanceTimersByTime(50_000); // 10_100 + 50_000 = 60_100ms total
-    });
+    act(() => { vi.advanceTimersByTime(50_000); }); // 60.1s total — cross hand-off
 
     const handoffSends = mockWs.sends
       .slice(countAfterNudge)
-      .map((s) => JSON.parse(s));
+      .map((s) => JSON.parse(s) as Record<string, unknown>);
 
     expect(handoffSends.length).toBeGreaterThanOrEqual(2);
     expect(handoffSends[0].type).toBe("conversation.item.create");
 
-    const handoffText: string =
-      handoffSends[0].item?.content?.[0]?.text ?? "";
+    const hItem = handoffSends[0].item as { content?: Array<{ text?: string }> };
+    const handoffText = hItem?.content?.[0]?.text ?? "";
     expect(
       handoffText.toLowerCase().includes("silent") ||
         handoffText.toLowerCase().includes("next") ||
@@ -305,9 +276,7 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
   });
 
   /**
-   * Test 5 — 108-A:
-   * disconnect() cancels the watchdog — no sends after disconnect even
-   * if timers would have elapsed.
+   * 108-A — disconnect() cancels timers; no sends appear afterwards.
    */
   it("produces no sends after disconnect() clears the watchdog (108-A)", async () => {
     const { result } = renderHook(() =>
@@ -316,24 +285,17 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
     await openHook(result);
 
     deliver("input_audio_buffer.speech_stopped");
-
-    act(() => {
-      vi.advanceTimersByTime(5_000); // 5s — before the nudge
-    });
+    act(() => { vi.advanceTimersByTime(5_000); }); // 5s — below nudge
 
     const countBeforeDisconnect = mockWs.sends.length;
 
-    act(() => {
-      result.current.disconnect();
-    });
+    act(() => { result.current.disconnect(); });
 
-    // Advance well past both the 10s nudge and the 60s hand-off
-    act(() => {
-      vi.advanceTimersByTime(60_000);
-    });
+    // Advance well past both 10s and 60s thresholds
+    act(() => { vi.advanceTimersByTime(60_000); });
 
     // WebSocket is CLOSED after disconnect so sendSilenceNudge returns early;
-    // no new sends must have been recorded
+    // no new sends must appear
     expect(mockWs.sends.length).toBe(countBeforeDisconnect);
   });
 });
