@@ -116,4 +116,33 @@ describe("POST /api/problems/generate", () => {
     const response = await POST(makeRequest({ config: VALID_CONFIG }));
     expect(response.status).toBe(500);
   });
+
+  // 123-L: POST with Other + additional_instructions → OpenAI called with user's Other topic
+  it("passes Other topic via additional_instructions into the OpenAI prompt", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: VALID_PROBLEM_JSON } }],
+    });
+
+    const configWithOther = {
+      interview_type: "leetcode",
+      focus_areas: ["arrays", "other"],
+      language: "python",
+      difficulty: "medium",
+      additional_instructions: "Other focus area: GPU shaders",
+    };
+
+    const response = await POST(makeRequest({ config: configWithOther }));
+    expect(response.status).toBe(200);
+
+    // The OpenAI call should have received a prompt containing the user's Other topic
+    expect(mockChatCreate).toHaveBeenCalledOnce();
+    const callArgs = mockChatCreate.mock.calls[0][0];
+    const userMessage = callArgs.messages.find(
+      (m: { role: string; content: string }) => m.role === "user"
+    );
+    expect(userMessage.content).toContain("Other focus area: GPU shaders");
+    // The raw "other" sentinel should NOT appear in the focus-areas topics line
+    expect(userMessage.content).not.toMatch(/topics:.*other/);
+  });
 });

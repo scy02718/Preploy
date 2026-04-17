@@ -584,4 +584,63 @@ describe("API /api/sessions (integration)", () => {
       (await import("drizzle-orm")).eq(users.id, TEST_USER.id)
     );
   });
+
+  // 123-J: Create technical session with "other" + additional_instructions — 201 + persisted JSONB
+  it("POST creates technical session with 'other' sentinel and persists both focus_areas and additional_instructions", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const res = await POST(
+      makePostRequest({
+        type: "technical",
+        config: {
+          interview_type: "leetcode",
+          focus_areas: ["arrays", "other"],
+          language: "python",
+          difficulty: "medium",
+          additional_instructions: "Other focus area: GPU shaders",
+        },
+      })
+    );
+
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.id).toBeDefined();
+    expect(data.type).toBe("technical");
+
+    // Verify the JSONB config was persisted correctly in the DB
+    const db = getTestDb();
+    const { interviewSessions } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db
+      .select()
+      .from(interviewSessions)
+      .where(eq(interviewSessions.id, data.id));
+
+    expect(row).toBeDefined();
+    const config = row.config as Record<string, unknown>;
+    expect((config.focus_areas as string[])).toContain("other");
+    expect(config.additional_instructions).toBe("Other focus area: GPU shaders");
+  });
+
+  // 123-K: additional_instructions > 1000 chars → 400
+  it("POST returns 400 when additional_instructions exceeds 1000 chars", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const res = await POST(
+      makePostRequest({
+        type: "technical",
+        config: {
+          interview_type: "leetcode",
+          focus_areas: ["arrays"],
+          language: "python",
+          difficulty: "medium",
+          additional_instructions: "x".repeat(1001),
+        },
+      })
+    );
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("Invalid session config");
+  });
 });
