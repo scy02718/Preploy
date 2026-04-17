@@ -47,7 +47,7 @@ const ANALYSES: StarAnalysisForPDF[] = [];
 // URL / anchor helpers
 // ---------------------------------------------------------------------------
 
-let mockObjectUrl = "blob:http://localhost/fake-url";
+const mockObjectUrl = "blob:http://localhost/fake-url";
 const mockCreateObjectURL = vi.fn(() => mockObjectUrl);
 const mockRevokeObjectURL = vi.fn();
 const mockAnchorClick = vi.fn();
@@ -127,10 +127,10 @@ describe("StarPdfExportButton", () => {
     const deferred = new Promise<void>((res) => { resolve = res; });
 
     const { pdf } = await import("@react-pdf/renderer");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(pdf).mockReturnValueOnce({
-      toBlob: vi.fn().mockReturnValue(deferred.then(() => new Blob(["pdf"]))),
-    } as any);
+    const blobMock = { toBlob: vi.fn().mockReturnValue(deferred.then(() => new Blob(["pdf"]))) };
+    vi.mocked(pdf).mockReturnValueOnce(
+      blobMock as unknown as ReturnType<typeof pdf>
+    );
 
     render(<StarPdfExportButton story={STORY} analyses={ANALYSES} />);
 
