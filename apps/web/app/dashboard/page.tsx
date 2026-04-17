@@ -13,6 +13,7 @@ import { ScoreTrendChart, ScoreTrendPoint } from "@/components/dashboard/ScoreTr
 import { WeakAreas, WeakArea } from "@/components/dashboard/WeakAreas";
 import { MonthlyUsageMeter } from "@/components/dashboard/MonthlyUsageMeter";
 import { DashboardStatTiles } from "@/components/dashboard/DashboardStatTiles";
+import { OnboardingTourLauncher } from "@/components/onboarding/OnboardingTourLauncher";
 
 const ONBOARDING_DISMISSED_KEY = "preploy_onboarding_dismissed";
 
@@ -204,6 +205,12 @@ export default function DashboardPage() {
       <div className="mb-6">
         <MonthlyUsageMeter />
       </div>
+
+      {/* Onboarding tour launcher — desktop only, 600ms delay, auto-starts for new users */}
+      <OnboardingTourLauncher
+        totalSessions={totalSessions}
+        isStatsLoading={isStatsLoading}
+      />
 
       {/* Welcome card for first-time users OR stats grid for returning users */}
       {!isStatsLoading && totalSessions === 0 && !onboardingDismissed ? (
