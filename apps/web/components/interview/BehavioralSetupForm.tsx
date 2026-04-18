@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Plus, X } from "lucide-react";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
@@ -20,6 +21,23 @@ interface CompanyQuestion {
   question: string;
   category: string;
   tip: string;
+}
+
+// Slider value → human-readable band. The sliders sit in 0-1 space; these
+// buckets give the user a concrete word for where they are instead of a raw
+// percentage, which matches how the left/right extremes are labelled.
+function styleLabel(v: number): string {
+  if (v < 0.25) return "Strict";
+  if (v < 0.5) return "Mostly strict";
+  if (v < 0.75) return "Mostly casual";
+  return "Casual";
+}
+
+function difficultyLabel(v: number): string {
+  if (v < 0.25) return "Entry";
+  if (v < 0.5) return "Mid";
+  if (v < 0.75) return "Senior";
+  return "Staff+";
 }
 
 export function BehavioralSetupForm() {
@@ -228,10 +246,10 @@ export function BehavioralSetupForm() {
                       <button
                         type="button"
                         onClick={() => removeQuestion(i)}
-                        className="text-muted-foreground hover:text-destructive"
+                        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                         aria-label={`Remove question ${i + 1}`}
                       >
-                        &times;
+                        <X className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </li>
                   ))}
@@ -283,7 +301,12 @@ export function BehavioralSetupForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <Label>Interview Style</Label>
+                <div className="flex items-baseline justify-between">
+                  <Label>Interview Style</Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {styleLabel(interviewStyle)}
+                  </span>
+                </div>
                 <Slider
                   value={[interviewStyle * 100]}
                   onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
@@ -298,7 +321,12 @@ export function BehavioralSetupForm() {
               </div>
 
               <div className="space-y-3">
-                <Label>Difficulty</Label>
+                <div className="flex items-baseline justify-between">
+                  <Label>Difficulty</Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {difficultyLabel(difficulty)}
+                  </span>
+                </div>
                 <Slider
                   value={[difficulty * 100]}
                   onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
@@ -332,9 +360,14 @@ export function BehavioralSetupForm() {
                 disabled={!companyName.trim() || isGenerating}
                 onClick={handleGenerateQuestions}
               >
-                {isGenerating
-                  ? "Generating..."
-                  : "Generate likely questions"}
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate likely questions"
+                )}
               </Button>
 
               {!companyName.trim() && (
@@ -360,10 +393,11 @@ export function BehavioralSetupForm() {
                           <button
                             type="button"
                             onClick={() => addGeneratedQuestion(gq.question)}
-                            className="shrink-0 rounded-md border px-2 py-1 text-xs hover:bg-accent"
-                            aria-label={`Add question ${i + 1}`}
+                            className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-xs font-medium transition-colors hover:bg-accent"
+                            aria-label={`Add question: ${gq.question}`}
                           >
-                            +
+                            <Plus className="h-3 w-3" aria-hidden="true" />
+                            Add
                           </button>
                         )}
                         {questions.includes(gq.question) && (

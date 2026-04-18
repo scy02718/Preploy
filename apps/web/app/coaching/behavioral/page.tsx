@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompetencyChips } from "@/components/coaching/CompetencyChips";
 import type { CompetencyItem } from "@/components/coaching/CompetencyChips";
+import { Lightbulb } from "lucide-react";
 
 function Section({
   title,
@@ -27,8 +28,11 @@ function Section({
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 rounded-md border bg-primary/5 px-4 py-3 text-sm">
-      <span className="shrink-0 text-primary">*</span>
+    <div className="flex gap-3 rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+      <Lightbulb
+        className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+        aria-hidden="true"
+      />
       <span>{children}</span>
     </div>
   );
@@ -228,8 +232,8 @@ export default function BehavioralPage() {
           Question: &quot;Tell me about a time you had to meet a tight deadline.&quot;
         </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-md border border-green-600/30 bg-green-50/50 p-3 dark:bg-green-950/20">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">
+          <div className="rounded-md border border-primary/25 bg-primary/5 p-3">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
               Strong answer
             </p>
             <p className="text-muted-foreground">
@@ -241,8 +245,8 @@ export default function BehavioralPage() {
               dependency risk earlier.&quot;
             </p>
           </div>
-          <div className="rounded-md border border-red-600/30 bg-red-50/50 p-3 dark:bg-red-950/20">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
+          <div className="rounded-md border border-destructive/25 bg-destructive/5 p-3">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-destructive">
               Weak answer
             </p>
             <p className="text-muted-foreground">

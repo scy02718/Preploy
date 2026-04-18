@@ -7,6 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getScoreColor } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, MessageSquare, Code } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StreakCard } from "@/components/dashboard/StreakCard";
 import { BadgeGrid } from "@/components/dashboard/BadgeGrid";
 import { ScoreTrendChart, ScoreTrendPoint } from "@/components/dashboard/ScoreTrendChart";
@@ -415,25 +422,33 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold">Session History</h2>
         <div className="flex gap-2">
-          <select
-            value={typeFilter}
-            onChange={(e) => handleTypeChange(e.target.value)}
-            className="rounded-md border bg-background px-3 py-1.5 text-sm"
-          >
-            <option value="all">All Types</option>
-            <option value="behavioral">Behavioral</option>
-            <option value="technical">Technical</option>
-          </select>
-          <select
-            value={scoreFilter}
-            onChange={(e) => handleScoreChange(e.target.value)}
-            className="rounded-md border bg-background px-3 py-1.5 text-sm"
-          >
-            <option value="all">All Scores</option>
-            <option value="high">7+ (Good)</option>
-            <option value="mid">4-6 (Average)</option>
-            <option value="low">0-3 (Needs Work)</option>
-          </select>
+          <Select value={typeFilter} onValueChange={(v) => handleTypeChange(v ?? "all")}>
+            <SelectTrigger
+              aria-label="Filter by session type"
+              className="h-9 w-[140px]"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="behavioral">Behavioral</SelectItem>
+              <SelectItem value="technical">Technical</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={scoreFilter} onValueChange={(v) => handleScoreChange(v ?? "all")}>
+            <SelectTrigger
+              aria-label="Filter by score"
+              className="h-9 w-[160px]"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Scores</SelectItem>
+              <SelectItem value="high">7+ (Good)</SelectItem>
+              <SelectItem value="mid">4–6 (Average)</SelectItem>
+              <SelectItem value="low">0–3 (Needs Work)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

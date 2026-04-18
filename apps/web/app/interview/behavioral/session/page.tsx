@@ -10,6 +10,7 @@ import { BEHAVIORAL_SESSION_MAX_DURATION_SECONDS } from "@/lib/plans";
 import type { BehavioralSessionConfig } from "@preploy/shared";
 import { VideoCallLayout } from "@/components/interview/VideoCallLayout";
 import { SessionControls } from "@/components/interview/SessionControls";
+import { X } from "lucide-react";
 
 export default function BehavioralSessionPage() {
   const router = useRouter();
@@ -197,12 +198,14 @@ export default function BehavioralSessionPage() {
       {/* Session timer — top-right, counts down from 20:00. Turns destructive
           red in the last minute so the user knows the session will auto-end. */}
       <div
-        className={`absolute top-4 right-4 z-10 rounded-md border bg-background/90 px-3 py-1.5 text-sm font-medium shadow backdrop-blur ${
+        className={`absolute top-4 right-4 z-10 rounded-md border bg-background/90 px-3 py-1.5 text-sm font-medium tabular-nums shadow backdrop-blur transition-colors motion-safe:duration-[var(--duration-base)] ${
           isLastMinute
             ? "border-destructive/60 text-destructive"
             : "text-muted-foreground"
         }`}
         data-testid="session-timer"
+        aria-live="polite"
+        aria-atomic="true"
         aria-label={`Time remaining: ${formattedRemaining}`}
       >
         {formattedRemaining} left
@@ -225,16 +228,22 @@ export default function BehavioralSessionPage() {
 
       {/* Transcript overlay */}
       {showTranscript && (
-        <div className="absolute bottom-16 right-4 z-10 h-64 w-80 overflow-y-auto rounded-lg border bg-background/90 p-3 shadow-lg backdrop-blur">
+        <div
+          id="session-transcript-panel"
+          className="absolute bottom-16 right-4 z-10 h-64 w-80 overflow-y-auto rounded-lg border bg-background/90 p-3 shadow-lg backdrop-blur"
+          role="region"
+          aria-label="Live transcript"
+        >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">
               Live Transcript
             </span>
             <button
               onClick={() => setShowTranscript(false)}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              aria-label="Close transcript"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
-              &times;
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
           <div className="space-y-2 text-sm">
@@ -243,8 +252,8 @@ export default function BehavioralSessionPage() {
                 <span
                   className={`font-medium ${
                     entry.speaker === "assistant"
-                      ? "text-blue-600 dark:text-blue-400"
-                      : "text-green-600 dark:text-green-400"
+                      ? "text-[color:var(--chart-5)]"
+                      : "text-primary"
                   }`}
                 >
                   {entry.speaker === "assistant" ? "Interviewer" : "You"}:
@@ -257,11 +266,14 @@ export default function BehavioralSessionPage() {
         </div>
       )}
 
-      {/* Transcript toggle button */}
+      {/* Transcript toggle button — ≥44px touch target per WCAG AA; announces
+          expanded state and the panel it controls. */}
       {!showTranscript && (
         <button
           onClick={() => setShowTranscript(true)}
-          className="absolute bottom-16 right-4 z-10 rounded-md border bg-background/80 px-3 py-1.5 text-xs text-muted-foreground shadow backdrop-blur hover:bg-background"
+          aria-expanded={false}
+          aria-controls="session-transcript-panel"
+          className="absolute bottom-16 right-4 z-10 inline-flex h-11 items-center rounded-md border bg-background/80 px-4 text-xs font-medium text-muted-foreground shadow backdrop-blur transition-colors hover:bg-background hover:text-foreground"
         >
           Show Transcript
         </button>

@@ -14,6 +14,7 @@ import {
 import { CodeEditor } from "@/components/editor/CodeEditor";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { MicIndicator } from "@/components/interview/MicIndicator";
+import { RefreshCw, Loader2 } from "lucide-react";
 
 export default function TechnicalSessionPage() {
   const router = useRouter();
@@ -104,6 +105,34 @@ export default function TechnicalSessionPage() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // Retry the initial problem fetch after an error — does not consume a
+  // regeneration slot. Recovers from transient failures (network blip, AI
+  // timeout) without forcing the user to end and restart the session.
+  const handleRetryInitialFetch = useCallback(async () => {
+    setProblemLoading(true);
+    setProblemError(null);
+    try {
+      const res = await fetch("/api/problems/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: techConfig }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setProblemError(data.error || "Failed to generate problem");
+      } else {
+        const data = await res.json();
+        setProblem(data);
+      }
+    } catch (err) {
+      setProblemError(
+        err instanceof Error ? err.message : "Failed to generate problem"
+      );
+    } finally {
+      setProblemLoading(false);
+    }
+  }, [techConfig]);
 
   // Regenerate problem handler — sends all previously-shown problem titles
   // so the LLM avoids repeats.
@@ -275,10 +304,18 @@ export default function TechnicalSessionPage() {
       </div>
     </div>
   ) : problemError ? (
-    <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
       <p className="text-sm text-destructive">{problemError}</p>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Try ending the session and starting a new one.
+      <button
+        type="button"
+        onClick={handleRetryInitialFetch}
+        className="inline-flex h-10 items-center gap-2 rounded-md border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent"
+      >
+        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        Try again
+      </button>
+      <p className="text-xs text-muted-foreground">
+        Still stuck? End the session and start a new one.
       </p>
     </div>
   ) : problem ? (
@@ -286,20 +323,28 @@ export default function TechnicalSessionPage() {
       <div className="flex-1 overflow-y-auto">
         <ProblemDescription problem={problem} />
       </div>
-      <div className="border-t px-4 py-3 flex items-center justify-between">
+      <div className="border-t px-4 py-2 flex items-center justify-between">
         <button
           onClick={handleRegenerate}
           disabled={regenerationsLeft <= 0 || isRegenerating}
-          className="text-xs text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex h-11 items-center gap-2 rounded-md px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           title={
             regenerationsLeft <= 0
               ? "No regenerations remaining this session"
               : `Regenerate problem (${regenerationsLeft} left)`
           }
         >
-          {isRegenerating
-            ? "Generating..."
-            : `↻ New question (${regenerationsLeft}/${MAX_REGENERATIONS} left)`}
+          {isRegenerating ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              Generating…
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+              New question ({regenerationsLeft}/{MAX_REGENERATIONS} left)
+            </>
+          )}
         </button>
       </div>
     </div>
