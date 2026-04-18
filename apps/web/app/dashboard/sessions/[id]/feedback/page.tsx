@@ -6,6 +6,13 @@ import { FeedbackDashboard } from "@/components/feedback/FeedbackDashboard";
 import type { TimelineEvent } from "@/components/feedback/TimelineView";
 import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
 
+interface DriftAnalysis {
+  added: string[];
+  omitted: string[];
+  tightened: string[];
+  loosened: string[];
+}
+
 interface FeedbackData {
   overallScore: number;
   summary: string;
@@ -25,6 +32,7 @@ interface FeedbackData {
   gazeDistribution?: GazeDistribution | null;
   gazeCoverage?: number | null;
   gazeTimeline?: GazeTimelineBucket[] | null;
+  driftAnalysis?: DriftAnalysis | null;
 }
 
 const MAX_POLL_ATTEMPTS = 40; // 40 × 3s = 2 minutes max
@@ -108,6 +116,7 @@ export default function FeedbackPage() {
           gazeDistribution: data.gazeDistribution ?? undefined,
           gazeCoverage: data.gazeCoverage ?? undefined,
           gazeTimeline: data.gazeTimeline ?? undefined,
+          driftAnalysis: data.driftAnalysis ?? undefined,
         });
         setIsLoading(false);
         // Done — no more polling
