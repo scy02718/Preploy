@@ -153,3 +153,74 @@ When modifying an existing route, **always re-read** its integration test file f
 ## Logging
 
 Server-side: use `createRequestLogger({ route, userId })` from `@/lib/logger` — never `console.log`. Client-side `console.error` is fine (Pino doesn't run in the browser).
+
+## Design
+
+Preploy's visual system is the "editorial coaching studio" direction landed in
+PRs #164 / #165 / the polish follow-up. The full rationale lives in
+`dev_logs/design-audit-2026-04.md`; what you need to know day-to-day:
+
+### Tokens
+
+All colour, font, shadow, and motion primitives are defined as CSS custom
+properties in `app/globals.css`. Read that file before reaching for Tailwind
+colour utilities — the tokens are:
+
+- **Colour**: `--background`, `--foreground`, `--card`, `--primary` (cedar
+  green), `--accent` (warm amber wash), `--destructive` (terracotta, not
+  fire-truck red), `--muted`, `--border`, `--ring`, plus `--chart-1`..`5`
+  (cedar / amber / burnt orange / terracotta / slate blue — semantic hues
+  for score visualisations). Every token carries real chroma on a warm axis
+  in light mode and ink-navy axis in dark.
+- **Typography**: `--font-display` (Fraunces, serif, opsz + SOFT axes) is
+  used **only on `h1`** via a `@layer base` rule; `--font-sans` (Instrument
+  Sans) is the UI workhorse; `--font-mono` (Geist Mono) stays on code /
+  transcript / timer / tabular numerals. `--font-heading` is deliberately
+  mapped to `--font-sans` — do not move shadcn Card/Sheet/AlertDialog titles
+  onto the serif, it reads heavy in dense UI.
+- **Shadow**: `--shadow-xs`/`sm`/`md`/`lg`/`xl`. Warm-tinted drops in light
+  mode; inset top-highlight + deep outer in dark. Never fall back to the
+  default Tailwind shadow (pure black on warm bg reads cheap).
+- **Motion**: `--ease-out` / `--ease-in` / `--ease-in-out` + `--duration-fast`
+  (120ms) / `--duration-base` (200ms) / `--duration-slow` (320ms). Wrap
+  aesthetic transitions in `motion-safe:` — `globals.css` has a global
+  `prefers-reduced-motion` safety net that caps all animation + transition
+  durations to 0.01ms, but that is a safety net, not licence to skip the
+  prefix.
+
+### Anti-patterns (do not ship)
+
+- **Hardcoded Tailwind colours** like `text-green-600 dark:text-green-400`,
+  `bg-red-50/50`, `text-blue-600` — use semantic tokens (`text-primary`,
+  `bg-destructive/10`, `text-[color:var(--chart-5)]`) so dark mode stays
+  cohesive.
+- **Raw HTML entities as icons** — `&times;`, `↻`, `*` all look lazy. Reach
+  for Lucide (`<X>`, `<RefreshCw>`, `<Lightbulb>`).
+- **Native `<select>` / `confirm()` / `alert()`** — use shadcn
+  `<Select>` / `<AlertDialog>` / an inline `role="status" aria-live="polite"`
+  banner respectively. Native dialogs have no focus management and are blocked
+  in some embedded contexts.
+- **Decorative icons inside `<label>` text** without `aria-hidden="true"`.
+  Screen readers announce the SVG title ("Building 2 Company") otherwise.
+- **Toggle buttons without `aria-expanded` + `aria-controls`** for any
+  expand/collapse widget (FAQ, AnalysisCard, Show Transcript).
+- **Touch targets below 44×44px on interactive elements** — especially icon-
+  only buttons and chip-sized filter toggles.
+
+### Skill workflow
+
+The `ui-ux-pro-max` and `frontend-design` skills are both installed. Default
+routing for UI work:
+
+- **`frontend-design`** when building or overhauling a user-facing surface.
+  It's explicitly scoped to "avoid generic AI aesthetics" — use it whenever
+  a page needs real craft, not just a token swap.
+- **`ui-ux-pro-max`** for the accessibility / interaction / navigation rule
+  audits (`--design-system`, `--domain ux`). Cross-check against its
+  priority table before shipping a new component — it catches
+  touch-target, reduced-motion, and `aria-*` gaps that are easy to miss.
+
+When editing an existing UI file, the self-check before opening a PR is:
+"does this look like every other shadcn+tailwind starter?" and "would a
+real user hit a dead end or confusion here?" If either answer is yes,
+push further.
