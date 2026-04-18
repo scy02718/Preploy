@@ -18,9 +18,14 @@ import {
   Code,
   Plus,
   ChevronDown,
+  Star,
+  FileText,
+  Lightbulb,
 } from "lucide-react";
-import type { PlanDay, PlanData } from "@/lib/plan-generator";
+import type { PlanDay, PlanData, PlanDayType } from "@/lib/plan-generator";
+import { resolveDayType } from "@/lib/plan-generator";
 import { PlanCardMenu } from "@/components/planner/PlanCardMenu";
+import { DayActionButton } from "@/components/planner/DayActionButton";
 
 interface Plan {
   id: string;
@@ -46,6 +51,37 @@ function PlanSkeleton() {
   );
 }
 
+const DAY_TYPE_BADGE: Record<
+  PlanDayType,
+  { label: string; variant: "default" | "secondary" | "outline"; icon: React.ReactNode }
+> = {
+  behavioral: {
+    label: "Behavioral",
+    variant: "default",
+    icon: <MessageSquare className="h-3 w-3" />,
+  },
+  technical: {
+    label: "Technical",
+    variant: "secondary",
+    icon: <Code className="h-3 w-3" />,
+  },
+  "star-prep": {
+    label: "STAR Prep",
+    variant: "outline",
+    icon: <Star className="h-3 w-3" />,
+  },
+  resume: {
+    label: "Resume",
+    variant: "outline",
+    icon: <FileText className="h-3 w-3" />,
+  },
+  coaching: {
+    label: "Coaching",
+    variant: "outline",
+    icon: <Lightbulb className="h-3 w-3" />,
+  },
+};
+
 function DayCard({
   day,
   index,
@@ -55,7 +91,8 @@ function DayCard({
   index: number;
   onToggle: (index: number, completed: boolean) => void;
 }) {
-  const isBehavioral = day.focus === "behavioral";
+  const dayType = resolveDayType(day);
+  const badgeConfig = DAY_TYPE_BADGE[dayType];
 
   return (
     <div
@@ -71,25 +108,15 @@ function DayCard({
         className="mt-1"
       />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span className="text-sm font-medium">
             Day {index + 1} — {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
           </span>
-          <Badge
-            variant={isBehavioral ? "default" : "secondary"}
-            className="text-xs"
-          >
-            {isBehavioral ? (
-              <span className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                Behavioral
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <Code className="h-3 w-3" />
-                Technical
-              </span>
-            )}
+          <Badge variant={badgeConfig.variant} className="text-xs">
+            <span className="flex items-center gap-1">
+              {badgeConfig.icon}
+              {badgeConfig.label}
+            </span>
           </Badge>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -103,9 +130,12 @@ function DayCard({
           ))}
         </div>
       </div>
-      {day.completed && (
-        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-      )}
+      <div className="flex items-center gap-2 shrink-0">
+        {!day.completed && <DayActionButton day={day} />}
+        {day.completed && (
+          <CheckCircle2 className="h-5 w-5 text-green-500" />
+        )}
+      </div>
     </div>
   );
 }
