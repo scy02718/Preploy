@@ -14,6 +14,7 @@ import {
   getTestDb,
 } from "../../../../tests/setup-db";
 import { users, userResumes } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 const mockAuth = vi.fn();
 vi.mock("@/lib/auth", () => ({ auth: () => mockAuth() }));
@@ -59,6 +60,11 @@ describe("POST /api/questions/smart-generate (integration)", () => {
       content: "Senior Engineer at Acme Corp. 10 years Python experience.",
     }).returning();
     resumeId = r.id;
+
+    // This route is Pro-gated only when `resume_id` is present. Default
+    // the seeded user to Pro so existing smart-mode tests pass; the
+    // free-tier block below flips to "free" to exercise the 402 path.
+    await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
 
     mockCreate.mockResolvedValue({
       choices: [{ message: { content: JSON.stringify([
@@ -123,7 +129,7 @@ describe("POST /api/questions/smart-generate (integration)", () => {
     expect(data.mode).toBe("smart");
   });
 
-  it("ignores invalid resume_id gracefully", async () => {
+  it("ignores invalid resume_id gracefully (Pro user)", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     const res = await POST(makeRequest({
       company: "Google",
@@ -133,5 +139,51 @@ describe("POST /api/questions/smart-generate (integration)", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.mode).toBe("company-only");
+  });
+
+  // This route is the parallel attack surface for the Resume feature —
+  // any authenticated user could previously post a `resume_id` here and
+  // get resume-tailored questions without paying. The gate fires only
+  // when a resume_id is supplied (company-only stays free).
+  describe("free-tier resume-tailored gating", () => {
+    beforeEach(async () => {
+      const db = getTestDb();
+      await db
+        .update(users)
+        .set({ plan: "free" })
+        .where(eq(users.id, TEST_USER.id));
+    });
+
+    it("free user with resume_id is blocked with 402 pro_plan_required", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makeRequest({
+          company: "Google",
+          resume_id: resumeId,
+          question_type: "behavioral",
+        })
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "resume",
+        currentPlan: "free",
+      });
+      // GPT must not be invoked — gate fires before OpenAI.
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("free user WITHOUT resume_id stays allowed (company-only mode)", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makeRequest({ company: "Google", question_type: "behavioral" })
+      );
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.mode).toBe("company-only");
+    });
   });
 });

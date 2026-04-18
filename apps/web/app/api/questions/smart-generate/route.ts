@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { userResumes } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
 import { createRequestLogger } from "@/lib/logger";
-import { checkRateLimit } from "@/lib/api-utils";
+import { checkRateLimit, requireProFeature } from "@/lib/api-utils";
 import { buildSmartQuestionsPrompt } from "@/lib/smart-questions-prompt";
 import OpenAI from "openai";
 
@@ -27,6 +27,19 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json();
   const { company, role, resume_id, question_type } = body;
+
+  // Pro-gating: this route is `/api/questions/generate` + an optional
+  // resume-content injection. The resume injection IS the Pro feature
+  // (resume-tailored questions). If the caller supplies a `resume_id`,
+  // require Pro. If they don't, fall through — a company-only smart
+  // question set is equivalent to the free `/api/questions/generate`
+  // surface, so blocking it would be over-reach. Blocks the parallel
+  // attack path where a free user posts their own `resume_id` here to
+  // get resume-tailored output without paying.
+  if (resume_id) {
+    const gated = await requireProFeature(session.user.id, "resume");
+    if (gated) return gated;
+  }
 
   if (!company || typeof company !== "string") {
     return NextResponse.json({ error: "Company name is required" }, { status: 400 });

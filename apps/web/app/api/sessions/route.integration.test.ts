@@ -806,4 +806,84 @@ describe("API /api/sessions (integration)", () => {
 
     expect(res.status).toBe(400);
   });
+
+  // Regression: the parallel bypass path for the Resume feature. A free
+  // user could previously POST a session config containing
+  // `resume_text` or `resume_id` and land a resume-aware interviewer
+  // system prompt without paying. Session-creation itself stays free;
+  // attaching resume context makes it the Resume feature.
+  describe("resume-attached session gating", () => {
+    it("free user POSTing with resume_text is blocked with 402", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default.
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: {
+            interview_style: 0.5,
+            difficulty: 0.5,
+            resume_text: "I'm a senior engineer with 10 years at Acme Corp.",
+          },
+        })
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "resume",
+        currentPlan: "free",
+      });
+    });
+
+    it("free user POSTing with resume_id is blocked with 402", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: {
+            interview_style: 0.5,
+            difficulty: 0.5,
+            resume_id: "00000000-0000-0000-0000-000000000099",
+          },
+        })
+      );
+      expect(res.status).toBe(402);
+    });
+
+    it("free user WITHOUT resume fields keeps free-tier session creation", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5 },
+        })
+      );
+      // 201 on success (or 402 with free_tier_limit_reached on quota,
+      // but we're under the cap here) — anything but 402
+      // pro_plan_required proves the Pro gate didn't fire.
+      expect(res.status).not.toBe(402);
+    });
+
+    it("Pro user with resume_text is allowed through the gate", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: {
+            interview_style: 0.5,
+            difficulty: 0.5,
+            resume_text: "Some resume text",
+          },
+        })
+      );
+      expect(res.status).toBe(201);
+    });
+  });
 });
