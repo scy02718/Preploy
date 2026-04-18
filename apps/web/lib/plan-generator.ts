@@ -3,9 +3,20 @@
  * All functions are side-effect free and unit-testable.
  */
 
+/** All valid day types the planner can emit. */
+export type PlanDayType =
+  | "behavioral"
+  | "technical"
+  | "star-prep"
+  | "resume"
+  | "coaching";
+
 export interface PlanDay {
   date: string; // ISO date string (YYYY-MM-DD)
+  /** Legacy field — kept for backward compatibility with plans generated before day_type was added. */
   focus: "behavioral" | "technical";
+  /** Explicit day type — takes precedence over `focus` when present. */
+  day_type?: PlanDayType;
   topics: string[];
   session_type: string;
   completed: boolean;
@@ -63,10 +74,14 @@ export function buildPlanGenerationPrompt(input: PlanGenerationInput): string {
   sections.push(
     `Guidelines:
 - Alternate between behavioral and technical prep days for balance
+- Include at least one star-prep day (STAR story writing practice) and optionally a resume review day or a coaching day
 - Start with fundamentals and build up to harder topics
 - Include specific, actionable topics for each day (e.g., "Two pointers + sliding window", "STAR method for leadership questions")
 - For behavioral days, include relevant question categories (leadership, conflict, teamwork, failure)
 - For technical days, include specific algorithm patterns or system design topics
+- For star-prep days, include STAR storytelling practice (situation, task, action, result structuring)
+- For resume days, include resume review and tailoring activities
+- For coaching days, include job search strategy, offer negotiation, or hiring process guidance
 - The last day should be a light review day, not heavy practice`
   );
 
@@ -77,6 +92,7 @@ export function buildPlanGenerationPrompt(input: PlanGenerationInput): string {
     {
       "date": "YYYY-MM-DD",
       "focus": "behavioral" | "technical",
+      "day_type": "behavioral" | "technical" | "star-prep" | "resume" | "coaching",
       "topics": ["topic1", "topic2"],
       "session_type": "behavioral" | "technical",
       "completed": false
@@ -116,6 +132,16 @@ export function extractWeakAreas(
     .filter(([, count]) => count >= 2)
     .sort((a, b) => b[1] - a[1])
     .map(([weakness]) => weakness);
+}
+
+/**
+ * Resolve the effective day type for a PlanDay.
+ * Uses `day_type` if present (new plans), otherwise falls back to `focus`
+ * (legacy plans generated before day_type was added).
+ */
+export function resolveDayType(day: PlanDay): PlanDayType {
+  if (day.day_type) return day.day_type;
+  return day.focus;
 }
 
 /**
