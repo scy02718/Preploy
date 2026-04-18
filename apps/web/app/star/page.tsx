@@ -176,6 +176,9 @@ function AnalysisCard({ analysis }: { analysis: StarAnalysis }) {
 export default function StarPrepPage() {
   const router = useRouter();
   const setBehavioralPrefill = usePrefillStore((s) => s.setBehavioralPrefill);
+  const starPrepPrefill = usePrefillStore((s) => s.starPrepPrefill);
+  const setStarPrepPrefill = usePrefillStore((s) => s.setStarPrepPrefill);
+  const [plannerHint, setPlannerHint] = useState<string[] | null>(null);
   const [stories, setStories] = useState<StarStory[]>([]);
   const [selectedDetail, setSelectedDetail] = useState<StoryDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,6 +191,14 @@ export default function StarPrepPage() {
   const [exportAllProgress, setExportAllProgress] = useState<{ done: number; total: number } | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [questionInput, setQuestionInput] = useState("");
+
+  // Consume starPrepPrefill from planner CTA on mount
+  useEffect(() => {
+    if (starPrepPrefill?.focus_topics && starPrepPrefill.focus_topics.length > 0) {
+      setPlannerHint(starPrepPrefill.focus_topics);
+      setStarPrepPrefill(null);
+    }
+  }, [starPrepPrefill, setStarPrepPrefill]);
 
   const fetchStories = useCallback(async () => {
     try {
@@ -418,6 +429,34 @@ export default function StarPrepPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-6xl mx-auto">
+      {plannerHint && plannerHint.length > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+          <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              Suggested focus from your prep plan
+            </p>
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {plannerHint.map((topic, i) => (
+                <span
+                  key={i}
+                  className="inline-block rounded-md bg-blue-100 px-2 py-0.5 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => setPlannerHint(null)}
+            className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200 shrink-0"
+            aria-label="Dismiss hint"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

@@ -72,6 +72,35 @@ const SAMPLE_PLAN_DATA = {
   ],
 };
 
+const STAR_PREP_PLAN_DATA = {
+  days: [
+    {
+      date: "2026-04-12",
+      focus: "behavioral",
+      day_type: "star-prep",
+      topics: ["STAR story drafting", "Leadership narrative"],
+      session_type: "behavioral",
+      completed: false,
+    },
+    {
+      date: "2026-04-13",
+      focus: "technical",
+      day_type: "technical",
+      topics: ["Arrays", "Dynamic programming"],
+      session_type: "technical",
+      completed: false,
+    },
+    {
+      date: "2026-04-14",
+      focus: "behavioral",
+      day_type: "resume",
+      topics: ["Resume tailoring", "ATS keywords"],
+      session_type: "behavioral",
+      completed: false,
+    },
+  ],
+};
+
 function makeGetRequest(id: string): [NextRequest, { params: Promise<{ id: string }> }] {
   return [
     new NextRequest(`http://localhost:3000/api/plans/${id}`),
@@ -351,5 +380,68 @@ describe("API /api/plans/[id] (integration)", () => {
 
     const getRes = await GET(...makeGetRequest(planId));
     expect(getRes.status).toBe(404);
+  });
+
+  // ---- star-prep day_type round-trip tests ----
+
+  it("GET returns a plan containing a star-prep day (round-trip through DB)", async () => {
+    const db = getTestDb();
+    // Insert a plan with star-prep day_type
+    const [starPlan] = await db
+      .insert(interviewPlans)
+      .values({
+        userId: TEST_USER.id,
+        company: "Stripe",
+        role: "Engineer",
+        interviewDate: new Date("2026-05-01"),
+        planData: STAR_PREP_PLAN_DATA,
+      })
+      .returning();
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await GET(...makeGetRequest(starPlan.id));
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    expect(data.planData.days[0].day_type).toBe("star-prep");
+    expect(data.planData.days[1].day_type).toBe("technical");
+    expect(data.planData.days[2].day_type).toBe("resume");
+  });
+
+  it("PATCH works on a plan with star-prep days — preserves day_type field", async () => {
+    const db = getTestDb();
+    const [starPlan] = await db
+      .insert(interviewPlans)
+      .values({
+        userId: TEST_USER.id,
+        company: "Stripe",
+        role: "Engineer",
+        interviewDate: new Date("2026-05-01"),
+        planData: STAR_PREP_PLAN_DATA,
+      })
+      .returning();
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(
+      ...makePatchRequest(starPlan.id, { day_index: 0, completed: true })
+    );
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    // day_type must be preserved after the toggle
+    expect(data.planData.days[0].completed).toBe(true);
+    expect(data.planData.days[0].day_type).toBe("star-prep");
+  });
+
+  it("legacy plans without day_type still round-trip correctly", async () => {
+    // SAMPLE_PLAN_DATA has no day_type field (legacy)
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await GET(...makeGetRequest(planId));
+    expect(res.status).toBe(200);
+
+    const data = await res.json();
+    // Legacy days should not have day_type set
+    expect(data.planData.days[0].day_type).toBeUndefined();
+    expect(data.planData.days[0].focus).toBe("behavioral");
   });
 });

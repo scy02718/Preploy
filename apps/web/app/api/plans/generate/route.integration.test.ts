@@ -54,6 +54,7 @@ const MOCK_PLAN_RESPONSE = {
     {
       date: "2026-04-12",
       focus: "behavioral",
+      day_type: "behavioral",
       topics: ["STAR method", "Leadership questions"],
       session_type: "behavioral",
       completed: false,
@@ -61,8 +62,38 @@ const MOCK_PLAN_RESPONSE = {
     {
       date: "2026-04-13",
       focus: "technical",
+      day_type: "technical",
       topics: ["Arrays", "Hash maps"],
       session_type: "technical",
+      completed: false,
+    },
+  ],
+};
+
+const MOCK_PLAN_WITH_STAR_PREP = {
+  days: [
+    {
+      date: "2026-04-12",
+      focus: "behavioral",
+      day_type: "star-prep",
+      topics: ["STAR storytelling", "Conflict narrative"],
+      session_type: "behavioral",
+      completed: false,
+    },
+    {
+      date: "2026-04-13",
+      focus: "technical",
+      day_type: "technical",
+      topics: ["Arrays", "Sorting"],
+      session_type: "technical",
+      completed: false,
+    },
+    {
+      date: "2026-04-14",
+      focus: "behavioral",
+      day_type: "resume",
+      topics: ["Resume tailoring"],
+      session_type: "behavioral",
       completed: false,
     },
   ],
@@ -172,6 +203,41 @@ describe("POST /api/plans/generate (integration)", () => {
     const rows = await db.select().from(interviewPlans);
     expect(rows).toHaveLength(1);
     expect(rows[0].company).toBe("Google");
+  });
+
+  it("preserves day_type field including star-prep when persisting generated plan", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    // Override mock to return plan with star-prep days
+    mockCreate.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify(MOCK_PLAN_WITH_STAR_PREP),
+          },
+        },
+      ],
+    });
+
+    const res = await POST(
+      makeRequest({
+        company: "Stripe",
+        role: "Full Stack Engineer",
+        interview_date: "2026-05-01",
+      })
+    );
+    expect(res.status).toBe(201);
+
+    const data = await res.json();
+    expect(data.planData.days[0].day_type).toBe("star-prep");
+    expect(data.planData.days[1].day_type).toBe("technical");
+    expect(data.planData.days[2].day_type).toBe("resume");
+
+    // Verify persisted day_type in DB
+    const db = getTestDb();
+    const rows = await db.select().from(interviewPlans);
+    const planData = rows[0].planData as { days: Array<{ day_type?: string }> };
+    expect(planData.days[0].day_type).toBe("star-prep");
   });
 
   it("includes weak areas from past feedback in the prompt", async () => {

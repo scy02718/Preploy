@@ -4,8 +4,9 @@ import {
   calculatePrepDays,
   extractWeakAreas,
   calculateProgress,
+  resolveDayType,
 } from "./plan-generator";
-import type { PlanData } from "./plan-generator";
+import type { PlanData, PlanDay } from "./plan-generator";
 
 describe("calculatePrepDays", () => {
   it("returns the number of days between now and interview date", () => {
@@ -121,6 +122,93 @@ describe("buildPlanGenerationPrompt", () => {
     });
 
     expect(prompt).toContain("last day should be a light review");
+  });
+
+  it("includes star-prep as a valid day_type in the JSON schema", () => {
+    const prompt = buildPlanGenerationPrompt({
+      company: "Google",
+      role: "SWE",
+      interview_date: "2026-04-20",
+    });
+
+    expect(prompt).toContain("star-prep");
+  });
+
+  it("includes all five day_type variants in the JSON schema", () => {
+    const prompt = buildPlanGenerationPrompt({
+      company: "Amazon",
+      role: "SDE II",
+      interview_date: "2026-04-20",
+    });
+
+    expect(prompt).toContain('"day_type"');
+    expect(prompt).toContain("behavioral");
+    expect(prompt).toContain("technical");
+    expect(prompt).toContain("star-prep");
+    expect(prompt).toContain("resume");
+    expect(prompt).toContain("coaching");
+  });
+
+  it("instructs OpenAI to include star-prep days", () => {
+    const prompt = buildPlanGenerationPrompt({
+      company: "Netflix",
+      role: "Backend Engineer",
+      interview_date: "2026-04-20",
+    });
+
+    expect(prompt).toContain("at least one star-prep day");
+  });
+});
+
+describe("resolveDayType", () => {
+  const makeDay = (overrides: Partial<PlanDay>): PlanDay => ({
+    date: "2026-04-12",
+    focus: "behavioral",
+    topics: ["STAR"],
+    session_type: "behavioral",
+    completed: false,
+    ...overrides,
+  });
+
+  it("returns day_type when it is set (behavioral)", () => {
+    const day = makeDay({ day_type: "behavioral" });
+    expect(resolveDayType(day)).toBe("behavioral");
+  });
+
+  it("returns day_type when it is set (technical)", () => {
+    const day = makeDay({ focus: "technical", day_type: "technical" });
+    expect(resolveDayType(day)).toBe("technical");
+  });
+
+  it("returns day_type star-prep even when focus says behavioral", () => {
+    const day = makeDay({ focus: "behavioral", day_type: "star-prep" });
+    expect(resolveDayType(day)).toBe("star-prep");
+  });
+
+  it("returns day_type resume", () => {
+    const day = makeDay({ day_type: "resume" });
+    expect(resolveDayType(day)).toBe("resume");
+  });
+
+  it("returns day_type coaching", () => {
+    const day = makeDay({ day_type: "coaching" });
+    expect(resolveDayType(day)).toBe("coaching");
+  });
+
+  it("falls back to focus when day_type is absent (legacy behavioral day)", () => {
+    const day = makeDay({ focus: "behavioral" });
+    // no day_type set
+    expect(resolveDayType(day)).toBe("behavioral");
+  });
+
+  it("falls back to focus when day_type is absent (legacy technical day)", () => {
+    const day = makeDay({ focus: "technical" });
+    expect(resolveDayType(day)).toBe("technical");
+  });
+
+  it("day_type takes precedence over focus when both differ", () => {
+    const day = makeDay({ focus: "behavioral", day_type: "technical" });
+    expect(resolveDayType(day)).toBe("technical");
   });
 });
 

@@ -3,18 +3,28 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 // Mock next/navigation with the canonical vi.hoisted() + vi.mock() pattern
 // so the factory receives a hoisted ref before the import graph is evaluated.
-const { mockPush, mockSetBehavioralPrefill } = vi.hoisted(() => ({
+const { mockPush, mockSetBehavioralPrefill, mockSetStarPrepPrefill } = vi.hoisted(() => ({
   mockPush: vi.fn(),
   mockSetBehavioralPrefill: vi.fn(),
+  mockSetStarPrepPrefill: vi.fn(),
 }));
+
+// Mutable variable controlled per-test for starPrepPrefill
+let mockStarPrepPrefill: { focus_topics: string[] } | null = null;
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
   usePathname: () => "/star",
 }));
 vi.mock("@/stores/prefillStore", () => ({
-  usePrefillStore: (
-    selector: (s: { setBehavioralPrefill: typeof mockSetBehavioralPrefill }) => unknown,
-  ) => selector({ setBehavioralPrefill: mockSetBehavioralPrefill }),
+  usePrefillStore: (selector?: (s: unknown) => unknown) => {
+    const state = {
+      starPrepPrefill: mockStarPrepPrefill,
+      setStarPrepPrefill: mockSetStarPrepPrefill,
+      setBehavioralPrefill: mockSetBehavioralPrefill,
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 import StarPrepPage from "./page";
@@ -54,6 +64,7 @@ const MOCK_DETAIL = {
 const originalFetch = global.fetch;
 
 beforeEach(() => {
+  mockStarPrepPrefill = null;
   global.fetch = vi.fn().mockResolvedValue({
     ok: true,
     json: async () => ({ stories: MOCK_STORIES, pagination: { total: 2, page: 1, limit: 20, totalPages: 1 } }),
@@ -272,5 +283,52 @@ describe("StarPrepPage", () => {
 
     // "Export all" button must not be present
     expect(screen.queryByText("Export all")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Planner hint banner (122 — planner day CTAs)
+// ---------------------------------------------------------------------------
+describe("planner hint banner", () => {
+  it("renders heading and each focus topic when starPrepPrefill is populated", async () => {
+    mockStarPrepPrefill = { focus_topics: ["Leadership challenge", "Conflict resolution"] };
+
+    render(<StarPrepPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Suggested focus from your prep plan").length).toBeGreaterThanOrEqual(1);
+    });
+    expect(screen.getAllByText("Leadership challenge").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Conflict resolution").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does NOT render the hint banner when starPrepPrefill is null", async () => {
+    mockStarPrepPrefill = null;
+
+    render(<StarPrepPage />);
+
+    // Give any effects a chance to run
+    await waitFor(() => {
+      expect(screen.queryByText("Suggested focus from your prep plan")).toBeNull();
+    });
+  });
+
+  it("clears the banner when the dismiss (X) button is clicked", async () => {
+    mockStarPrepPrefill = { focus_topics: ["Leadership challenge", "Conflict resolution"] };
+
+    render(<StarPrepPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Suggested focus from your prep plan").length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Click the dismiss button
+    const dismissBtn = screen.getByRole("button", { name: /dismiss hint/i });
+    fireEvent.click(dismissBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Suggested focus from your prep plan")).toBeNull();
+    });
+    expect(screen.queryByText("Leadership challenge")).toBeNull();
   });
 });
