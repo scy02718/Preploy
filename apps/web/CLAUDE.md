@@ -5,13 +5,7 @@ covers monorepo-wide rules (Tasks.md workflow, pre-commit checklist).
 
 ## Stack
 
-- Next.js 16 (App Router) + React 19
-- Drizzle ORM + Postgres (`postgres` driver)
-- NextAuth v5 (`@/lib/auth`)
-- Vitest + Testing Library + jsdom for unit/component tests
-- Vitest + real Docker Postgres for integration tests
-- Tailwind v4 + shadcn/ui components
-- Pino structured logging (`@/lib/logger`)
+Next.js 16 (App Router) + React 19 · Drizzle ORM + Postgres (`postgres` driver) · NextAuth v5 (`@/lib/auth`) · Tailwind v4 + shadcn/ui · Vitest (+ jsdom for unit/component, real Docker Postgres for integration) · Pino structured logging (`@/lib/logger`).
 
 ## API routes
 
@@ -87,19 +81,11 @@ twice (PRs #52, #53).
 - [ ] For nested widgets that fetch their own data (e.g., `MonthlyUsageMeter`), the widget owns its own internal skeleton — the parent doesn't need to know about it.
 - [ ] Use `animate-pulse rounded bg-muted` divs sized to match the eventual content. Don't use empty `<Card />` shells without inner placeholders — they look broken.
 
-## Styling
-
-- Tailwind v4 + shadcn/ui (`Card`, `CardHeader`, `CardTitle`, `CardContent`).
-- Dark mode: use `dark:` variants for custom colors.
-- Score colors: `getScoreColor()` from `@/lib/utils`.
-
 ## Tests
 
 ### Unit tests (`lib/*.test.ts`)
 
-- Co-locate next to the source file (e.g., `lib/prompts.test.ts`).
-- Target 80%+ line coverage on `lib/`, `services/`, `stores/`.
-- Cover happy path, edge cases, error cases, boundary values, empty/null inputs.
+Co-locate next to source. Cover happy path + edge/error cases.
 
 ### E2E tests (`e2e/*.spec.ts`)
 
@@ -149,37 +135,7 @@ The only things you may mock:
 - External APIs (OpenAI, Anthropic, etc.)
 - `@/lib/db` — pointed at `getTestDb()` from `tests/setup-db.ts` (this is *redirection*, not mocking)
 
-**Standard template:**
-
-```typescript
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from "vitest";
-import { NextRequest } from "next/server";
-import { cleanupTestDb, teardownTestDb, getTestDb } from "../../../../tests/setup-db";
-import { users } from "@/lib/schema";
-
-const mockAuth = vi.fn();
-vi.mock("@/lib/auth", () => ({ auth: () => mockAuth() }));
-vi.mock("@/lib/db", () => ({ get db() { return getTestDb(); } }));
-
-import { GET, POST } from "./route";
-
-const TEST_USER = {
-  id: "00000000-0000-0000-0000-000000000001",
-  email: "test@example.com",
-  name: "Test User",
-};
-
-describe("API /api/your-route (integration)", () => {
-  beforeAll(async () => { /* seed users */ });
-  beforeEach(async () => { vi.clearAllMocks(); /* clean tables */ });
-  afterAll(async () => { await cleanupTestDb(); await teardownTestDb(); });
-
-  it("returns 401 when unauthenticated", async () => { /* ... */ });
-  it("returns 404 for another user's resource", async () => { /* ... */ });
-  it("returns 400 for invalid input", async () => { /* ... */ });
-  it("happy path returns correct data", async () => { /* ... */ });
-});
-```
+For the standard template, copy any existing `app/api/**/*.integration.test.ts` — they all follow the same shape (mock auth + db, seed users in `beforeAll`, clean tables in `beforeEach`, teardown in `afterAll`).
 
 ### Integration test checklist (mandatory for every route change)
 
@@ -196,16 +152,4 @@ When modifying an existing route, **always re-read** its integration test file f
 
 ## Logging
 
-```ts
-import { createRequestLogger } from "@/lib/logger";
-const log = createRequestLogger({ route: "POST /api/example", userId });
-log.info("processing request");
-log.error({ err }, "something failed");
-```
-
-Client-side `console.error` is fine — Pino doesn't run in the browser.
-
-## Skills available in this project
-
-- **`webapp-testing`** — Playwright for browser tests. Use this when asked to "click through", "exercise the UI", or "verify the avatar renders". Prefer this over writing component tests for Three.js or animation-heavy code.
-- **`claude-api`** — reference this only if the story touches Anthropic SDK code. The web app currently uses OpenAI; do not "convert" OpenAI calls to Anthropic without explicit instruction.
+Server-side: use `createRequestLogger({ route, userId })` from `@/lib/logger` — never `console.log`. Client-side `console.error` is fine (Pino doesn't run in the browser).
