@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Instrument_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/shared/Header";
 import { Providers } from "@/components/shared/Providers";
@@ -7,14 +7,31 @@ import { AchievementToastProvider } from "@/components/shared/AchievementToastPr
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-const geistSans = Geist({
-  variable: "--font-sans",
+// Display — Fraunces, used for h1 / hero / score numerals. Variable with optical
+// sizing so it looks right at every display size and reads as editorial rather
+// than "another SaaS serif."
+const fraunces = Fraunces({
+  variable: "--font-display",
   subsets: ["latin"],
+  axes: ["opsz", "SOFT"],
+  display: "swap",
 });
 
+// Body / UI — Instrument Sans. Neo-grotesque workhorse with real character,
+// replaces the previous Geist Sans default. Variable for full weight range.
+const instrumentSans = Instrument_Sans({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// Mono — Geist Mono retained for code editor, transcript, timer, and tabular
+// numerals. The existing `--font-geist-mono` variable name is preserved so no
+// downstream components need to change.
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
@@ -53,7 +70,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={`${fraunces.variable} ${instrumentSans.variable} ${geistMono.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col" suppressHydrationWarning>
