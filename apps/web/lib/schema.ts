@@ -182,6 +182,7 @@ export const sessionFeedback = pgTable("session_feedback", {
   gazeDistribution: jsonb("gaze_distribution"),
   gazeCoverage: real("gaze_coverage"),
   gazeTimeline: jsonb("gaze_timeline"),
+  driftAnalysis: jsonb("drift_analysis"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
