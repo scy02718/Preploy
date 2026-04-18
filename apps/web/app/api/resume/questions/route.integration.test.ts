@@ -6,6 +6,7 @@ import {
   getTestDb,
 } from "../../../../tests/setup-db";
 import { users, userResumes } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 // Use vi.hoisted so the mock fn is available when vi.mock factories run
 const { mockAuth, mockCreate } = vi.hoisted(() => ({
@@ -91,7 +92,7 @@ describe("API POST /api/resume/questions (integration)", () => {
     testResumeId = resume.id;
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mockCreate.mockReset();
     mockCreate.mockResolvedValue({
       choices: [
@@ -102,6 +103,11 @@ describe("API POST /api/resume/questions (integration)", () => {
         },
       ],
     });
+    // Resume-tailored question generation is Pro-only. Default the seeded
+    // users to Pro; the free-tier gating suite below flips TEST_USER to
+    // "free" to exercise the 402 path.
+    const db = getTestDb();
+    await db.update(users).set({ plan: "pro" });
   });
 
   afterAll(async () => {
@@ -213,5 +219,32 @@ describe("API POST /api/resume/questions (integration)", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toContain("Failed to generate");
+  });
+
+  describe("free-tier gating", () => {
+    beforeEach(async () => {
+      const db = getTestDb();
+      await db
+        .update(users)
+        .set({ plan: "free" })
+        .where(eq(users.id, TEST_USER.id));
+    });
+
+    it("free-tier user is blocked with 402 pro_plan_required", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makeRequest({ resume_id: testResumeId, question_type: "behavioral" })
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "resume",
+        currentPlan: "free",
+      });
+      // GPT must not be invoked — gating runs before the OpenAI call.
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
   });
 });

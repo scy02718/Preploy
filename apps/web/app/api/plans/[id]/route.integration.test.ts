@@ -27,10 +27,17 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-// Mock rate limit to always pass in tests
-vi.mock("@/lib/api-utils", () => ({
-  checkRateLimit: vi.fn().mockResolvedValue(null),
-}));
+// Mock only the rate limiter — `requireProFeature` runs for real against
+// the test DB so we exercise the actual gating logic end-to-end.
+vi.mock("@/lib/api-utils", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api-utils")>(
+    "@/lib/api-utils"
+  );
+  return {
+    ...actual,
+    checkRateLimit: vi.fn().mockResolvedValue(null),
+  };
+});
 
 import { GET, PATCH, DELETE } from "./route";
 
@@ -148,6 +155,11 @@ describe("API /api/plans/[id] (integration)", () => {
 
     const db = getTestDb();
     await db.delete(interviewPlans);
+
+    // Default both seeded users to Pro — PATCH is now Pro-gated. The
+    // free-tier gating suite below overrides TEST_USER to "free" to
+    // exercise the 402 path.
+    await db.update(users).set({ plan: "pro" });
 
     // Create a test plan
     const [created] = await db
@@ -443,5 +455,77 @@ describe("API /api/plans/[id] (integration)", () => {
     // Legacy days should not have day_type set
     expect(data.planData.days[0].day_type).toBeUndefined();
     expect(data.planData.days[0].focus).toBe("behavioral");
+  });
+
+  // ---- Free-tier gating (Pro-only PATCH) ----
+  describe("free-tier gating", () => {
+    beforeEach(async () => {
+      const db = getTestDb();
+      await db
+        .update(users)
+        .set({ plan: "free" })
+        .where(eq(users.id, TEST_USER.id));
+    });
+
+    it("PATCH is blocked with 402 for free-tier users (day completion)", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const req = new NextRequest(
+        `http://localhost:3000/api/plans/${planId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ day_index: 0, completed: true }),
+        }
+      );
+      const res = await PATCH(req, { params: Promise.resolve({ id: planId }) });
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "planner",
+        currentPlan: "free",
+      });
+    });
+
+    it("PATCH archive toggle is also blocked with 402 for free-tier", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const req = new NextRequest(
+        `http://localhost:3000/api/plans/${planId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ archived: true }),
+        }
+      );
+      const res = await PATCH(req, { params: Promise.resolve({ id: planId }) });
+      expect(res.status).toBe(402);
+    });
+
+    it("GET stays open for free-tier (read-only grandfathering)", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const req = new NextRequest(
+        `http://localhost:3000/api/plans/${planId}`
+      );
+      const res = await GET(req, { params: Promise.resolve({ id: planId }) });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.id).toBe(planId);
+    });
+
+    it("DELETE stays open for free-tier (cleanup grandfathering)", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const req = new NextRequest(
+        `http://localhost:3000/api/plans/${planId}`,
+        { method: "DELETE" }
+      );
+      const res = await DELETE(req, {
+        params: Promise.resolve({ id: planId }),
+      });
+      expect(res.status).toBe(204);
+    });
   });
 });

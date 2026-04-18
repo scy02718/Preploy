@@ -6,6 +6,7 @@ import {
   getTestDb,
 } from "../../../../tests/setup-db";
 import { users, userResumes } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 // Mock auth
 const mockAuth = vi.fn();
@@ -60,6 +61,12 @@ describe("API POST /api/resume/upload (integration)", () => {
   beforeEach(async () => {
     const db = getTestDb();
     await db.delete(userResumes);
+    // Resume upload is Pro-only. Default seeded user to Pro for existing
+    // tests; the free-tier gating suite below flips to "free".
+    await db
+      .update(users)
+      .set({ plan: "pro" })
+      .where(eq(users.id, TEST_USER.id));
   });
 
   afterAll(async () => {
@@ -134,7 +141,6 @@ describe("API POST /api/resume/upload (integration)", () => {
     expect(res.status).toBe(201);
 
     const db = getTestDb();
-    const { eq } = await import("drizzle-orm");
     const rows = await db
       .select()
       .from(userResumes)
@@ -142,5 +148,45 @@ describe("API POST /api/resume/upload (integration)", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].filename).toBe("test.txt");
     expect(rows[0].content).toBe("My resume content");
+  });
+
+  describe("free-tier gating", () => {
+    beforeEach(async () => {
+      const db = getTestDb();
+      await db
+        .update(users)
+        .set({ plan: "free" })
+        .where(eq(users.id, TEST_USER.id));
+    });
+
+    it("free-tier user is blocked with 402 pro_plan_required", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makeUploadRequest("My resume content", "test.txt", "text/plain")
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "resume",
+        currentPlan: "free",
+      });
+    });
+
+    it("free-tier gating happens before any DB insert", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      await POST(
+        makeUploadRequest("My resume content", "test.txt", "text/plain")
+      );
+
+      const db = getTestDb();
+      const rows = await db
+        .select()
+        .from(userResumes)
+        .where(eq(userResumes.userId, TEST_USER.id));
+      expect(rows).toHaveLength(0);
+    });
   });
 });

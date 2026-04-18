@@ -14,6 +14,7 @@ import {
   getTestDb,
 } from "../../../../tests/setup-db";
 import { users, interviewPlans, interviewSessions, sessionFeedback } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 const mockAuth = vi.fn();
 vi.mock("@/lib/auth", () => ({
@@ -119,6 +120,14 @@ describe("POST /api/plans/generate (integration)", () => {
     await db.delete(interviewPlans);
     await db.delete(sessionFeedback);
     await db.delete(interviewSessions);
+
+    // Planner is Pro-only. Default the seeded user to Pro for existing
+    // happy-path tests; the free-tier gating suite below flips this to
+    // "free" to exercise the 402 path.
+    await db
+      .update(users)
+      .set({ plan: "pro" })
+      .where(eq(users.id, TEST_USER.id));
 
     mockCreate.mockResolvedValue({
       choices: [
@@ -312,5 +321,52 @@ describe("POST /api/plans/generate (integration)", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toContain("Failed to generate plan");
+  });
+
+  describe("free-tier gating", () => {
+    beforeEach(async () => {
+      const db = getTestDb();
+      await db
+        .update(users)
+        .set({ plan: "free" })
+        .where(eq(users.id, TEST_USER.id));
+    });
+
+    it("free-tier user is blocked with 402 pro_plan_required", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makeRequest({
+          company: "Google",
+          role: "SWE",
+          interview_date: "2026-05-01",
+        })
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "planner",
+        currentPlan: "free",
+      });
+      // OpenAI must not be invoked — gating runs before the GPT call.
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("free-tier user blocked does NOT create a plan row", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      await POST(
+        makeRequest({
+          company: "Google",
+          role: "SWE",
+          interview_date: "2026-05-01",
+        })
+      );
+
+      const db = getTestDb();
+      const rows = await db.select().from(interviewPlans);
+      expect(rows).toHaveLength(0);
+    });
   });
 });

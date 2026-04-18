@@ -7,6 +7,7 @@ import { z } from "zod/v4";
 import OpenAI from "openai";
 import { buildPlanGenerationPrompt, extractWeakAreas } from "@/lib/plan-generator";
 import { createRequestLogger } from "@/lib/logger";
+import { requireProFeature } from "@/lib/api-utils";
 import type { PlanData } from "@/lib/plan-generator";
 
 const generatePlanSchema = z.object({
@@ -26,6 +27,12 @@ export async function POST(request: NextRequest) {
     route: "POST /api/plans/generate",
     userId: session.user.id,
   });
+
+  // Planner is a Pro-only feature — see `lib/features.ts`. Free users who
+  // already have plans can still GET them (/api/plans), but they cannot
+  // create new ones.
+  const gated = await requireProFeature(session.user.id, "planner");
+  if (gated) return gated;
 
   const body = await request.json();
   const parsed = generatePlanSchema.safeParse(body);

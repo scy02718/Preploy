@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { interviewPlans } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
-import { checkRateLimit } from "@/lib/api-utils";
+import { checkRateLimit, requireProFeature } from "@/lib/api-utils";
 import { createRequestLogger } from "@/lib/logger";
 import type { PlanData, PlanDay } from "@/lib/plan-generator";
 
@@ -60,6 +60,12 @@ export async function PATCH(
 
   const rateLimitRes = await checkRateLimit(session.user.id);
   if (rateLimitRes) return rateLimitRes;
+
+  // Planner is a Pro feature. Free users keep read-only access to legacy
+  // plans via GET, but cannot mark days complete, archive, or unarchive.
+  // DELETE remains open (see the DELETE handler) so they can still clean up.
+  const gated = await requireProFeature(session.user.id, "planner");
+  if (gated) return gated;
 
   const log = createRequestLogger({ route: "PATCH /api/plans/[id]", userId: session.user.id });
 

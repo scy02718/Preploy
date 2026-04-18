@@ -5,6 +5,7 @@ import { userResumes } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
 import { createRequestLogger } from "@/lib/logger";
 import { buildResumeQuestionsPrompt } from "@/lib/resume-prompt-builder";
+import { requireProFeature } from "@/lib/api-utils";
 import OpenAI from "openai";
 import { z } from "zod/v4";
 
@@ -21,6 +22,10 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Resume-tailored question generation is a Pro feature.
+  const gated = await requireProFeature(session.user.id, "resume");
+  if (gated) return gated;
 
   // Lazy-instantiate so `next build` can import this module without
   // OPENAI_API_KEY being present.

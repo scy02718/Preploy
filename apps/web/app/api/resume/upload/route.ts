@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { userResumes } from "@/lib/schema";
 import { createRequestLogger } from "@/lib/logger";
+import { requireProFeature } from "@/lib/api-utils";
 import OpenAI from "openai";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -51,6 +52,12 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Resume upload is a Pro feature. Free users keep GET access to resumes
+  // they already uploaded before upgrading / downgrading, but cannot add
+  // new ones.
+  const gated = await requireProFeature(session.user.id, "resume");
+  if (gated) return gated;
 
   const log = createRequestLogger({ route: "POST /api/resume/upload", userId: session.user.id });
 
