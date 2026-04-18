@@ -1,4 +1,4 @@
-import type { TranscriptEntry } from "@interview-assistant/shared";
+import type { TranscriptEntry } from "@preploy/shared";
 
 interface WordTimestamp {
   word: string;

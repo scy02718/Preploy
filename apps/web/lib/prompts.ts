@@ -1,4 +1,4 @@
-import type { BehavioralSessionConfig } from "@interview-assistant/shared";
+import type { BehavioralSessionConfig } from "@preploy/shared";
 
 export function buildBehavioralSystemPrompt(
   config: BehavioralSessionConfig

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useInterviewStore } from "@/stores/interviewStore";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useCodeSnapshots } from "@/hooks/useCodeSnapshots";
-import type { TechnicalSessionConfig } from "@interview-assistant/shared";
+import type { TechnicalSessionConfig } from "@preploy/shared";
 import { TechnicalSessionLayout } from "@/components/interview/TechnicalSessionLayout";
 import {
   ProblemDescription,

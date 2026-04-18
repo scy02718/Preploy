@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { TechnicalInterviewType } from "@interview-assistant/shared";
+import type { TechnicalInterviewType } from "@preploy/shared";
 
 interface PrefillState {
   /** Pre-fill data for behavioral setup */

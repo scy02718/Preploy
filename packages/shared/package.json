@@ -1,5 +1,5 @@
 {
-  "name": "@interview-assistant/shared",
+  "name": "@preploy/shared",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",

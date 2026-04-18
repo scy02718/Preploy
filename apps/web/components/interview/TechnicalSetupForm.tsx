@@ -23,12 +23,12 @@ import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
 import {
   SUPPORTED_LANGUAGES,
   FOCUS_AREAS_BY_TYPE,
-} from "@interview-assistant/shared";
+} from "@preploy/shared";
 import type {
   TechnicalSessionConfig,
   TechnicalInterviewType,
   Difficulty,
-} from "@interview-assistant/shared";
+} from "@preploy/shared";
 
 /** Prefix used to embed the user's Other topic inside additional_instructions. */
 const OTHER_PREFIX = "Other focus area: ";

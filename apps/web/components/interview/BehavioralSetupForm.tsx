@@ -14,7 +14,7 @@ import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
 import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
 import { usePrefillStore } from "@/stores/prefillStore";
-import type { BehavioralSessionConfig } from "@interview-assistant/shared";
+import type { BehavioralSessionConfig } from "@preploy/shared";
 
 interface CompanyQuestion {
   question: string;

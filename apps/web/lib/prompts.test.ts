@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildBehavioralSystemPrompt } from "./prompts";
-import type { BehavioralSessionConfig } from "@interview-assistant/shared";
+import type { BehavioralSessionConfig } from "@preploy/shared";
 
 const DEFAULT_CONFIG: BehavioralSessionConfig = {
   interview_style: 0.5,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildProblemGenerationPrompt } from "./prompts-technical";
-import type { TechnicalSessionConfig } from "@interview-assistant/shared";
+import type { TechnicalSessionConfig } from "@preploy/shared";
 
 const baseConfig: TechnicalSessionConfig = {
   interview_type: "leetcode",
