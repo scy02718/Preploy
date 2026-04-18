@@ -38,6 +38,7 @@ export function BehavioralSetupForm() {
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const { behavioralPrefill, clearPrefill } = usePrefillStore();
+  const [sourceStarStoryId, setSourceStarStoryId] = useState<string | undefined>(undefined);
 
   // Fetch user's global gaze tracking preference
   useEffect(() => {
@@ -72,6 +73,9 @@ export function BehavioralSetupForm() {
       }
       if (behavioralPrefill.resume_id) {
         setConfig({ resume_id: behavioralPrefill.resume_id });
+      }
+      if (behavioralPrefill.source_star_story_id) {
+        setSourceStarStoryId(behavioralPrefill.source_star_story_id);
       }
       clearPrefill();
     }
@@ -134,7 +138,9 @@ export function BehavioralSetupForm() {
     setError(null);
     setIsSubmitting(true);
 
-    const sessionId = await createSession();
+    const sessionId = await createSession(
+      sourceStarStoryId ? { source_star_story_id: sourceStarStoryId } : undefined
+    );
     setIsSubmitting(false);
 
     if (sessionId) {

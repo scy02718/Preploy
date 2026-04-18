@@ -7,6 +7,7 @@ interface PrefillState {
     company_name?: string;
     expected_questions?: string[];
     resume_id?: string;
+    source_star_story_id?: string;
   } | null;
 
   /** Pre-fill data for technical setup */
