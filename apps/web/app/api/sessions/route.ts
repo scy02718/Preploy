@@ -9,7 +9,7 @@ import {
   behavioralConfigSchema,
   technicalConfigSchema,
 } from "@/lib/validations";
-import { checkRateLimit } from "@/lib/api-utils";
+import { checkRateLimit, requireProFeature } from "@/lib/api-utils";
 import { tryConsumeInterviewSlot } from "@/lib/usage";
 
 // GET /api/sessions — list sessions with pagination, type/score filters
@@ -162,6 +162,22 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+  }
+
+  // Pro gate for resume-attached sessions. The config is free-form (the
+  // top-level schema only enforces `record`), so a free user could POST
+  // `{ config: { resume_text: "...", resume_id: "..." } }` and land a
+  // resume-tailored interviewer system prompt via `lib/prompts.ts`. That
+  // is the Resume feature via a different entry point — gate it as such.
+  // Users without either field keep the current free behaviour.
+  if (
+    config &&
+    typeof config === "object" &&
+    ((config as Record<string, unknown>).resume_text ||
+      (config as Record<string, unknown>).resume_id)
+  ) {
+    const gated = await requireProFeature(session.user.id, "resume");
+    if (gated) return gated;
   }
 
   // Capture once so the transaction callback closure has a narrowed string
