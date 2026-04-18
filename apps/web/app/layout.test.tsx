@@ -3,7 +3,8 @@ import { render, screen } from "@testing-library/react";
 
 // Mock next/font/google before importing layout
 vi.mock("next/font/google", () => ({
-  Geist: () => ({ variable: "--font-sans", className: "geist-sans" }),
+  Fraunces: () => ({ variable: "--font-display", className: "fraunces" }),
+  Instrument_Sans: () => ({ variable: "--font-sans", className: "instrument-sans" }),
   Geist_Mono: () => ({ variable: "--font-geist-mono", className: "geist-mono" }),
 }));
 

@@ -4,11 +4,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Preploy design tokens — "editorial coaching studio"
+ *
+ * Goal: a calm, trustworthy environment for people preparing for interviews.
+ * Not another shadcn-default SaaS. Warm paper backgrounds, grounded cedar-green
+ * brand, restrained terracotta for destructive actions, and a chart palette
+ * whose hues actually mean something (cedar = strong, amber = middling,
+ * terracotta = weak). See dev_logs/design-audit-2026-04.md for the full brief.
+ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+  /* `font-heading` is the shadcn utility applied on card / sheet / alert-dialog
+   * titles — kept on the sans stack so dense UI doesn't turn into a wall of
+   * serif. Only h1 opts into the display face (see @layer base below). */
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -46,75 +60,129 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Elevation — warm-tinted, not cheap black */
+  --shadow-xs: 0 1px 1px 0 oklch(0.2 0.02 260 / 0.04);
+  --shadow-sm:
+    0 1px 2px 0 oklch(0.2 0.02 260 / 0.06),
+    0 1px 1px 0 oklch(0.2 0.02 260 / 0.04);
+  --shadow-md:
+    0 6px 12px -2px oklch(0.2 0.02 260 / 0.08),
+    0 2px 4px 0 oklch(0.2 0.02 260 / 0.05);
+  --shadow-lg:
+    0 16px 32px -8px oklch(0.2 0.02 260 / 0.1),
+    0 4px 8px 0 oklch(0.2 0.02 260 / 0.06);
+  --shadow-xl:
+    0 24px 48px -12px oklch(0.15 0.02 260 / 0.14),
+    0 8px 16px 0 oklch(0.15 0.02 260 / 0.08);
+
+  /* Motion primitives — exposed as custom properties so components can
+   * reach for them via `duration-[var(--duration-base)]` or inline style.
+   * All aesthetic consumers should wrap in `motion-safe:`. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.5, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
 }
 
+/* ─── Light mode ──────────────────────────────────────────────────────────
+ * Warm paper (H≈85) background with deep ink (H≈250) text. Cards are pure
+ * white so they lift off the warm bg with a quiet halo. Primary is a grounded
+ * cedar green (L=0.48 C=0.09 H=158) — confident, not a bright brand-emerald.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.985 0.008 85);
+  --foreground: oklch(0.22 0.018 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.22 0.018 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.22 0.018 250);
+  --primary: oklch(0.48 0.09 158);
+  --primary-foreground: oklch(0.985 0.006 85);
+  --secondary: oklch(0.955 0.006 75);
+  --secondary-foreground: oklch(0.22 0.018 250);
+  --muted: oklch(0.955 0.006 75);
+  --muted-foreground: oklch(0.48 0.012 250);
+  --accent: oklch(0.94 0.03 85);
+  --accent-foreground: oklch(0.22 0.018 250);
+  --destructive: oklch(0.56 0.18 25);
+  --border: oklch(0.89 0.008 75);
+  --input: oklch(0.89 0.008 75);
+  --ring: oklch(0.48 0.09 158);
+  --chart-1: oklch(0.55 0.12 158); /* cedar — strong */
+  --chart-2: oklch(0.78 0.14 85); /* amber — middling */
+  --chart-3: oklch(0.67 0.16 50); /* burnt orange — low-mid */
+  --chart-4: oklch(0.56 0.18 25); /* terracotta — weak */
+  --chart-5: oklch(0.58 0.08 240); /* slate blue — neutral/info */
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.98 0.006 85);
+  --sidebar-foreground: oklch(0.22 0.018 250);
+  --sidebar-primary: oklch(0.48 0.09 158);
+  --sidebar-primary-foreground: oklch(0.985 0.006 85);
+  --sidebar-accent: oklch(0.94 0.03 85);
+  --sidebar-accent-foreground: oklch(0.22 0.018 250);
+  --sidebar-border: oklch(0.89 0.008 75);
+  --sidebar-ring: oklch(0.48 0.09 158);
 }
 
+/* ─── Dark mode ───────────────────────────────────────────────────────────
+ * Ink-navy (H≈260) with warm paper text — the inverse warmth of light mode
+ * keeps the system cohesive rather than "inverted colors." Cedar lifts to
+ * L=0.68 so the brand reads at the right contrast against the dark bg.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.16 0.015 260);
+  --foreground: oklch(0.94 0.006 85);
+  --card: oklch(0.2 0.018 260);
+  --card-foreground: oklch(0.94 0.006 85);
+  --popover: oklch(0.2 0.018 260);
+  --popover-foreground: oklch(0.94 0.006 85);
+  --primary: oklch(0.68 0.12 158);
+  --primary-foreground: oklch(0.16 0.015 260);
+  --secondary: oklch(0.24 0.012 260);
+  --secondary-foreground: oklch(0.94 0.006 85);
+  --muted: oklch(0.24 0.012 260);
+  --muted-foreground: oklch(0.7 0.008 85);
+  --accent: oklch(0.26 0.018 80);
+  --accent-foreground: oklch(0.94 0.006 85);
+  --destructive: oklch(0.65 0.17 25);
+  --border: oklch(0.28 0.01 260);
+  --input: oklch(0.28 0.01 260);
+  --ring: oklch(0.68 0.12 158);
+  --chart-1: oklch(0.72 0.13 158);
+  --chart-2: oklch(0.82 0.13 85);
+  --chart-3: oklch(0.72 0.15 50);
+  --chart-4: oklch(0.68 0.17 25);
+  --chart-5: oklch(0.7 0.1 240);
+  --sidebar: oklch(0.18 0.016 260);
+  --sidebar-foreground: oklch(0.94 0.006 85);
+  --sidebar-primary: oklch(0.68 0.12 158); /* brand cedar — replaces the stray blue */
+  --sidebar-primary-foreground: oklch(0.16 0.015 260);
+  --sidebar-accent: oklch(0.24 0.012 260);
+  --sidebar-accent-foreground: oklch(0.94 0.006 85);
+  --sidebar-border: oklch(0.28 0.01 260);
+  --sidebar-ring: oklch(0.68 0.12 158);
+}
+
+/* Dark-mode shadows trade drop-shadow for an inset top-highlight + deeper
+ * outer, which reads as real depth on a dark surface instead of the usual
+ * "smudge of black" you get when you naively reuse light-mode shadows. */
+.dark {
+  --shadow-xs: inset 0 1px 0 0 oklch(1 0 0 / 0.03);
+  --shadow-sm:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.04),
+    0 1px 2px 0 oklch(0 0 0 / 0.3);
+  --shadow-md:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.05),
+    0 6px 16px -4px oklch(0 0 0 / 0.4);
+  --shadow-lg:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.06),
+    0 16px 32px -8px oklch(0 0 0 / 0.45);
+  --shadow-xl:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.07),
+    0 24px 48px -12px oklch(0 0 0 / 0.5);
 }
 
 @layer base {
@@ -123,8 +191,48 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings:
+      "ss01" on,
+      "cv11" on;
   }
   html {
-    @apply font-sans;
+    @apply font-sans antialiased;
+  }
+
+  /* Only h1 opts into the serif display face automatically — the visible
+   * "this is a redesigned product" signal. h2+ stays on Instrument Sans so
+   * dense UI headings don't turn into a wall of serif. */
+  h1 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+  }
+
+  /* Slight negative tracking on display-sized sans headings — gives h2 a
+   * confident, settled look without crossing into cramped territory. */
+  h2 {
+    letter-spacing: -0.01em;
+  }
+
+  /* Tabular numerals for anything that looks like a number column. */
+  time,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Respect `prefers-reduced-motion` globally for any consumer that forgets
+ * the `motion-safe:` prefix — animations get reduced to near-zero, never
+ * completely removed (so state changes stay perceivable), transitions
+ * snap. This is a safety net, not a license to ship motion without the
+ * prefix. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
