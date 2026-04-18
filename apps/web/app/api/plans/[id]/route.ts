@@ -4,12 +4,20 @@ import { db } from "@/lib/db";
 import { interviewPlans } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
+import { checkRateLimit } from "@/lib/api-utils";
+import { createRequestLogger } from "@/lib/logger";
 import type { PlanData, PlanDay } from "@/lib/plan-generator";
 
 const markCompletedSchema = z.object({
   day_index: z.number().int().min(0),
   completed: z.boolean(),
 });
+
+// Discriminated union: either day-completion or archive toggle
+const patchPlanSchema = z.union([
+  markCompletedSchema,
+  z.object({ archived: z.boolean() }),
+]);
 
 // GET /api/plans/[id] — get a specific plan
 export async function GET(
@@ -39,7 +47,7 @@ export async function GET(
   return NextResponse.json(plan);
 }
 
-// PATCH /api/plans/[id] — mark a day as completed/uncompleted
+// PATCH /api/plans/[id] — mark a day as completed/uncompleted OR archive/unarchive
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -50,8 +58,19 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const parsed = markCompletedSchema.safeParse(body);
+  const rateLimitRes = await checkRateLimit(session.user.id);
+  if (rateLimitRes) return rateLimitRes;
+
+  const log = createRequestLogger({ route: "PATCH /api/plans/[id]", userId: session.user.id });
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = patchPlanSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request", details: parsed.error.issues },
@@ -59,9 +78,7 @@ export async function PATCH(
     );
   }
 
-  const { day_index, completed } = parsed.data;
-
-  // Fetch the plan first
+  // Fetch the plan first (auth guard — 404 for another user's plan)
   const [plan] = await db
     .select()
     .from(interviewPlans)
@@ -76,6 +93,28 @@ export async function PATCH(
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
+  // Branch: archive toggle
+  if ("archived" in parsed.data) {
+    const { archived } = parsed.data;
+    const archivedAt = archived ? new Date() : null;
+
+    const [updated] = await db
+      .update(interviewPlans)
+      .set({ archivedAt })
+      .where(
+        and(
+          eq(interviewPlans.id, id),
+          eq(interviewPlans.userId, session.user.id)
+        )
+      )
+      .returning();
+
+    log.info({ planId: id, archived }, "Plan archive status updated");
+    return NextResponse.json(updated);
+  }
+
+  // Branch: day completion toggle
+  const { day_index, completed } = parsed.data;
   const planData = plan.planData as PlanData;
   if (!planData.days || day_index >= planData.days.length) {
     return NextResponse.json(
@@ -84,7 +123,6 @@ export async function PATCH(
     );
   }
 
-  // Update the specific day's completed status
   const updatedDays: PlanDay[] = planData.days.map((day, i) =>
     i === day_index ? { ...day, completed } : day
   );
@@ -101,4 +139,48 @@ export async function PATCH(
     .returning();
 
   return NextResponse.json(updated);
+}
+
+// DELETE /api/plans/[id] — hard-delete a plan
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rateLimitRes = await checkRateLimit(session.user.id);
+  if (rateLimitRes) return rateLimitRes;
+
+  const log = createRequestLogger({ route: "DELETE /api/plans/[id]", userId: session.user.id });
+
+  // Auth guard — 404 for another user's plan (never leak existence)
+  const [plan] = await db
+    .select()
+    .from(interviewPlans)
+    .where(
+      and(
+        eq(interviewPlans.id, id),
+        eq(interviewPlans.userId, session.user.id)
+      )
+    );
+
+  if (!plan) {
+    return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+  }
+
+  await db
+    .delete(interviewPlans)
+    .where(
+      and(
+        eq(interviewPlans.id, id),
+        eq(interviewPlans.userId, session.user.id)
+      )
+    );
+
+  log.info({ planId: id }, "Plan deleted");
+  return new NextResponse(null, { status: 204 });
 }
