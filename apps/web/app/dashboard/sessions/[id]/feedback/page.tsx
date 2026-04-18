@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FeedbackDashboard } from "@/components/feedback/FeedbackDashboard";
 import type { TimelineEvent } from "@/components/feedback/TimelineView";
 import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
+import { Loader2, RefreshCw } from "lucide-react";
 
 interface DriftAnalysis {
   added: string[];
@@ -47,8 +48,12 @@ export default function FeedbackPage() {
   >(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Retry nonce — bumped by the Retry button to re-arm the polling effect
+  // without a full page reload (which would drop scroll position and any
+  // in-progress UI state).
+  const [retryNonce, setRetryNonce] = useState(0);
 
-  // Poll for feedback — runs once on mount, cleans up on unmount.
+  // Poll for feedback — re-runs when retryNonce changes, cleans up on unmount.
   // All mutable state accessed via refs to avoid re-triggering the effect.
   useEffect(() => {
     let cancelled = false;
@@ -133,9 +138,9 @@ export default function FeedbackPage() {
       cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
     };
-    // Only re-run if the session ID changes (page navigation)
+    // Re-run when the session ID changes or when the user hits Retry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [params.id, retryNonce]);
 
   if (isLoading) {
     return (
@@ -174,18 +179,10 @@ export default function FeedbackPage() {
           </div>
         </div>
 
-        {/* Gaze card skeleton */}
-        <div className="rounded-lg border p-6 space-y-4">
-          <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 animate-pulse rounded-full bg-muted" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
-              <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
-            </div>
-          </div>
-          <div className="h-6 w-full animate-pulse rounded bg-muted" />
-        </div>
+        {/* Gaze card skeleton removed — not all sessions have gaze data,
+            so a dedicated skeleton promises content the post-load layout may
+            never render. When gaze is present the card mounts naturally; when
+            it isn't, nothing was promised. */}
 
         {/* Breakdown skeleton */}
         <div className="space-y-3">
@@ -201,9 +198,10 @@ export default function FeedbackPage() {
           ))}
         </div>
 
-        <p className="text-center text-sm text-muted-foreground animate-pulse">
-          Generating feedback... This may take a few seconds.
-        </p>
+        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Generating feedback… This may take a few seconds.
+        </div>
       </div>
     );
   }
@@ -213,16 +211,16 @@ export default function FeedbackPage() {
       <div className="mx-auto max-w-md py-24 text-center">
         <p className="mb-4 text-destructive">{error}</p>
         <button
+          type="button"
           onClick={() => {
             setError(null);
             setIsLoading(true);
-            // Re-mount the effect by forcing a state change —
-            // but since params.id hasn't changed, we manually re-poll
-            window.location.reload();
+            setRetryNonce((n) => n + 1);
           }}
-          className="text-sm text-primary underline"
+          className="inline-flex h-10 items-center gap-2 rounded-md border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent"
         >
-          Retry
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          Try again
         </button>
       </div>
     );

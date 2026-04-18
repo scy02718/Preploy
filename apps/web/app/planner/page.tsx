@@ -146,6 +146,7 @@ export default function PlannerPage() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
 
@@ -187,6 +188,7 @@ export default function PlannerPage() {
     if (!company || !role || !interviewDate) return;
 
     setGenerating(true);
+    setGenerateError(null);
     try {
       const res = await fetch("/api/plans/generate", {
         method: "POST",
@@ -202,9 +204,17 @@ export default function PlannerPage() {
         setCompany("");
         setRole("");
         setInterviewDate("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setGenerateError(
+          data?.error ??
+            "We couldn't generate your plan. Please check your inputs and try again."
+        );
       }
     } catch {
-      // Error handling could be added
+      setGenerateError(
+        "Network error — couldn't reach the server. Please try again."
+      );
     } finally {
       setGenerating(false);
     }
@@ -356,13 +366,21 @@ export default function PlannerPage() {
                   >
                     {generating ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
                         Generating Plan...
                       </>
                     ) : (
                       "Generate Plan"
                     )}
                   </Button>
+                  {generateError && (
+                    <p
+                      role="alert"
+                      className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+                    >
+                      {generateError}
+                    </p>
+                  )}
                 </form>
               </CardContent>
             </Card>
