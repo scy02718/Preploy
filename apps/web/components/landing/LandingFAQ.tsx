@@ -43,32 +43,42 @@ const faqs = [
 ];
 
 interface FAQItemProps {
+  index: number;
   question: string;
   answer: string;
   isOpen: boolean;
   onToggle: () => void;
 }
 
-function FAQItem({ question, answer, isOpen, onToggle }: FAQItemProps) {
+function FAQItem({ index, question, answer, isOpen, onToggle }: FAQItemProps) {
+  const panelId = `faq-panel-${index}`;
+  const buttonId = `faq-trigger-${index}`;
   return (
     <div className="border-b last:border-b-0">
       <button
-        className="flex w-full items-center justify-between py-4 text-left text-sm font-medium hover:text-primary transition-colors"
+        id={buttonId}
+        className="flex w-full items-center justify-between py-4 text-left text-sm font-medium transition-colors hover:text-primary motion-safe:duration-[var(--duration-fast)]"
         onClick={onToggle}
         aria-expanded={isOpen}
+        aria-controls={panelId}
         data-testid="faq-trigger"
       >
         <span>{question}</span>
         <ChevronDown
+          aria-hidden="true"
           className={cn(
-            "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+            "h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-safe:duration-[var(--duration-base)]",
             isOpen && "rotate-180"
           )}
         />
       </button>
       <div
+        id={panelId}
+        role="region"
+        aria-labelledby={buttonId}
+        hidden={!isOpen}
         className={cn(
-          "overflow-hidden transition-all duration-200",
+          "overflow-hidden transition-all motion-safe:duration-[var(--duration-base)]",
           isOpen ? "max-h-96 pb-4" : "max-h-0"
         )}
         data-testid="faq-content"
@@ -96,6 +106,7 @@ export function LandingFAQ() {
           {faqs.map((faq, index) => (
             <FAQItem
               key={index}
+              index={index}
               question={faq.question}
               answer={faq.answer}
               isOpen={openIndex === index}

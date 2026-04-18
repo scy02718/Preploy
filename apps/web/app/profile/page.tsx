@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { AlertTriangle } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { PLANS, PLAN_DEFINITIONS } from "@/lib/plans";
 import type { PlanId } from "@/lib/plans";
@@ -481,9 +482,12 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-destructive/40">
             <CardHeader>
-              <CardTitle className="text-destructive">Delete Account</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+                Delete Account
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {showDeleteConfirm ? (
@@ -506,6 +510,9 @@ export default function ProfilePage() {
                       onChange={(e) => setDeleteConfirmation(e.target.value)}
                       placeholder="DELETE my account and all my data"
                       className="border-destructive/50"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                     />
                   </div>
                   <div className="flex gap-2">

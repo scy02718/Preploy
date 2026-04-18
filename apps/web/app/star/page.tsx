@@ -8,6 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getScoreColor } from "@/lib/utils";
 import { StarPdfExportButton } from "@/components/star/StarPdfExportButton";
 import { slugify } from "@/lib/slugify";
@@ -103,6 +113,7 @@ function ScoreBadge({ score, label }: { score: number; label: string }) {
 function AnalysisCard({ analysis }: { analysis: StarAnalysis }) {
   const [expanded, setExpanded] = useState(false);
   const scores = analysis.scores;
+  const detailsId = `analysis-details-${analysis.id}`;
 
   return (
     <div className="border rounded-lg p-4 space-y-3">
@@ -111,10 +122,18 @@ function AnalysisCard({ analysis }: { analysis: StarAnalysis }) {
           {new Date(analysis.createdAt).toLocaleString()}
         </p>
         <button
+          type="button"
           onClick={() => setExpanded(!expanded)}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-expanded={expanded}
+          aria-controls={detailsId}
+          aria-label={expanded ? "Hide analysis details" : "Show analysis details"}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {expanded ? (
+            <ChevronUp className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          )}
         </button>
       </div>
 
@@ -126,7 +145,7 @@ function AnalysisCard({ analysis }: { analysis: StarAnalysis }) {
       </div>
 
       {expanded && (
-        <div className="space-y-4 border-t pt-3">
+        <div id={detailsId} className="space-y-4 border-t pt-3">
           <div>
             <p className="text-sm font-medium mb-2">STAR Section Scores</p>
             <div className="grid grid-cols-4 gap-2">
@@ -191,6 +210,19 @@ export default function StarPrepPage() {
   const [exportAllProgress, setExportAllProgress] = useState<{ done: number; total: number } | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [questionInput, setQuestionInput] = useState("");
+  // Pending delete target — drives the styled confirmation dialog (replaces
+  // the native `confirm()` which was inaccessible in embedded contexts).
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  // Inline toast banner — replaces native `alert()` for analyze/export
+  // failures. `useToast` isn't installed; a simple auto-dismissing banner
+  // keeps the accessibility + styling benefits without adding a dependency.
+  const [toast, setToast] = useState<{ tone: "error" | "success"; text: string } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   // Consume starPrepPrefill from planner CTA on mount
   useEffect(() => {
@@ -318,16 +350,28 @@ export default function StarPrepPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this story? This cannot be undone.")) return;
+  function requestDelete(story: StarStory) {
+    setPendingDelete({ id: story.id, title: story.title });
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setIsDeleting(true);
     try {
-      await fetch(`/api/star/${id}`, { method: "DELETE" });
-      setStories((prev) => prev.filter((s) => s.id !== id));
-      if (selectedDetail?.story.id === id) {
+      const res = await fetch(`/api/star/${pendingDelete.id}`, { method: "DELETE" });
+      if (!res.ok && res.status !== 204) {
+        setToast({ tone: "error", text: "Delete failed. Please try again." });
+        return;
+      }
+      setStories((prev) => prev.filter((s) => s.id !== pendingDelete.id));
+      if (selectedDetail?.story.id === pendingDelete.id) {
         setSelectedDetail(null);
       }
+      setPendingDelete(null);
     } catch {
-      // Silent
+      setToast({ tone: "error", text: "Delete failed. Please try again." });
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -342,12 +386,15 @@ export default function StarPrepPage() {
         // Refresh detail to show the new analysis
         await fetchDetail(storyId);
       } else if (res.status === 429) {
-        alert("Too many requests. Please wait before analyzing again.");
+        setToast({
+          tone: "error",
+          text: "Too many requests. Please wait before analyzing again.",
+        });
       } else {
-        alert("Analysis failed. Please try again.");
+        setToast({ tone: "error", text: "Analysis failed. Please try again." });
       }
     } catch {
-      alert("Analysis failed. Please try again.");
+      setToast({ tone: "error", text: "Analysis failed. Please try again." });
     } finally {
       setAnalyzing(false);
     }
@@ -429,6 +476,59 @@ export default function StarPrepPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-6xl mx-auto">
+      {/* Inline toast — replaces `alert()` for analyze/delete/export failures.
+          `aria-live="polite"` so screen readers pick it up without stealing focus. */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed right-4 top-20 z-50 max-w-sm rounded-md border px-4 py-3 text-sm shadow-md transition-opacity motion-safe:duration-[var(--duration-base)] ${
+            toast.tone === "error"
+              ? "border-destructive/30 bg-destructive/10 text-destructive"
+              : "border-primary/30 bg-primary/10 text-foreground"
+          }`}
+        >
+          {toast.text}
+        </div>
+      )}
+
+      {/* Destructive-action dialog — replaces the native `confirm()` which
+          has no focus management and is blocked in some embedded contexts. */}
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this story?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete
+                ? `"${pendingDelete.title}" and all its analyses will be permanently removed. This cannot be undone.`
+                : "This cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete story"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {plannerHint && plannerHint.length > 0 && (
         <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
           <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
@@ -731,10 +831,11 @@ export default function StarPrepPage() {
                       <Button
                         size="sm"
                         variant="outline"
+                        aria-label={`Delete story: ${selectedDetail.story.title}`}
                         className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() => handleDelete(selectedDetail.story.id)}
+                        onClick={() => requestDelete(selectedDetail.story)}
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3" aria-hidden="true" />
                       </Button>
                     </div>
                   </div>
