@@ -36,6 +36,7 @@ export const problemSchema = z.object({
 export const createSessionSchema = z.object({
   type: z.enum(["behavioral", "technical"]),
   config: z.record(z.string(), z.unknown()).optional(),
+  source_star_story_id: z.string().uuid().optional(),
 });
 
 // ---- Timeline correlator schemas ----
