@@ -44,8 +44,11 @@ export function Header() {
       <div className="flex h-14 items-center px-4 gap-4">
         {/* Mobile sidebar trigger */}
         <Sheet>
-          <SheetTrigger className="md:hidden inline-flex items-center justify-center rounded-lg h-8 w-8 hover:bg-muted transition-colors">
-            <Menu className="h-5 w-5" />
+          <SheetTrigger
+            aria-label="Open navigation menu"
+            className="md:hidden inline-flex items-center justify-center rounded-lg h-10 w-10 hover:bg-muted transition-colors"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <Sidebar />
@@ -85,8 +88,14 @@ export function Header() {
           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           aria-label="Toggle theme"
         >
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+          <Sun
+            aria-hidden="true"
+            className="h-4 w-4 rotate-0 scale-100 transition-transform motion-safe:duration-[var(--duration-base)] dark:-rotate-90 dark:scale-0"
+          />
+          <Moon
+            aria-hidden="true"
+            className="absolute h-4 w-4 rotate-90 scale-0 transition-transform motion-safe:duration-[var(--duration-base)] dark:rotate-0 dark:scale-100"
+          />
         </button>
 
         {/* User menu */}
@@ -110,8 +119,8 @@ export function Header() {
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => window.location.assign("/profile")}>
-                Profile
+              <DropdownMenuItem asChild>
+                <Link href="/profile">Profile</Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
                 Sign Out

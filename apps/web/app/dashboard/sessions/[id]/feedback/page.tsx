@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { FeedbackDashboard } from "@/components/feedback/FeedbackDashboard";
 import type { TimelineEvent } from "@/components/feedback/TimelineView";
 import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
-import { Loader2, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 
 interface DriftAnalysis {
   added: string[];
@@ -229,10 +230,25 @@ export default function FeedbackPage() {
   if (!feedback || !sessionType) return null;
 
   return (
-    <FeedbackDashboard
-      feedback={feedback}
-      sessionId={params.id}
-      sessionType={sessionType}
-    />
+    <>
+      {/* Sticky back-link so the path home is always visible, not buried
+          below a long per-answer breakdown. */}
+      <div className="sticky top-14 z-20 border-b bg-background/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center px-4 py-2">
+          <Link
+            href="/dashboard"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+      <FeedbackDashboard
+        feedback={feedback}
+        sessionId={params.id}
+        sessionType={sessionType}
+      />
+    </>
   );
 }
