@@ -42,6 +42,9 @@ export default function ProfilePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // `messageExiting` toggles ~300ms before `message` is nulled, driving a
+  // fade-out transition so the toast doesn't snap out of existence.
+  const [messageExiting, setMessageExiting] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -92,8 +95,19 @@ export default function ProfilePage() {
   };
 
   const showMessage = useCallback((type: "success" | "error", text: string) => {
+    setMessageExiting(false);
     setMessage({ type, text });
-    setTimeout(() => setMessage(null), 3000);
+    const fadeTimer = setTimeout(() => setMessageExiting(true), 2700);
+    const unmountTimer = setTimeout(() => {
+      setMessage(null);
+      setMessageExiting(false);
+    }, 3000);
+    // Note: timers aren't cleaned up here — if showMessage is called again
+    // before the 3s window closes, the newer call's timers race the older
+    // ones. This is acceptable for a profile-page toast; if this grows into
+    // a shared primitive the cleanup should be lifted into a ref.
+    void fadeTimer;
+    void unmountTimer;
   }, []);
 
   const handleSaveName = async () => {
@@ -292,13 +306,20 @@ export default function ProfilePage() {
         Manage your account settings and preferences.
       </p>
 
-      {/* Toast message */}
+      {/* Toast message — success uses the brand cedar (`--primary`), error
+          uses the terracotta destructive token; both work in light + dark.
+          Opacity transitions via `messageExiting` so the toast fades out
+          instead of snapping off screen. */}
       {message && (
         <div
-          className={`mb-6 rounded-md border px-4 py-3 text-sm ${
+          role="status"
+          aria-live="polite"
+          className={`mb-6 rounded-md border px-4 py-3 text-sm transition-opacity motion-safe:duration-[var(--duration-slow)] ${
+            messageExiting ? "opacity-0" : "opacity-100"
+          } ${
             message.type === "success"
-              ? "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400"
-              : "border-destructive/50 bg-destructive/10 text-destructive"
+              ? "border-primary/30 bg-primary/10 text-primary"
+              : "border-destructive/30 bg-destructive/10 text-destructive"
           }`}
         >
           {message.text}
@@ -438,26 +459,41 @@ export default function ProfilePage() {
                     interviews per month. Pick monthly or annual — annual saves
                     about 33%.
                   </p>
-                  <Button
-                    onClick={() => handleUpgrade("month")}
-                    disabled={isBillingLoading}
-                    data-testid="upgrade-button"
-                    className="w-full"
-                  >
-                    {isBillingLoading
-                      ? "Loading..."
-                      : `Upgrade — $${PLAN_DEFINITIONS.pro.priceUsd}/month`}
-                  </Button>
+                  {/* Annual promoted as the primary action — "Best value"
+                      badge makes the hierarchy obvious instead of leaving
+                      the two buttons equal-weight. Multi-line labels keep
+                      the long billing-frequency copy from wrapping into the
+                      button's touch area on narrow viewports. */}
                   <Button
                     onClick={() => handleUpgrade("year")}
                     disabled={isBillingLoading}
                     data-testid="upgrade-annual-button"
+                    className="relative h-auto w-full py-3"
+                  >
+                    <span className="absolute -top-2 right-3 rounded-full bg-[color:var(--chart-2)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-background">
+                      Best value
+                    </span>
+                    <span className="flex flex-col items-center gap-0.5">
+                      <span className="font-semibold">
+                        {isBillingLoading
+                          ? "Loading…"
+                          : `Upgrade — $${PLAN_DEFINITIONS.pro.annualMonthlyEquivalentUsd}/month`}
+                      </span>
+                      <span className="text-xs font-normal opacity-80">
+                        Billed annually · ${PLAN_DEFINITIONS.pro.annualTotalUsd}/year
+                      </span>
+                    </span>
+                  </Button>
+                  <Button
+                    onClick={() => handleUpgrade("month")}
+                    disabled={isBillingLoading}
+                    data-testid="upgrade-button"
                     variant="outline"
                     className="w-full"
                   >
                     {isBillingLoading
-                      ? "Loading..."
-                      : `Upgrade — $${PLAN_DEFINITIONS.pro.annualMonthlyEquivalentUsd}/month billed annually ($${PLAN_DEFINITIONS.pro.annualTotalUsd}/year)`}
+                      ? "Loading…"
+                      : `Monthly — $${PLAN_DEFINITIONS.pro.priceUsd}/month`}
                   </Button>
                 </>
               )}
@@ -466,7 +502,7 @@ export default function ProfilePage() {
 
           <TemplateManager />
 
-          <Card className="hidden md:block" data-testid="preferences-card">
+          <Card data-testid="preferences-card">
             <CardHeader>
               <CardTitle>Preferences</CardTitle>
               <CardDescription>Personalize your experience</CardDescription>
