@@ -14,6 +14,7 @@ import {
   getTestDb,
 } from "../../../../tests/setup-db";
 import { users, interviewPlans } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 
 const mockAuth = vi.fn();
 vi.mock("@/lib/auth", () => ({
@@ -26,7 +27,12 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { GET, PATCH } from "./route";
+// Mock rate limit to always pass in tests
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
+import { GET, PATCH, DELETE } from "./route";
 
 const TEST_USER = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -87,6 +93,15 @@ function makePatchRequest(
   ];
 }
 
+function makeDeleteRequest(id: string): [NextRequest, { params: Promise<{ id: string }> }] {
+  return [
+    new NextRequest(`http://localhost:3000/api/plans/${id}`, {
+      method: "DELETE",
+    }),
+    { params: Promise.resolve({ id }) },
+  ];
+}
+
 describe("API /api/plans/[id] (integration)", () => {
   let planId: string;
 
@@ -98,6 +113,10 @@ describe("API /api/plans/[id] (integration)", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Re-apply rate limit mock after clearAllMocks
+    const { checkRateLimit } = await import("@/lib/api-utils");
+    vi.mocked(checkRateLimit).mockResolvedValue(null);
+
     const db = getTestDb();
     await db.delete(interviewPlans);
 
@@ -153,7 +172,7 @@ describe("API /api/plans/[id] (integration)", () => {
     expect(data.planData.days).toHaveLength(3);
   });
 
-  // ---- PATCH tests ----
+  // ---- PATCH day-completion tests ----
 
   it("PATCH returns 401 when unauthenticated", async () => {
     mockAuth.mockResolvedValue(null);
@@ -235,5 +254,102 @@ describe("API /api/plans/[id] (integration)", () => {
     const getRes = await GET(...makeGetRequest(planId));
     const data = await getRes.json();
     expect(data.planData.days[2].completed).toBe(true);
+  });
+
+  // ---- PATCH archive tests ----
+
+  it("PATCH archive: returns 401 when unauthenticated", async () => {
+    mockAuth.mockResolvedValue(null);
+    const res = await PATCH(...makePatchRequest(planId, { archived: true }));
+    expect(res.status).toBe(401);
+  });
+
+  it("PATCH archive: returns 404 for another user's plan", async () => {
+    mockAuth.mockResolvedValue({ user: { id: OTHER_USER.id } });
+    const res = await PATCH(...makePatchRequest(planId, { archived: true }));
+    expect(res.status).toBe(404);
+  });
+
+  it("PATCH archive: sets archived_at when archived=true", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(...makePatchRequest(planId, { archived: true }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.archivedAt).not.toBeNull();
+
+    // Verify in DB
+    const db = getTestDb();
+    const [row] = await db
+      .select()
+      .from(interviewPlans)
+      .where(eq(interviewPlans.id, planId));
+    expect(row.archivedAt).not.toBeNull();
+    expect(row.archivedAt).toBeInstanceOf(Date);
+  });
+
+  it("PATCH archive: clears archived_at when archived=false", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    // First archive
+    await PATCH(...makePatchRequest(planId, { archived: true }));
+
+    // Then unarchive
+    const res = await PATCH(...makePatchRequest(planId, { archived: false }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.archivedAt).toBeNull();
+
+    // Verify in DB
+    const db = getTestDb();
+    const [row] = await db
+      .select()
+      .from(interviewPlans)
+      .where(eq(interviewPlans.id, planId));
+    expect(row.archivedAt).toBeNull();
+  });
+
+  // ---- DELETE tests ----
+
+  it("DELETE returns 401 when unauthenticated", async () => {
+    mockAuth.mockResolvedValue(null);
+    const res = await DELETE(...makeDeleteRequest(planId));
+    expect(res.status).toBe(401);
+  });
+
+  it("DELETE returns 404 for another user's plan", async () => {
+    mockAuth.mockResolvedValue({ user: { id: OTHER_USER.id } });
+    const res = await DELETE(...makeDeleteRequest(planId));
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE returns 404 for non-existent plan", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await DELETE(
+      ...makeDeleteRequest("00000000-0000-0000-0000-000000000099")
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE returns 204 and hard-deletes the plan", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await DELETE(...makeDeleteRequest(planId));
+    expect(res.status).toBe(204);
+
+    // Verify row is gone from DB
+    const db = getTestDb();
+    const rows = await db
+      .select()
+      .from(interviewPlans)
+      .where(eq(interviewPlans.id, planId));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("DELETE: subsequent GET returns 404 after deletion", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    await DELETE(...makeDeleteRequest(planId));
+
+    const getRes = await GET(...makeGetRequest(planId));
+    expect(getRes.status).toBe(404);
   });
 });
