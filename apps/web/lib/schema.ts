@@ -238,6 +238,7 @@ export const interviewPlans = pgTable("interview_plans", {
   role: text("role").notNull(),
   interviewDate: timestamp("interview_date", { withTimezone: true }).notNull(),
   planData: jsonb("plan_data").notNull().default({}),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
