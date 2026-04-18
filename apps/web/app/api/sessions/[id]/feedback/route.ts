@@ -7,6 +7,7 @@ import {
   codeSnapshots,
   sessionFeedback,
   gazeSamples,
+  starStories,
 } from "@/lib/schema";
 import { eq, and, asc } from "drizzle-orm";
 import type { GazeSample } from "@/lib/gaze-types";
@@ -119,6 +120,26 @@ export async function POST(
       .orderBy(asc(codeSnapshots.timestampMs));
   }
 
+  // For behavioral sessions with a source STAR story, fetch the story for
+  // drift analysis comparison.
+  let preparedStory: { situation: string; task: string; action: string; result: string } | undefined;
+  if (!isTechnical && found.sourceStarStoryId) {
+    const [storyRow] = await db
+      .select({
+        situation: starStories.situation,
+        task: starStories.task,
+        action: starStories.action,
+        result: starStories.result,
+      })
+      .from(starStories)
+      .where(eq(starStories.id, found.sourceStarStoryId));
+
+    if (storyRow) {
+      preparedStory = storyRow;
+      log.info({ sessionId: id, sourceStarStoryId: found.sourceStarStoryId }, "fetched source STAR story for drift analysis");
+    }
+  }
+
   // Call the local TS analysis pipeline directly (no HTTP hop). These are the
   // same functions the thin `/api/analysis/{behavioral,technical}` routes wrap.
   let feedbackData: FeedbackResponse | TechnicalFeedbackResponse;
@@ -149,7 +170,7 @@ export async function POST(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           config: (found.config ?? {}) as any,
         },
-        { log, userId: session.user.id },
+        { log, userId: session.user.id, preparedStory },
       );
     }
   } catch (err) {
@@ -222,6 +243,9 @@ export async function POST(
         codeQualityScore: (feedbackData as TechnicalFeedbackResponse).code_quality_score,
         explanationQualityScore: (feedbackData as TechnicalFeedbackResponse).explanation_quality_score,
         timelineAnalysis: (feedbackData as TechnicalFeedbackResponse).timeline_analysis,
+      }),
+      ...(!isTechnical && {
+        driftAnalysis: (feedbackData as FeedbackResponse).drift_analysis ?? null,
       }),
       gazeConsistencyScore,
       gazeDistribution,

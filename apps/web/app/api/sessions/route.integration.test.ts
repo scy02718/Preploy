@@ -643,4 +643,141 @@ describe("API /api/sessions (integration)", () => {
     const data = await res.json();
     expect(data.error).toContain("Invalid session config");
   });
+
+  // ---- 146: source_star_story_id tests ----
+
+  it("POST creates session with valid source_star_story_id and persists it", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { starStories, interviewSessions } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+
+    // Create a star story for the test user
+    const [story] = await db
+      .insert(starStories)
+      .values({
+        userId: TEST_USER.id,
+        title: "Led under pressure",
+        role: "Engineer",
+        expectedQuestions: ["Tell me about a time you led under pressure"],
+        situation: "Our system was down in production.",
+        task: "I needed to coordinate the fix.",
+        action: "I set up a war room and delegated tasks.",
+        result: "We restored service in 2 hours.",
+      })
+      .returning();
+
+    const res = await POST(
+      makePostRequest({
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+        source_star_story_id: story.id,
+      })
+    );
+
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.id).toBeDefined();
+
+    // Verify persistence
+    const [row] = await db
+      .select()
+      .from(interviewSessions)
+      .where(eq(interviewSessions.id, data.id));
+    expect(row.sourceStarStoryId).toBe(story.id);
+
+    // Cleanup
+    await db.delete(starStories).where(eq(starStories.id, story.id));
+  });
+
+  it("POST returns 400 when source_star_story_id belongs to a different user", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { starStories, users: usersTable } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+
+    // Create a second user and a story belonging to them
+    const OTHER_USER_ID = "00000000-0000-0000-0000-000000000002";
+    await db
+      .insert(usersTable)
+      .values({ id: OTHER_USER_ID, email: "other@example.com", name: "Other" })
+      .onConflictDoNothing();
+
+    const [otherStory] = await db
+      .insert(starStories)
+      .values({
+        userId: OTHER_USER_ID,
+        title: "Other user story",
+        role: "Manager",
+        expectedQuestions: ["Tell me about leadership"],
+        situation: "S",
+        task: "T",
+        action: "A",
+        result: "R",
+      })
+      .returning();
+
+    const res = await POST(
+      makePostRequest({
+        type: "behavioral",
+        source_star_story_id: otherStory.id,
+      })
+    );
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("Invalid source_star_story_id");
+
+    // Cleanup
+    await db.delete(starStories).where(eq(starStories.id, otherStory.id));
+  });
+
+  it("POST returns 400 when source_star_story_id does not exist", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const nonExistentId = "00000000-0000-0000-0000-999999999999";
+    const res = await POST(
+      makePostRequest({
+        type: "behavioral",
+        source_star_story_id: nonExistentId,
+      })
+    );
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("Invalid source_star_story_id");
+  });
+
+  it("POST creates session without source_star_story_id (null preserved)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { interviewSessions } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(201);
+    const data = await res.json();
+
+    const [row] = await db
+      .select()
+      .from(interviewSessions)
+      .where(eq(interviewSessions.id, data.id));
+    expect(row.sourceStarStoryId).toBeNull();
+  });
+
+  it("POST returns 400 for invalid UUID format in source_star_story_id", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const res = await POST(
+      makePostRequest({
+        type: "behavioral",
+        source_star_story_id: "not-a-uuid",
+      })
+    );
+
+    expect(res.status).toBe(400);
+  });
 });

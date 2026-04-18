@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { interviewSessions, sessionFeedback, users } from "@/lib/schema";
+import { interviewSessions, sessionFeedback, users, starStories } from "@/lib/schema";
 import { and, desc, eq, gte, lte, sql, ne } from "drizzle-orm";
 import { getPlanConfig, FREE_PLAN_MONTHLY_INTERVIEW_LIMIT } from "@/lib/plans";
 import {
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { type, config } = parsed.data;
+  const { type, config, source_star_story_id } = parsed.data;
 
   // Validate config based on interview type
   if (config) {
@@ -168,6 +168,23 @@ export async function POST(request: NextRequest) {
   // (TypeScript loses the `session.user.id` non-null narrowing across the
   // async boundary).
   const userId = session.user.id;
+
+  // Validate source_star_story_id — must exist and belong to the requesting
+  // user. Return 400 (not 404) to avoid leaking the existence of another
+  // user's story.
+  if (source_star_story_id) {
+    const [story] = await db
+      .select({ id: starStories.id, userId: starStories.userId })
+      .from(starStories)
+      .where(eq(starStories.id, source_star_story_id));
+
+    if (!story || story.userId !== userId) {
+      return NextResponse.json(
+        { error: "Invalid source_star_story_id" },
+        { status: 400 }
+      );
+    }
+  }
 
   // Free-tier monthly limit gate. Pro users short-circuit out of the
   // counter entirely; free users at the limit get a 402 with a documented
@@ -199,6 +216,7 @@ export async function POST(request: NextRequest) {
           userId,
           type,
           config: config ?? {},
+          sourceStarStoryId: source_star_story_id ?? null,
         })
         .returning();
       return row;
