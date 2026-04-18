@@ -19,7 +19,7 @@ its acceptance criteria. When the task is complete, update `Tasks.md` to mark
 it done.
 
 When asked about a **new feature idea** or tech debt, check open GitHub Issues
-first (use the GitHub MCP or `gh issue list --repo scy02718/interview-assistant`)
+first (use the GitHub MCP or `gh issue list --repo scy02718/preploy`)
 to see whether it is already filed.
 
 `Backlog.md` is archived at `dev_logs/Backlog-archive.md` — new tech debt and

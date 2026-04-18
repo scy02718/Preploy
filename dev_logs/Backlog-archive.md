@@ -1,4 +1,4 @@
-> **Archived 2026-04-14.** This file is frozen. All items migrated to GitHub Issues — see https://github.com/scy02718/interview-assistant/issues. File new tech debt as issues, not here.
+> **Archived 2026-04-14.** This file is frozen. All items migrated to GitHub Issues — see https://github.com/scy02718/preploy/issues. File new tech debt as issues, not here.
 
 # Backlog
 
@@ -109,7 +109,7 @@ Use the `sessionType` prop (already available) to set the heading:
 
 ### Problem
 
-`npx turbo test --filter=@interview-assistant/web` (and `cd apps/web && npm run test`) reports all 276 test assertions passing but the Vitest process exits with code 1. The cause is uncaught `ReferenceError: window is not defined` exceptions thrown during React 19 async cleanup in jsdom — they surface AFTER every test has already passed, in the teardown phase, so they don't fail any individual test but they break the process exit code.
+`npx turbo test --filter=@preploy/web` (and `cd apps/web && npm run test`) reports all 276 test assertions passing but the Vitest process exits with code 1. The cause is uncaught `ReferenceError: window is not defined` exceptions thrown during React 19 async cleanup in jsdom — they surface AFTER every test has already passed, in the teardown phase, so they don't fail any individual test but they break the process exit code.
 
 Baseline on `main` shows roughly 29 such teardown errors; the PR #1 branch shows 14 (fewer only because fewer files were touched in that test run, not because of any fix). This has been happening for a while and is unrelated to any single story — it's a React 19 + Vitest + jsdom interaction in the component test harness.
 
@@ -127,7 +127,7 @@ Investigate in this order — stop as soon as one works:
 
 ### Acceptance criteria
 
-- `npx turbo test --filter=@interview-assistant/web` exits 0 on a clean `main` checkout.
+- `npx turbo test --filter=@preploy/web` exits 0 on a clean `main` checkout.
 - `.claude/hooks/precommit-gate.sh` passes on any valid web-only change without manual override.
 - No reduction in test count (still 276 assertions, no suppressed tests).
 - Fix is documented in `apps/web/CLAUDE.md` under a short "Known gotchas" section so future contributors don't re-trip this.
@@ -174,7 +174,7 @@ The Python service does NOT touch the database — `SQLAlchemy` is in `pyproject
 1. **Duplicated patterns across languages.** The retry-on-malformed-GPT-response story (PR #2) had to be implemented twice — once per service file — because there's no way to share the helper across languages. Any future resilience / observability / rate-limiting work has the same doubling cost.
 2. **Two test runners, two CI jobs, two dep upgrade flows**, two security audits, two Sentry SDKs, two logging stacks.
 3. **Two CLAUDE.md files** (`apps/web/CLAUDE.md` and `apps/api/CLAUDE.md`) that can drift. The autonomous loop's cognitive overhead doubles when it has to decide which one to read.
-4. **Drift class of bugs.** The `precommit-gate.sh` hook shipped in PR #1 had a bug — it filtered on `interview-assistant-api` but the actual npm workspace name is `@interview-assistant/api`. That bug is only possible because Python and JS use different package naming conventions.
+4. **Drift class of bugs.** The `precommit-gate.sh` hook shipped in PR #1 had a bug — it filtered on `preploy-api` but the actual npm workspace name is `@preploy/api`. That bug is only possible because Python and JS use different package naming conventions.
 5. **Extra hop in the request path.** `browser → Next.js route → fetch → FastAPI → fetch → OpenAI → parse → JSON → fetch response → parse → Next.js response → browser`. That's two JSON round-trips and one extra process boundary for every feedback generation.
 6. **Backlog drift risk.** PR #2 discovered that the retry pattern had been partially implemented in a prior session but the Backlog item was never removed and one of the two services was never mirrored. Single-language, this whole class of drift goes away.
 
@@ -206,7 +206,7 @@ Migration plan (a `/standup` Tech Lead can refine this):
 7. Port the test suite: `apps/api/tests/test_*.py` → `apps/web/app/api/analysis/*.test.ts` + `apps/web/app/api/analysis/*.integration.test.ts`. Use the same sample fixtures and assert byte-equivalent outputs for the pure functions
 8. Delete `apps/api/`, `apps/api/CLAUDE.md`, the Python CI job in `.github/workflows/ci.yml`, and the api service in `docker-compose.yml`
 9. Update `README.md` setup instructions (no more Python venv, no more `pip install -e ".[dev]"`)
-10. Remove `@interview-assistant/api` filter from `.claude/hooks/precommit-gate.sh`
+10. Remove `@preploy/api` filter from `.claude/hooks/precommit-gate.sh`
 11. Shrink the per-app CLAUDE.md scheme to just `apps/web/CLAUDE.md`
 
 ### Validation strategy (byte-equivalent outputs)
@@ -226,7 +226,7 @@ Before deleting `apps/api`, run the existing pytest fixtures (the `VALID_GPT_RES
 - `README.md` setup section no longer mentions Python, venv, or pip
 - All existing Python tests have a TypeScript equivalent asserting the same behavior
 - `apps/api/CLAUDE.md` deleted; `CLAUDE.md` "Monorepo layout" section updated
-- `.claude/hooks/precommit-gate.sh` filter list no longer mentions `@interview-assistant/api`
+- `.claude/hooks/precommit-gate.sh` filter list no longer mentions `@preploy/api`
 - PR includes a before/after diff showing the request path simplification (one fewer process boundary)
 
 ### Out of scope

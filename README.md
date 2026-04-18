@@ -1,4 +1,4 @@
-# Preploy — Interview Assistant
+# Preploy
 
 Practice mock interviews with AI. Get scored, track progress, get hired.
 
@@ -29,8 +29,8 @@ packages/
 ## Quickstart
 
 ```bash
-git clone https://github.com/scy02718/interview-assistant.git
-cd interview-assistant
+git clone https://github.com/scy02718/preploy.git
+cd preploy
 npm install                  # also runs scripts/setup-mediapipe.sh via postinstall
 cp apps/web/.env.local.example apps/web/.env.local
 # fill in required env vars (see below)
@@ -102,7 +102,7 @@ dev_logs/           Archived design docs (e.g. parked AWS migration)
 
 ## Contributing
 
-This is a solo-maintained project, but bug reports and PRs are welcome. [Open an issue](https://github.com/scy02718/interview-assistant/issues) or fork and submit a PR against `main`.
+This is a solo-maintained project, but bug reports and PRs are welcome. [Open an issue](https://github.com/scy02718/preploy/issues) or fork and submit a PR against `main`.
 
 ## License
 

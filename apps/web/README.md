@@ -1,6 +1,6 @@
 > `apps/web` — the Next.js app in the Preploy monorepo. Start with the [root README](../../README.md) for project overview, stack, and setup. This file covers app-level topics: E2E tests, gaze tracking, billing, local Docker.
 
-# @interview-assistant/web
+# @preploy/web
 
 Next.js 16 (App Router) application for Preploy — AI-powered mock interview
 practice. See the root `CLAUDE.md` and `apps/web/CLAUDE.md` for coding

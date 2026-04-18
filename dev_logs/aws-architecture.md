@@ -7,7 +7,7 @@
 > that a migration would cost is better spent on landing page, SEO, billing,
 > and remaining feature work.
 >
-> **Revival triggers** — reopen epic [#19](https://github.com/scy02718/interview-assistant/issues/19) when any of the following holds:
+> **Revival triggers** — reopen epic [#19](https://github.com/scy02718/preploy/issues/19) when any of the following holds:
 >
 > - Vercel bandwidth crosses **60 GB** in a single month (60% of the 100 GB Hobby free tier)
 > - Supabase database size crosses **350 MB** (70% of the 500 MB free tier)
@@ -33,8 +33,8 @@
 
 This document is the target architecture for migrating Preploy off Vercel +
 Supabase and onto AWS. It captures the decisions made under the migration
-epic [#19](https://github.com/scy02718/interview-assistant/issues/19) and is
-the deliverable for design sub-issue [#20](https://github.com/scy02718/interview-assistant/issues/20).
+epic [#19](https://github.com/scy02718/preploy/issues/19) and is
+the deliverable for design sub-issue [#20](https://github.com/scy02718/preploy/issues/20).
 It is the contract every downstream sub-issue (#21–#30) would build against;
 if a sub-issue needed to deviate, it would amend this doc first.
 
@@ -311,7 +311,7 @@ and any image tagged `prod`, expire everything else. Scan-on-push enabled.
 **What.** An IAM OIDC identity provider for
 `token.actions.githubusercontent.com` and a `github-actions-deploy` role
 with a trust policy scoped to
-`repo:scy02718/interview-assistant:ref:refs/heads/main`. Permissions: ECR
+`repo:scy02718/preploy:ref:refs/heads/main`. Permissions: ECR
 push to the one repo, ECS `RegisterTaskDefinition` + `UpdateService` +
 `DescribeServices` on the one service, `iam:PassRole` for the task role and
 execution role, CloudWatch log tailing for deploy-time diagnostics.

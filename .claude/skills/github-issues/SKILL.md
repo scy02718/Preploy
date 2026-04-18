@@ -15,7 +15,7 @@ Trigger on any of:
 - "track this in GitHub" / "add this to the backlog"
 - The user describes multi-step work and the repo tracks work in GitHub Issues.
 
-Default target repo for this project: **`scy02718/interview-assistant`** (confirm if unsure).
+Default target repo for this project: **`scy02718/preploy`** (confirm if unsure).
 
 ## Workflow
 
