@@ -17,8 +17,14 @@ interface PrefillState {
     resume_id?: string;
   } | null;
 
+  /** Pre-fill data for STAR prep — populated when navigating from a planner star-prep day. */
+  starPrepPrefill: {
+    focus_topics?: string[];
+  } | null;
+
   setBehavioralPrefill: (data: PrefillState["behavioralPrefill"]) => void;
   setTechnicalPrefill: (data: PrefillState["technicalPrefill"]) => void;
+  setStarPrepPrefill: (data: PrefillState["starPrepPrefill"]) => void;
   clearPrefill: () => void;
   /**
    * Strip the `resume_id` field from any prefill entry that references the
@@ -31,10 +37,13 @@ interface PrefillState {
 export const usePrefillStore = create<PrefillState>((set) => ({
   behavioralPrefill: null,
   technicalPrefill: null,
+  starPrepPrefill: null,
 
   setBehavioralPrefill: (data) => set({ behavioralPrefill: data }),
   setTechnicalPrefill: (data) => set({ technicalPrefill: data }),
-  clearPrefill: () => set({ behavioralPrefill: null, technicalPrefill: null }),
+  setStarPrepPrefill: (data) => set({ starPrepPrefill: data }),
+  clearPrefill: () =>
+    set({ behavioralPrefill: null, technicalPrefill: null, starPrepPrefill: null }),
 
   clearResumeReference: (resumeId: string) =>
     set((state) => {
