@@ -13,7 +13,12 @@ global.fetch = vi.fn().mockResolvedValue({
   json: () => Promise.resolve({ plans: [] }),
 });
 
-import PlannerPage from "./page";
+// The top-level `page.tsx` is now a server component (auth + plan gating),
+// so these tests target the interactive client body directly. The Pro-user
+// happy path is what this suite has always been testing; the server-level
+// gating (free users redirected to paywall, etc.) is covered by the API
+// integration tests plus the `features.test.ts` unit tests.
+import PlannerPage from "./PlannerClient";
 
 describe("PlannerPage", () => {
   it("renders the page title", () => {

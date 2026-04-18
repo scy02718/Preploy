@@ -21,7 +21,10 @@ vi.mock("@/stores/prefillStore", () => ({
   }),
 }));
 
-import ResumePage from "./page";
+// The top-level `page.tsx` is now a server component (auth + plan gating).
+// Target the interactive client body directly here; server gating is
+// exercised by the API integration tests.
+import ResumePage from "./ResumeClient";
 
 const RESUME_1 = {
   id: "resume-aaa",

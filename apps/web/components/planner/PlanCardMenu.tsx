@@ -24,6 +24,13 @@ interface PlanCardMenuProps {
   isArchived: boolean;
   onArchive: (planId: string, archived: boolean) => Promise<void>;
   onDelete: (planId: string) => Promise<void>;
+  /**
+   * When true (read-only grandfathered view for free-tier users), the
+   * Archive item is hidden because archive is a Pro-gated mutation. Delete
+   * stays visible — cleanup of data the user already owns is always
+   * allowed.
+   */
+  isReadOnly?: boolean;
 }
 
 export function PlanCardMenu({
@@ -31,6 +38,7 @@ export function PlanCardMenu({
   isArchived,
   onArchive,
   onDelete,
+  isReadOnly = false,
 }: PlanCardMenuProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
@@ -65,19 +73,21 @@ export function PlanCardMenu({
           <MoreHorizontal className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={handleArchive}>
-            {isArchived ? (
-              <>
-                <ArchiveX className="h-4 w-4 mr-2" />
-                Unarchive
-              </>
-            ) : (
-              <>
-                <Archive className="h-4 w-4 mr-2" />
-                Archive
-              </>
-            )}
-          </DropdownMenuItem>
+          {!isReadOnly && (
+            <DropdownMenuItem onClick={handleArchive}>
+              {isArchived ? (
+                <>
+                  <ArchiveX className="h-4 w-4 mr-2" />
+                  Unarchive
+                </>
+              ) : (
+                <>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archive
+                </>
+              )}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onClick={() => setDeleteDialogOpen(true)}
             className="text-destructive focus:text-destructive"

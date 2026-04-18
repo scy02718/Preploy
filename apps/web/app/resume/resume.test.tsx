@@ -15,7 +15,8 @@ const mockResumes = [
   },
 ];
 
-import ResumePage from "./page";
+// Target the client body — `page.tsx` is now a server component (Pro gate).
+import ResumePage from "./ResumeClient";
 
 describe("ResumePage", () => {
   const originalFetch = global.fetch;
