@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimited = await checkRateLimit(session.user.id);
+  // Whisper is a billable OpenAI endpoint — use the "openai" tier (5/min).
+  const rateLimited = await checkRateLimit(session.user.id, "openai");
   if (rateLimited) return rateLimited;
 
   const formData = await request.formData();

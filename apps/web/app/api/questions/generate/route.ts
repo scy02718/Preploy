@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
   const userId = session.user.id;
   const log = createRequestLogger({ route: "POST /api/questions/generate", userId });
 
-  const rateLimited = await checkRateLimit(userId);
+  // Question generation calls OpenAI — "openai" tier (5/min).
+  const rateLimited = await checkRateLimit(userId, "openai");
   if (rateLimited) return rateLimited;
 
   let body: unknown;

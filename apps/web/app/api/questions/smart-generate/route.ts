@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
   // is missing at construction time.
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  const rateLimited = await checkRateLimit(session.user.id);
+  // Smart generation issues an OpenAI call per request — "openai" tier (5/min).
+  const rateLimited = await checkRateLimit(session.user.id, "openai");
   if (rateLimited) return rateLimited;
 
   const log = createRequestLogger({ route: "POST /api/questions/smart-generate", userId: session.user.id });

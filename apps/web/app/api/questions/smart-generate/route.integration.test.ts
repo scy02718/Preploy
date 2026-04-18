@@ -17,6 +17,11 @@ import { users, userResumes } from "@/lib/schema";
 
 const mockAuth = vi.fn();
 vi.mock("@/lib/auth", () => ({ auth: () => mockAuth() }));
+// Route uses the "openai" tier (5/min); mock the limiter so >5 sequential
+// tests don't hit a stray 429. Real behaviour tested in lib/ratelimit.test.ts.
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("@/lib/db", () => ({ get db() { return getTestDb(); } }));
 
 // Mock OpenAI

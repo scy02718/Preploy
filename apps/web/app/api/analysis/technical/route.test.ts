@@ -10,6 +10,14 @@ vi.mock("openai", () => ({
   },
 }));
 
+// Route now auths + rate-limits; tests default to "signed-in, not limited".
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn().mockResolvedValue({ user: { id: "test-user" } }),
+}));
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
 import { POST } from "./route";
 
 const VALID_GPT_RESPONSE = readFileSync(

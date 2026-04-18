@@ -234,15 +234,19 @@ export default function FeedbackPage() {
       {/* Sticky back-link so the path home is always visible, not buried
           below a long per-answer breakdown.
 
-          The dashboard layout wraps this page in `<div className="flex-1
-          overflow-auto p-6">` — that `overflow-auto` makes the div (not the
-          viewport) the nearest scrolling ancestor, so `sticky` anchors to
-          IT. We therefore `top-0` (not `top-14`, which would have anchored
-          56px DOWN from the scroll container's top — mid-way through the
-          p-6 padding zone, floating over content). The `-mx-6 -mt-6` pulls
-          the bar edge-to-edge and flush with the Header by escaping the
-          layout's padding. */}
-      <div className="sticky top-0 z-20 -mx-6 -mt-6 border-b bg-background/80 backdrop-blur">
+          Dashboard layout wraps this page in `<div className="flex-1
+          overflow-auto p-6">`. Two separate offsets have to line up:
+
+          - `-mt-6 -mx-6` pulls the bar OUT of the `p-6` so it spans the
+            scroll container edge-to-edge (and not inset by 24px).
+          - `-top-6` sets the STICKY anchor. The CSS spec measures sticky
+            `top` from the scroll container's *padding* edge, not the
+            border edge. With `p-6` on the container, `top: 0` would pin
+            the bar 24px DOWN from the visible top. `top: -1.5rem` (i.e.
+            `-top-6`) backs that offset out so the bar pins flush against
+            the header. Without this, the bar renders 24px below the
+            header — which is the "ample space above" the user reported. */}
+      <div className="sticky -top-6 z-20 -mx-6 -mt-6 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center px-4 py-2">
           <Link
             href="/dashboard"
