@@ -82,4 +82,68 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("Dashboard").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Behavioral Interview").length).toBeGreaterThanOrEqual(1);
   });
+
+  describe("Pro feature badge", () => {
+    /**
+     * Route the fetch mock on URL so Sidebar gets a real `/api/users/me`
+     * response (which drives the badge) while still returning the expected
+     * `/api/sessions` shape for the Recent Sessions fetch.
+     */
+    function mockFetchByRoute(plan: "free" | "pro" | null) {
+      fetchSpy.mockImplementation(async (input: RequestInfo | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/users/me")) {
+          if (plan === null) {
+            return new Response("", { status: 500 });
+          }
+          return new Response(
+            JSON.stringify({ id: "u1", email: "t@e.com", plan }),
+            { status: 200 }
+          );
+        }
+        return new Response(
+          JSON.stringify({ sessions: [], pagination: { totalCount: 0 } }),
+          { status: 200 }
+        );
+      });
+    }
+
+    it("renders a 'Pro' badge on Planner + Resume for free-tier users", async () => {
+      mockFetchByRoute("free");
+      await act(async () => {
+        render(<Sidebar />);
+      });
+
+      const plannerLink = screen.getByTestId("sidebar-nav-planner");
+      const resumeLink = screen.getByTestId("sidebar-nav-resume");
+      expect(plannerLink.textContent).toMatch(/Pro/);
+      expect(resumeLink.textContent).toMatch(/Pro/);
+
+      // Non-gated item has no badge.
+      const dashboardLink = screen.getByTestId("sidebar-nav-dashboard");
+      expect(dashboardLink.textContent).not.toMatch(/Pro/);
+    });
+
+    it("does NOT render the 'Pro' badge for Pro-tier users", async () => {
+      mockFetchByRoute("pro");
+      await act(async () => {
+        render(<Sidebar />);
+      });
+
+      const plannerLink = screen.getByTestId("sidebar-nav-planner");
+      const resumeLink = screen.getByTestId("sidebar-nav-resume");
+      expect(plannerLink.textContent).not.toMatch(/Pro/);
+      expect(resumeLink.textContent).not.toMatch(/Pro/);
+    });
+
+    it("stays resilient if /api/users/me fails — no badge, no crash", async () => {
+      mockFetchByRoute(null);
+      await act(async () => {
+        render(<Sidebar />);
+      });
+
+      const plannerLink = screen.getByTestId("sidebar-nav-planner");
+      expect(plannerLink.textContent).not.toMatch(/Pro/);
+    });
+  });
 });

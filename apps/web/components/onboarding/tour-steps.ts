@@ -16,14 +16,21 @@ export const TOUR_STEPS: Step[] = [
   },
   {
     target: 'aside a[href="/planner"]',
-    title: "Planner",
-    content: "Build a day-by-day prep schedule for a real interview. Unlimited.",
+    title: "Planner (Pro)",
+    // Copy reframed when Planner moved behind the Pro tier. The tour is
+    // shown to free and Pro users alike; Pro users read "Available on
+    // Pro" as a confirmation of what they unlocked, free users read it
+    // as an honest preview — never a promise of a feature they can't
+    // use. See `dev_logs/pricing-model.md` for the full policy.
+    content:
+      "Available on Pro: build an AI-generated day-by-day prep schedule from now until your interview date.",
     placement: "right",
   },
   {
     target: 'aside a[href="/resume"]',
-    title: "Resume analysis",
-    content: "Upload a resume and get likely questions. Unlimited.",
+    title: "Resume tools (Pro)",
+    content:
+      "Available on Pro: upload your resume and generate questions drawn from your real experience.",
     placement: "right",
   },
   {
