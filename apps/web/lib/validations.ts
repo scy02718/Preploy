@@ -100,6 +100,13 @@ export const listStarStoriesQuerySchema = z.object({
 });
 export type ListStarStoriesQuery = z.infer<typeof listStarStoriesQuerySchema>;
 
+// ---- Plan archive PATCH schema ----
+
+export const patchPlanArchiveSchema = z.object({
+  archived: z.boolean(),
+});
+export type PatchPlanArchiveInput = z.infer<typeof patchPlanArchiveSchema>;
+
 // ---- User profile PATCH schema ----
 
 export const patchUserMeSchema = z.object({
