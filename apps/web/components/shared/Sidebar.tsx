@@ -70,6 +70,7 @@ function formatRelativeDate(dateString: string): string {
 export function Sidebar() {
   const pathname = usePathname();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
@@ -84,6 +85,8 @@ export function Sidebar() {
         }
       } catch {
         // Silent — sidebar sessions are non-critical
+      } finally {
+        setSessionsLoading(false);
       }
     }
     fetchSessions();
@@ -138,7 +141,24 @@ export function Sidebar() {
       </div>
 
       <div className="flex flex-col gap-1 px-2">
-        {sessions.length === 0 ? (
+        {sessionsLoading ? (
+          // Skeleton mirrors the post-load row shape: two-line label +
+          // trailing type badge. Three rows cover the common case (recent
+          // sessions max out at 5, but most users have fewer in view).
+          Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between px-3 py-2"
+              aria-hidden="true"
+            >
+              <div className="flex flex-col min-w-0 mr-2 flex-1 gap-1">
+                <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+                <div className="h-2.5 w-12 animate-pulse rounded bg-muted/60" />
+              </div>
+              <div className="h-4 w-7 shrink-0 animate-pulse rounded-full bg-muted" />
+            </div>
+          ))
+        ) : sessions.length === 0 ? (
           <p className="px-3 py-2 text-xs text-muted-foreground">
             No sessions yet
           </p>
