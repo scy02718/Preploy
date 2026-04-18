@@ -134,14 +134,32 @@ export function extractWeakAreas(
     .map(([weakness]) => weakness);
 }
 
+const VALID_DAY_TYPES: readonly PlanDayType[] = [
+  "behavioral",
+  "technical",
+  "star-prep",
+  "resume",
+  "coaching",
+];
+
+function isValidDayType(value: unknown): value is PlanDayType {
+  return (
+    typeof value === "string" &&
+    (VALID_DAY_TYPES as readonly string[]).includes(value)
+  );
+}
+
 /**
  * Resolve the effective day type for a PlanDay.
- * Uses `day_type` if present (new plans), otherwise falls back to `focus`
- * (legacy plans generated before day_type was added).
+ * Uses `day_type` if present and valid (new plans), otherwise falls back to
+ * `focus` (legacy plans generated before day_type was added). Unknown values
+ * produced by older GPT outputs collapse to `"behavioral"` so render paths
+ * keyed on the enum never blow up.
  */
 export function resolveDayType(day: PlanDay): PlanDayType {
-  if (day.day_type) return day.day_type;
-  return day.focus;
+  if (isValidDayType(day.day_type)) return day.day_type;
+  if (isValidDayType(day.focus)) return day.focus;
+  return "behavioral";
 }
 
 /**

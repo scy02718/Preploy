@@ -210,6 +210,22 @@ describe("resolveDayType", () => {
     const day = makeDay({ focus: "behavioral", day_type: "technical" });
     expect(resolveDayType(day)).toBe("technical");
   });
+
+  it("ignores an off-enum day_type and falls back to focus", () => {
+    const day = makeDay({
+      focus: "technical",
+      day_type: "star_prep" as unknown as PlanDay["day_type"],
+    });
+    expect(resolveDayType(day)).toBe("technical");
+  });
+
+  it("returns behavioral when both day_type and focus are off-enum", () => {
+    const day = makeDay({
+      focus: "review" as unknown as PlanDay["focus"],
+      day_type: "mock-interview" as unknown as PlanDay["day_type"],
+    });
+    expect(resolveDayType(day)).toBe("behavioral");
+  });
 });
 
 describe("extractWeakAreas", () => {
