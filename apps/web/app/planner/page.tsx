@@ -17,8 +17,10 @@ import {
   MessageSquare,
   Code,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import type { PlanDay, PlanData } from "@/lib/plan-generator";
+import { PlanCardMenu } from "@/components/planner/PlanCardMenu";
 
 interface Plan {
   id: string;
@@ -27,6 +29,7 @@ interface Plan {
   interviewDate: string;
   planData: PlanData;
   createdAt: string;
+  archivedAt: string | null;
 }
 
 function PlanSkeleton() {
@@ -109,10 +112,12 @@ function DayCard({
 
 export default function PlannerPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [archivedPlans, setArchivedPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
 
   // Form state
   const [company, setCompany] = useState("");
@@ -121,13 +126,20 @@ export default function PlannerPage() {
 
   const fetchPlans = useCallback(async () => {
     try {
-      const res = await fetch("/api/plans");
-      if (res.ok) {
-        const data = await res.json();
+      const [activeRes, archivedRes] = await Promise.all([
+        fetch("/api/plans"),
+        fetch("/api/plans?archived=true"),
+      ]);
+      if (activeRes.ok) {
+        const data = await activeRes.json();
         setPlans(data.plans);
         if (data.plans.length > 0) {
           setSelectedPlan((prev) => prev ?? data.plans[0]);
         }
+      }
+      if (archivedRes.ok) {
+        const data = await archivedRes.json();
+        setArchivedPlans(data.plans);
       }
     } catch {
       // Silent failure — non-critical
@@ -165,6 +177,48 @@ export default function PlannerPage() {
       // Error handling could be added
     } finally {
       setGenerating(false);
+    }
+  }
+
+  async function handleArchivePlan(planId: string, archived: boolean) {
+    try {
+      const res = await fetch(`/api/plans/${planId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archived }),
+      });
+      if (res.ok) {
+        const updated: Plan = await res.json();
+        if (archived) {
+          // Move from active to archived
+          setPlans((prev) => prev.filter((p) => p.id !== planId));
+          setArchivedPlans((prev) => [updated, ...prev]);
+          if (selectedPlan?.id === planId) {
+            setSelectedPlan(null);
+          }
+        } else {
+          // Move from archived to active
+          setArchivedPlans((prev) => prev.filter((p) => p.id !== planId));
+          setPlans((prev) => [updated, ...prev]);
+        }
+      }
+    } catch {
+      // Silent failure
+    }
+  }
+
+  async function handleDeletePlan(planId: string) {
+    try {
+      const res = await fetch(`/api/plans/${planId}`, { method: "DELETE" });
+      if (res.status === 204) {
+        setPlans((prev) => prev.filter((p) => p.id !== planId));
+        setArchivedPlans((prev) => prev.filter((p) => p.id !== planId));
+        if (selectedPlan?.id === planId) {
+          setSelectedPlan(null);
+        }
+      }
+    } catch {
+      // Silent failure
     }
   }
 
@@ -301,25 +355,89 @@ export default function PlannerPage() {
               ) : (
                 <div className="space-y-2">
                   {plans.map((plan) => (
-                    <button
+                    <div
                       key={plan.id}
-                      onClick={() => setSelectedPlan(plan)}
-                      className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                      className={`flex items-center gap-1 rounded-lg border transition-colors ${
                         selectedPlan?.id === plan.id
                           ? "border-primary bg-primary/5"
                           : "hover:bg-accent/50"
                       }`}
                     >
-                      <p className="font-medium text-sm">{plan.company}</p>
-                      <p className="text-xs text-muted-foreground">{plan.role}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(plan.interviewDate).toLocaleDateString()}
-                      </p>
-                    </button>
+                      <button
+                        onClick={() => setSelectedPlan(plan)}
+                        className="flex-1 text-left p-3 min-w-0"
+                      >
+                        <p className="font-medium text-sm truncate">{plan.company}</p>
+                        <p className="text-xs text-muted-foreground truncate">{plan.role}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(plan.interviewDate).toLocaleDateString()}
+                        </p>
+                      </button>
+                      <div className="pr-1">
+                        <PlanCardMenu
+                          planId={plan.id}
+                          isArchived={false}
+                          onArchive={handleArchivePlan}
+                          onDelete={handleDeletePlan}
+                        />
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
             </CardContent>
+          </Card>
+
+          {/* Archived plans section */}
+          <Card>
+            <button
+              onClick={() => setArchivedOpen((o) => !o)}
+              className="flex items-center justify-between w-full p-4 text-left"
+              aria-expanded={archivedOpen}
+            >
+              <span className="text-sm font-medium text-muted-foreground">
+                Archived ({loading ? "…" : archivedPlans.length})
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform ${archivedOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {archivedOpen && (
+              <CardContent className="pt-0">
+                {loading ? (
+                  <div className="space-y-2">
+                    <div className="h-12 w-full animate-pulse rounded bg-muted" />
+                  </div>
+                ) : archivedPlans.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No archived plans.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {archivedPlans.map((plan) => (
+                      <div
+                        key={plan.id}
+                        className="flex items-center gap-1 rounded-lg border border-dashed bg-muted/30 transition-colors hover:bg-accent/30"
+                      >
+                        <div className="flex-1 p-3 min-w-0">
+                          <p className="font-medium text-sm truncate text-muted-foreground">{plan.company}</p>
+                          <p className="text-xs text-muted-foreground truncate">{plan.role}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(plan.interviewDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="pr-1">
+                          <PlanCardMenu
+                            planId={plan.id}
+                            isArchived={true}
+                            onArchive={handleArchivePlan}
+                            onDelete={handleDeletePlan}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            )}
           </Card>
         </div>
 
