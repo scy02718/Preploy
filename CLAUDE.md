@@ -46,33 +46,6 @@ integration suite (it would need Docker and is too slow for a per-turn
 check), so you should still run `cd apps/web && npm run test:integration`
 manually before pushing.
 
-## E2E smoke tests
-
-`apps/web/e2e/` contains Playwright smoke tests for golden paths (landing,
-auth, dashboard, interview setup, profile).  These run against a production
-build — NOT `next dev`.
-
-- Extend only for **new top-level user flows** (golden paths).
-- **Bug repros and edge cases** go in integration tests, not E2E.
-- Tag every test with `@smoke` so CI selects it with `--grep @smoke`.
-- Auth state is pre-minted by `e2e/global.setup.ts` and stored in
-  `e2e/.auth/user.json` (gitignored).
-
-See `apps/web/README.md` → "E2E tests" for local run instructions.
-
-## Skills available in this repo
-
-The skills below live in `.claude/skills/` and trigger automatically when
-relevant. You don't need to invoke them by name.
-
-- **`webapp-testing`** — Playwright browser testing. Use whenever you need to
-  click through the running web app, verify rendered UI, or capture screenshots.
-- **`claude-api`** — Anthropic SDK reference. Use only when a story explicitly
-  asks to add or modify Claude API calls. The web app currently uses OpenAI;
-  do not silently swap providers.
-- **`skill-creator`** — Use only when the user asks to create or improve a
-  project-specific skill.
-
 ## Subagents (the autonomous-loop roles)
 
 The `.claude/agents/` directory holds specialized roles:
@@ -151,12 +124,9 @@ git add apps/web/drizzle/   # the whole directory, never individual files
 
 - Conventional Commits style (`feat:`, `fix:`, `chore:`, `refactor:`, `docs:`).
 - Branch naming: `feature/{story-number}-{short-description}` for feature work.
-- Never use `console.log` in server-side code (Next.js API routes). See the
-  per-app CLAUDE.md for the structured logger pattern.
-- Never commit secrets or files containing them (`.env`, `credentials.json`).
 - Before pushing to any branch, verify its PR is not already merged or closed
   (`gh pr list --state merged --head <branch>`). If it is, create a fresh
-  branch from `main` instead.
+  branch from `main` instead — burned us multiple times.
 
 ## graphify
 
