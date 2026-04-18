@@ -14,6 +14,7 @@ import OpenAI from "openai";
 import {
   buildBehavioralPrompt,
   BEHAVIORAL_SYSTEM_PROMPT,
+  type PreparedStarStory,
 } from "@/lib/analysis-prompts";
 import {
   FeedbackRequest,
@@ -25,12 +26,18 @@ import { OpenAIRetryError, withOpenAIRetry } from "@/lib/openai-retry";
 export interface RunBehavioralAnalysisOptions {
   log: pino.Logger;
   userId?: string;
+  /** Optional prepared STAR story for drift analysis */
+  preparedStory?: PreparedStarStory;
 }
 
 /**
  * Run behavioral analysis against OpenAI with retry + Zod validation.
  * Expects an already-Zod-parsed `FeedbackRequest` — does NOT re-validate input.
  * Throws `OpenAIRetryError` on retry exhaustion; propagates other errors as-is.
+ *
+ * When `opts.preparedStory` is provided the prompt includes the candidate's
+ * written STAR story and drift-analysis instructions; the returned
+ * `FeedbackResponse` will contain a `drift_analysis` field.
  */
 export async function runBehavioralAnalysis(
   input: FeedbackRequest,
@@ -38,7 +45,7 @@ export async function runBehavioralAnalysis(
 ): Promise<FeedbackResponse> {
   const { log } = opts;
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const prompt = buildBehavioralPrompt(input.transcript, input.config);
+  const prompt = buildBehavioralPrompt(input.transcript, input.config, opts.preparedStory);
 
   return withOpenAIRetry(
     () =>

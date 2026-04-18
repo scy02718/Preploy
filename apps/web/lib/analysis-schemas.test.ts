@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   answerAnalysisSchema,
+  driftAnalysisSchema,
   feedbackRequestSchema,
   feedbackResponseSchema,
   technicalFeedbackRequestSchema,
@@ -76,6 +77,76 @@ describe("feedbackResponseSchema", () => {
     const { summary: _omit, ...without } = VALID_FEEDBACK_RESPONSE;
     void _omit;
     expect(feedbackResponseSchema.safeParse(without).success).toBe(false);
+  });
+
+  it("accepts drift_analysis when present with all four arrays", () => {
+    const result = feedbackResponseSchema.safeParse({
+      ...VALID_FEEDBACK_RESPONSE,
+      drift_analysis: {
+        added: ["mentioned budget"],
+        omitted: ["dropped timeline"],
+        tightened: ["concise background"],
+        loosened: [],
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.drift_analysis?.added).toHaveLength(1);
+    }
+  });
+
+  it("accepts drift_analysis as null", () => {
+    const result = feedbackResponseSchema.safeParse({
+      ...VALID_FEEDBACK_RESPONSE,
+      drift_analysis: null,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.drift_analysis).toBeNull();
+    }
+  });
+
+  it("accepts response without drift_analysis field (optional)", () => {
+    const result = feedbackResponseSchema.safeParse(VALID_FEEDBACK_RESPONSE);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.drift_analysis).toBeUndefined();
+    }
+  });
+});
+
+describe("driftAnalysisSchema", () => {
+  it("accepts valid drift with all four arrays", () => {
+    const result = driftAnalysisSchema.safeParse({
+      added: ["a"],
+      omitted: ["b"],
+      tightened: ["c"],
+      loosened: ["d"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty arrays for all sections", () => {
+    const result = driftAnalysisSchema.safeParse({
+      added: [],
+      omitted: [],
+      tightened: [],
+      loosened: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null (no drift data)", () => {
+    const result = driftAnalysisSchema.safeParse(null);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBeNull();
+    }
+  });
+
+  it("rejects object missing required keys", () => {
+    const result = driftAnalysisSchema.safeParse({ added: [], omitted: [] });
+    expect(result.success).toBe(false);
   });
 });
 

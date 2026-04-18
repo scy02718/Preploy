@@ -107,6 +107,13 @@ Respond ONLY with valid JSON matching this exact structure:
 
 // ---- Behavioral prompt config ----
 
+export interface PreparedStarStory {
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+}
+
 export interface BehavioralPromptConfig {
   company_name?: string | null;
   job_description?: string | null;
@@ -120,10 +127,17 @@ export interface BehavioralPromptConfig {
  * from `_build_analysis_prompt` in feedback_generator.py — every `parts.append`
  * here corresponds to a Python `parts.append`, and the final `parts.join("\n")`
  * mirrors Python's `"\n".join(parts)`.
+ *
+ * When `preparedStory` is provided the prompt includes the candidate's
+ * written STAR story and drift-analysis instructions; the JSON schema gains a
+ * `drift_analysis` field. When `preparedStory` is absent the prompt is
+ * byte-identical to the version without drift support (snapshot-tested in
+ * analysis-prompts.test.ts).
  */
 export function buildBehavioralPrompt(
   transcript: TranscriptEntryInput[],
   config: BehavioralPromptConfig,
+  preparedStory?: PreparedStarStory,
 ): string {
   const parts: string[] = [];
 
@@ -144,6 +158,29 @@ export function buildBehavioralPrompt(
     parts.push("Interview level: Senior/Staff");
   } else {
     parts.push("Interview level: Mid-level");
+  }
+
+  // Prepared STAR story for drift analysis
+  if (preparedStory) {
+    parts.push("\n--- PREPARED STAR STORY ---\n");
+    parts.push(`Situation: ${preparedStory.situation}`);
+    parts.push(`Task: ${preparedStory.task}`);
+    parts.push(`Action: ${preparedStory.action}`);
+    parts.push(`Result: ${preparedStory.result}`);
+    parts.push("\n--- END PREPARED STAR STORY ---");
+    parts.push(
+      "\nCompare the candidate's spoken answer to the prepared STAR story above and return a drift_analysis field in your JSON response."
+    );
+    parts.push(
+      "drift_analysis must have four string arrays: added (details mentioned in the spoken answer not in the prepared story), omitted (meaningful details from the prepared story missing from the spoken answer), tightened (details that became more concise or focused), loosened (details that became vaguer or less specific)."
+    );
+    parts.push(
+      "Return empty arrays when drift is minimal — no forcing 3 bullets."
+    );
+    parts.push(
+      "Only flag drift that's meaningful for answer quality (not tiny paraphrasing)."
+    );
+    parts.push("Do not invent drift that isn't there.");
   }
 
   parts.push("\n--- TRANSCRIPT ---\n");

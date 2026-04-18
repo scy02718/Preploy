@@ -10,6 +10,7 @@ import { AnswerBreakdown } from "./AnswerBreakdown";
 import { CodeQualityCard } from "./CodeQualityCard";
 import { TimelineView, type TimelineEvent } from "./TimelineView";
 import { GazePresenceCard } from "./GazePresenceCard";
+import { PreparedVsSpokenCard, type DriftAnalysis } from "./PreparedVsSpokenCard";
 import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
 
 interface AnswerAnalysis {
@@ -33,6 +34,7 @@ interface FeedbackData {
   gazeDistribution?: GazeDistribution | null;
   gazeCoverage?: number | null;
   gazeTimeline?: GazeTimelineBucket[] | null;
+  driftAnalysis?: DriftAnalysis | null;
 }
 
 interface FeedbackDashboardProps {
@@ -140,6 +142,12 @@ export function FeedbackDashboard({
           gazeCoverage={feedback.gazeCoverage}
           gazeTimeline={feedback.gazeTimeline ?? null}
         />
+      )}
+
+      {/* Prepared vs. Spoken drift card — behavioral only, when session was
+          linked to a STAR story (drift_analysis non-null) */}
+      {!isTechnical && feedback.driftAnalysis != null && (
+        <PreparedVsSpokenCard driftAnalysis={feedback.driftAnalysis} />
       )}
 
       {/* Breakdown + Timeline side-by-side for technical, full-width for behavioral */}

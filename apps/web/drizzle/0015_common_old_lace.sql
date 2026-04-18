@@ -1,0 +1,1 @@
+ALTER TABLE "session_feedback" ADD COLUMN "drift_analysis" jsonb;

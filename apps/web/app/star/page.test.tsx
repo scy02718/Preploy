@@ -221,6 +221,7 @@ describe("StarPrepPage", () => {
 
     expect(mockSetBehavioralPrefill).toHaveBeenCalledWith({
       expected_questions: ["Tell me about a technical challenge"],
+      source_star_story_id: "story-1",
     });
     expect(mockPush).toHaveBeenCalledWith("/interview/behavioral/setup");
   });

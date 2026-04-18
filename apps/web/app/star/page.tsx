@@ -355,14 +355,14 @@ export default function StarPrepPage() {
 
   function handlePractice(story: StarStory) {
     // Pre-fill the behavioral setup form with this story's expected questions
-    // via prefillStore. The setup form consumes the store in its mount effect
-    // and applies the fields via setConfig. URL query params were used here
-    // before but were never read downstream.
+    // and source_star_story_id via prefillStore. The setup form consumes the
+    // store in its mount effect and applies the fields via setConfig.
     const questions = story.expectedQuestions.length
       ? story.expectedQuestions
       : [];
     setBehavioralPrefill({
       expected_questions: questions,
+      source_star_story_id: story.id,
     });
     router.push("/interview/behavioral/setup");
   }

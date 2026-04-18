@@ -36,7 +36,7 @@ interface InterviewState {
   // Actions
   setType: (type: InterviewType) => void;
   setConfig: (partial: Partial<SessionConfig>) => void;
-  createSession: () => Promise<string | null>;
+  createSession: (extraFields?: { source_star_story_id?: string }) => Promise<string | null>;
   clearQuotaError: () => void;
   startSession: () => Promise<void>;
   endSession: () => Promise<void>;
@@ -79,7 +79,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
       config: { ...state.config, ...partial } as SessionConfig,
     })),
 
-  createSession: async () => {
+  createSession: async (extraFields?: { source_star_story_id?: string }) => {
     const { config, type } = get();
     const sessionType = type ?? "behavioral";
     set({ error: null, quotaError: null });
@@ -88,7 +88,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: sessionType, config }),
+        body: JSON.stringify({ type: sessionType, config, ...extraFields }),
       });
 
       if (!res.ok) {
