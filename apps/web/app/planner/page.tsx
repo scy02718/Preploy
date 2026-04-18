@@ -312,7 +312,7 @@ export default function PlannerPage() {
                 <form onSubmit={handleGenerate} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="company">
-                      <Building2 className="h-4 w-4 inline mr-1" />
+                      <Building2 className="h-4 w-4 inline mr-1" aria-hidden="true" />
                       Company
                     </Label>
                     <Input
@@ -325,7 +325,7 @@ export default function PlannerPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">
-                      <Briefcase className="h-4 w-4 inline mr-1" />
+                      <Briefcase className="h-4 w-4 inline mr-1" aria-hidden="true" />
                       Role
                     </Label>
                     <Input
@@ -338,7 +338,7 @@ export default function PlannerPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="interview-date">
-                      <CalendarDays className="h-4 w-4 inline mr-1" />
+                      <CalendarDays className="h-4 w-4 inline mr-1" aria-hidden="true" />
                       Interview Date
                     </Label>
                     <Input

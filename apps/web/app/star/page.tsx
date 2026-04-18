@@ -460,7 +460,7 @@ export default function StarPrepPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Star className="h-6 w-6" />
+            <Star className="h-6 w-6 text-primary" aria-hidden="true" />
             STAR Story Prep
           </h1>
           <p className="text-muted-foreground">
@@ -551,8 +551,13 @@ export default function StarPrepPage() {
                   <CardTitle className="text-base">
                     {editing ? "Edit Story" : "New Story"}
                   </CardTitle>
-                  <button onClick={() => setShowForm(false)}>
-                    <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    aria-label={editing ? "Close edit form" : "Close new story form"}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </CardHeader>
