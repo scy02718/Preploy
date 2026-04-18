@@ -13,7 +13,10 @@ export default function CoachingLayout({
         topic and practice.
       </p>
       <CoachingHubNav />
-      <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150">
+      {/* Article-style coaching pages read better in a narrower column.
+          The outer layout keeps `max-w-6xl` for the nav; the inner
+          `max-w-3xl` applies only to the content pane. */}
+      <div className="mx-auto max-w-3xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-[var(--duration-base)]">
         {children}
       </div>
     </div>

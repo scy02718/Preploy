@@ -281,15 +281,14 @@ export default function TechnicalSessionPage() {
         <div className="h-6 w-48 animate-pulse rounded bg-muted" />
         <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
       </div>
-      {/* Description skeleton */}
+      {/* Description skeleton — tapered widths via Tailwind classes rather
+          than inline style so the skeleton inherits the project's utility
+          system (dark-mode parity, design tokens) instead of hardcoded px. */}
       <div className="mb-6 space-y-2">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-4 animate-pulse rounded bg-muted"
-            style={{ width: `${95 - i * 10}%` }}
-          />
-        ))}
+        <div className="h-4 w-[95%] animate-pulse rounded bg-muted" />
+        <div className="h-4 w-[85%] animate-pulse rounded bg-muted" />
+        <div className="h-4 w-[75%] animate-pulse rounded bg-muted" />
+        <div className="h-4 w-[65%] animate-pulse rounded bg-muted" />
       </div>
       {/* Example skeleton */}
       <div className="rounded-lg border bg-muted/30 p-4 space-y-2">

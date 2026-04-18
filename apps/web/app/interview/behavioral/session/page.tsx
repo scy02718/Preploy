@@ -10,7 +10,7 @@ import { BEHAVIORAL_SESSION_MAX_DURATION_SECONDS } from "@/lib/plans";
 import type { BehavioralSessionConfig } from "@preploy/shared";
 import { VideoCallLayout } from "@/components/interview/VideoCallLayout";
 import { SessionControls } from "@/components/interview/SessionControls";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 export default function BehavioralSessionPage() {
   const router = useRouter();
@@ -215,6 +215,25 @@ export default function BehavioralSessionPage() {
       {gazeSessionEnabled && gaze.isLoading && (
         <div className="absolute top-4 left-4 z-10 rounded-md border bg-background/90 px-3 py-1.5 text-xs text-muted-foreground shadow backdrop-blur">
           Loading presence analysis...
+        </div>
+      )}
+
+      {/* Connecting overlay — visible while the Realtime voice channel is
+          negotiating. The bottom-bar "Connecting…" text is easy to miss while
+          the user is looking at the 3D interviewer; this top-center pill
+          gives a clearer "AI is about to speak to you" cue. Hidden once
+          connected, and suppressed if voice.error is set (the error banner
+          below takes over in that case). */}
+      {!voice.isConnected && !voice.error && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full border bg-background/90 px-4 py-1.5 text-xs font-medium text-muted-foreground shadow backdrop-blur"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            Connecting to your AI interviewer…
+          </span>
         </div>
       )}
 

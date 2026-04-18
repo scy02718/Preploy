@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { getScoreColor } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, MessageSquare, Code } from "lucide-react";
 import {
@@ -350,7 +351,10 @@ export default function DashboardPage() {
                   {progress.monthComparison.thisMonth.avgScore != null &&
                     `, avg ${progress.monthComparison.thisMonth.avgScore}`}
                 </span>
-                <span className="text-muted-foreground">|</span>
+                <Separator
+                  orientation="vertical"
+                  className="!h-4 self-center"
+                />
                 <span className="text-muted-foreground">Last month:</span>
                 <span className="font-medium">
                   {progress.monthComparison.lastMonth.sessions} sessions
