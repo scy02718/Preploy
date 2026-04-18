@@ -5,9 +5,18 @@ import { Header } from "./Header";
 // Mutable pathname so individual tests can override it
 const mockPathname = { value: "/dashboard" };
 
-// Mock next/navigation
+// Mock next/navigation — Header uses both usePathname and useRouter (the
+// latter for the Profile dropdown item's client-side nav).
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname.value,
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+  }),
 }));
 
 // Mock next-auth/react

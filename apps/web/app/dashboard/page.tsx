@@ -422,7 +422,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold">Session History</h2>
         <div className="flex gap-2">
-          <Select value={typeFilter} onValueChange={handleTypeChange}>
+          <Select value={typeFilter} onValueChange={(v) => handleTypeChange(v ?? "all")}>
             <SelectTrigger
               aria-label="Filter by session type"
               className="h-9 w-[140px]"
@@ -435,7 +435,7 @@ export default function DashboardPage() {
               <SelectItem value="technical">Technical</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={scoreFilter} onValueChange={handleScoreChange}>
+          <Select value={scoreFilter} onValueChange={(v) => handleScoreChange(v ?? "all")}>
             <SelectTrigger
               aria-label="Filter by score"
               className="h-9 w-[160px]"

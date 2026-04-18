@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
@@ -31,6 +31,7 @@ const navItems = [
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, status } = useSession();
   const { theme, setTheme } = useTheme();
   const user = session?.user;
@@ -119,8 +120,8 @@ export function Header() {
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile">Profile</Link>
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
+                Profile
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
                 Sign Out
