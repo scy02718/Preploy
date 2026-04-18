@@ -20,6 +20,21 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+// Bypass Upstash-backed rate limiting; it isn't available in the integration
+// test env, and without this mock the test-local rate budget starves later
+// assertions in this file (they return 429 instead of their expected codes).
+// The route contract is: checkRateLimit returns a NextResponse when rate-limited,
+// or null/undefined when allowed — so the passing case returns null.
+vi.mock("@/lib/api-utils", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api-utils")>(
+    "@/lib/api-utils"
+  );
+  return {
+    ...actual,
+    checkRateLimit: vi.fn().mockResolvedValue(null),
+  };
+});
+
 import { GET, POST } from "./route";
 
 const TEST_USER = {
@@ -51,14 +66,22 @@ describe("API /api/sessions (integration)", () => {
   });
 
   beforeEach(async () => {
-    // Clean sessions and usage between tests but keep the user
+    // Clean sessions, usage, and star stories between tests but keep users
     const db = getTestDb();
-    const { interviewSessions, sessionFeedback, transcripts, interviewUsage } =
-      await import("@/lib/schema");
+    const {
+      interviewSessions,
+      sessionFeedback,
+      transcripts,
+      interviewUsage,
+      starStoryAnalyses,
+      starStories,
+    } = await import("@/lib/schema");
     await db.delete(sessionFeedback);
     await db.delete(transcripts);
     await db.delete(interviewSessions);
     await db.delete(interviewUsage);
+    await db.delete(starStoryAnalyses);
+    await db.delete(starStories);
     // Reset plan to free between tests
     const { eq } = await import("drizzle-orm");
     await db
@@ -737,7 +760,10 @@ describe("API /api/sessions (integration)", () => {
   it("POST returns 400 when source_star_story_id does not exist", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    const nonExistentId = "00000000-0000-0000-0000-999999999999";
+    // Valid RFC-4122 UUID format (v4) that doesn't exist in the DB.
+    // Strict zod .uuid() requires version + variant bits set correctly,
+    // so all-zeros IDs don't pass the schema validator.
+    const nonExistentId = "11111111-1111-4111-a111-111111111111";
     const res = await POST(
       makePostRequest({
         type: "behavioral",
