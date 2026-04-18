@@ -51,12 +51,21 @@ export const answerAnalysisSchema = z.object({
 });
 export type AnswerAnalysis = z.infer<typeof answerAnalysisSchema>;
 
+export const driftAnalysisSchema = z.object({
+  added: z.array(z.string()),
+  omitted: z.array(z.string()),
+  tightened: z.array(z.string()),
+  loosened: z.array(z.string()),
+}).nullable();
+export type DriftAnalysis = z.infer<typeof driftAnalysisSchema>;
+
 export const feedbackResponseSchema = z.object({
   overall_score: z.number().min(0).max(10),
   summary: z.string(),
   strengths: z.array(z.string()),
   weaknesses: z.array(z.string()),
   answer_analyses: z.array(answerAnalysisSchema),
+  drift_analysis: driftAnalysisSchema.optional(),
 });
 export type FeedbackResponse = z.infer<typeof feedbackResponseSchema>;
 

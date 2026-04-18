@@ -6,6 +6,7 @@ import {
   buildTechnicalPrompt,
   type BehavioralPromptConfig,
   type TechnicalPromptConfig,
+  type PreparedStarStory,
 } from "./analysis-prompts";
 import type {
   CodeSnapshotInput,
@@ -124,6 +125,70 @@ describe("buildBehavioralPrompt", () => {
     );
     const actual = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG);
     expect(actual).toBe(expected);
+  });
+
+  it("without preparedStory is byte-identical to baseline (no drift section)", () => {
+    const withoutStory = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG);
+    const alsoWithoutStory = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, undefined);
+    expect(withoutStory).toBe(alsoWithoutStory);
+  });
+});
+
+// ---- buildBehavioralPrompt with preparedStory (drift analysis) ----
+
+const SAMPLE_STAR_STORY: PreparedStarStory = {
+  situation: "Our production system experienced a critical outage.",
+  task: "I needed to coordinate the on-call engineers to restore service.",
+  action: "I set up a war room, assigned roles, and led the post-mortem.",
+  result: "We restored service in 2 hours and reduced future incidents by 40%.",
+};
+
+describe("buildBehavioralPrompt with preparedStory", () => {
+  it("includes PREPARED STAR STORY markers when preparedStory provided", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, SAMPLE_STAR_STORY);
+    expect(prompt).toContain("--- PREPARED STAR STORY ---");
+    expect(prompt).toContain("--- END PREPARED STAR STORY ---");
+  });
+
+  it("includes all four STAR sections from the story", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, SAMPLE_STAR_STORY);
+    expect(prompt).toContain("Situation: Our production system");
+    expect(prompt).toContain("Task: I needed to coordinate");
+    expect(prompt).toContain("Action: I set up a war room");
+    expect(prompt).toContain("Result: We restored service");
+  });
+
+  it("includes drift_analysis instruction in prompt", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, SAMPLE_STAR_STORY);
+    expect(prompt).toContain("drift_analysis");
+  });
+
+  it("includes guardrail: Return empty arrays when drift is minimal — no forcing 3 bullets", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, SAMPLE_STAR_STORY);
+    expect(prompt).toContain("Return empty arrays when drift is minimal — no forcing 3 bullets");
+  });
+
+  it("includes guardrail: Only flag drift that's meaningful for answer quality (not tiny paraphrasing)", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, SAMPLE_STAR_STORY);
+    expect(prompt).toContain("Only flag drift that's meaningful for answer quality (not tiny paraphrasing)");
+  });
+
+  it("includes guardrail: Do not invent drift that isn't there", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, SAMPLE_STAR_STORY);
+    expect(prompt).toContain("Do not invent drift that isn't there");
+  });
+
+  it("still includes TRANSCRIPT section after STAR story section", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG, SAMPLE_STAR_STORY);
+    const starEndIdx = prompt.indexOf("--- END PREPARED STAR STORY ---");
+    const transcriptIdx = prompt.indexOf("--- TRANSCRIPT ---");
+    expect(starEndIdx).toBeLessThan(transcriptIdx);
+  });
+
+  it("prompt without story does NOT contain PREPARED STAR STORY section", () => {
+    const prompt = buildBehavioralPrompt(SAMPLE_TRANSCRIPT, SAMPLE_CONFIG);
+    expect(prompt).not.toContain("--- PREPARED STAR STORY ---");
+    expect(prompt).not.toContain("drift_analysis");
   });
 });
 
