@@ -232,8 +232,17 @@ export default function FeedbackPage() {
   return (
     <>
       {/* Sticky back-link so the path home is always visible, not buried
-          below a long per-answer breakdown. */}
-      <div className="sticky top-14 z-20 border-b bg-background/80 backdrop-blur">
+          below a long per-answer breakdown.
+
+          The dashboard layout wraps this page in `<div className="flex-1
+          overflow-auto p-6">` — that `overflow-auto` makes the div (not the
+          viewport) the nearest scrolling ancestor, so `sticky` anchors to
+          IT. We therefore `top-0` (not `top-14`, which would have anchored
+          56px DOWN from the scroll container's top — mid-way through the
+          p-6 padding zone, floating over content). The `-mx-6 -mt-6` pulls
+          the bar edge-to-edge and flush with the Header by escaping the
+          layout's padding. */}
+      <div className="sticky top-0 z-20 -mx-6 -mt-6 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center px-4 py-2">
           <Link
             href="/dashboard"

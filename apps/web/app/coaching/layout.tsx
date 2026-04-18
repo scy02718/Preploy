@@ -13,10 +13,11 @@ export default function CoachingLayout({
         topic and practice.
       </p>
       <CoachingHubNav />
-      {/* Article-style coaching pages read better in a narrower column.
-          The outer layout keeps `max-w-6xl` for the nav; the inner
-          `max-w-3xl` applies only to the content pane. */}
-      <div className="mx-auto max-w-3xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-[var(--duration-base)]">
+      {/* Content spans the same `max-w-6xl` width as the title + nav so the
+          page doesn't look like the body shrinks mid-page. Prior narrower
+          reading column was visually jarring against the full-width tabs
+          above it. */}
+      <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-[var(--duration-base)]">
         {children}
       </div>
     </div>
