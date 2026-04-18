@@ -20,11 +20,11 @@ import { Sidebar } from "./Sidebar";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/planner", label: "Planner" },
   { href: "/interview/behavioral/setup", label: "Behavioral" },
   { href: "/interview/technical/setup", label: "Technical" },
   { href: "/star", label: "STAR Prep" },
   { href: "/coaching", label: "Coaching" },
+  { href: "/planner", label: "Planner" },
   { href: "/resume", label: "Resume" },
   { href: "/achievements", label: "Achievements" },
 ];
