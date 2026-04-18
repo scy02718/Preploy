@@ -33,10 +33,15 @@ vi.mock("@/stores/interviewStore", () => {
   return { useInterviewStore };
 });
 
+const { mockPrefillRef, mockClearPrefill } = vi.hoisted(() => ({
+  mockPrefillRef: { current: null as { expected_questions?: string[]; company_name?: string; resume_id?: string } | null },
+  mockClearPrefill: vi.fn(),
+}));
+
 vi.mock("@/stores/prefillStore", () => ({
   usePrefillStore: () => ({
-    behavioralPrefill: null,
-    clearPrefill: vi.fn(),
+    behavioralPrefill: mockPrefillRef.current,
+    clearPrefill: mockClearPrefill,
   }),
 }));
 
@@ -52,6 +57,7 @@ global.fetch = mockFetch;
 describe("BehavioralSetupForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPrefillRef.current = null;
   });
 
   it("renders company name input", () => {
@@ -149,5 +155,65 @@ describe("BehavioralSetupForm", () => {
     await vi.waitFor(() => {
       expect(screen.getByTestId("gaze-session-checkbox")).toBeTruthy();
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Regression: STAR "Practice this question" prefill must survive the effect
+  // that runs `setType("behavioral")`. The bug (pre-fix) was that the prefill
+  // effect and the setType effect were combined into one useEffect keyed on
+  // `behavioralPrefill`; `clearPrefill` at the end of the first run changed
+  // the dep, re-ran the effect, which re-called setType — and setType resets
+  // config to DEFAULT_BEHAVIORAL_CONFIG, wiping the just-applied prefill.
+  // ---------------------------------------------------------------------------
+  it("prefill survives: setType fires exactly once on mount even when prefill clears", () => {
+    mockPrefillRef.current = {
+      expected_questions: ["Tell me about a time you led under pressure"],
+    };
+    render(<BehavioralSetupForm />);
+    expect(mockSetType).toHaveBeenCalledTimes(1);
+    expect(mockSetType).toHaveBeenCalledWith("behavioral");
+  });
+
+  it("prefill survives: setConfig is called with expected_questions from STAR handoff", () => {
+    mockPrefillRef.current = {
+      expected_questions: [
+        "Tell me about a time you led under pressure",
+        "Describe a difficult technical challenge",
+      ],
+    };
+    render(<BehavioralSetupForm />);
+    expect(mockSetConfig).toHaveBeenCalledWith({
+      expected_questions: [
+        "Tell me about a time you led under pressure",
+        "Describe a difficult technical challenge",
+      ],
+    });
+    expect(mockClearPrefill).toHaveBeenCalledTimes(1);
+  });
+
+  it("prefill survives: setConfig is called with company_name + resume_id together", () => {
+    mockPrefillRef.current = {
+      company_name: "Stripe",
+      resume_id: "resume-123",
+      expected_questions: ["Walk me through your resume"],
+    };
+    render(<BehavioralSetupForm />);
+    expect(mockSetConfig).toHaveBeenCalledWith({ company_name: "Stripe" });
+    expect(mockSetConfig).toHaveBeenCalledWith({
+      expected_questions: ["Walk me through your resume"],
+    });
+    expect(mockSetConfig).toHaveBeenCalledWith({ resume_id: "resume-123" });
+  });
+
+  it("no prefill: setConfig is NOT called on mount (empty prefill path)", () => {
+    mockPrefillRef.current = null;
+    render(<BehavioralSetupForm />);
+    // setConfig may be called by unrelated effects (e.g. gaze preference fetch)
+    // but never with prefill fields on a null-prefill mount.
+    const prefillCalls = mockSetConfig.mock.calls.filter((call) => {
+      const arg = call[0] as Record<string, unknown>;
+      return "expected_questions" in arg || "company_name" in arg || "resume_id" in arg;
+    });
+    expect(prefillCalls).toHaveLength(0);
   });
 });

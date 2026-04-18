@@ -61,25 +61,33 @@ export function BehavioralSetupForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Set the interview type on mount. `setType` resets config to defaults,
+  // so this effect MUST NOT depend on `behavioralPrefill` — otherwise
+  // clearing the prefill triggers a re-run that wipes the just-applied
+  // values.
   useEffect(() => {
     setType("behavioral");
-    // Apply prefill from other pages (resume questions, planner, etc.)
-    if (behavioralPrefill) {
-      if (behavioralPrefill.company_name) {
-        setConfig({ company_name: behavioralPrefill.company_name });
-      }
-      if (behavioralPrefill.expected_questions?.length) {
-        setConfig({ expected_questions: behavioralPrefill.expected_questions });
-      }
-      if (behavioralPrefill.resume_id) {
-        setConfig({ resume_id: behavioralPrefill.resume_id });
-      }
-      if (behavioralPrefill.source_star_story_id) {
-        setSourceStarStoryId(behavioralPrefill.source_star_story_id);
-      }
-      clearPrefill();
+  }, [setType]);
+
+  // Apply prefill from other pages (resume questions, STAR, planner, etc.).
+  // Runs after the mount-only setType effect, then clears the prefill so the
+  // next visit doesn't redundantly re-apply stale values.
+  useEffect(() => {
+    if (!behavioralPrefill) return;
+    if (behavioralPrefill.company_name) {
+      setConfig({ company_name: behavioralPrefill.company_name });
     }
-  }, [setType, behavioralPrefill, clearPrefill, setConfig]);
+    if (behavioralPrefill.expected_questions?.length) {
+      setConfig({ expected_questions: behavioralPrefill.expected_questions });
+    }
+    if (behavioralPrefill.resume_id) {
+      setConfig({ resume_id: behavioralPrefill.resume_id });
+    }
+    if (behavioralPrefill.source_star_story_id) {
+      setSourceStarStoryId(behavioralPrefill.source_star_story_id);
+    }
+    clearPrefill();
+  }, [behavioralPrefill, clearPrefill, setConfig]);
 
   const behavioralConfig = config as BehavioralSessionConfig;
   const interviewStyle = typeof behavioralConfig.interview_style === "number" ? behavioralConfig.interview_style : 0.5;

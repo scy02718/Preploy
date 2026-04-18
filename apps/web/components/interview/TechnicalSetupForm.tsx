@@ -86,24 +86,32 @@ export function TechnicalSetupForm() {
     return segment ? segment.slice(OTHER_PREFIX.length) : "";
   })();
 
+  // Set the interview type on mount. `setType` resets config to defaults,
+  // so this effect MUST NOT depend on `technicalPrefill` — otherwise
+  // clearing the prefill triggers a re-run that wipes the just-applied
+  // values.
   useEffect(() => {
     setType("technical");
-    if (technicalPrefill) {
-      if (technicalPrefill.interview_type) {
-        setConfig({ interview_type: technicalPrefill.interview_type, focus_areas: [] });
-      }
-      if (technicalPrefill.focus_areas?.length) {
-        setConfig({ focus_areas: technicalPrefill.focus_areas });
-      }
-      if (technicalPrefill.additional_instructions) {
-        setConfig({ additional_instructions: technicalPrefill.additional_instructions });
-      }
-      if (technicalPrefill.resume_id) {
-        setConfig({ resume_id: technicalPrefill.resume_id });
-      }
-      clearPrefill();
+  }, [setType]);
+
+  // Apply prefill from other pages (resume, planner, etc.). Runs after
+  // setType and clears the prefill so the next visit starts fresh.
+  useEffect(() => {
+    if (!technicalPrefill) return;
+    if (technicalPrefill.interview_type) {
+      setConfig({ interview_type: technicalPrefill.interview_type, focus_areas: [] });
     }
-  }, [setType, technicalPrefill, clearPrefill, setConfig]);
+    if (technicalPrefill.focus_areas?.length) {
+      setConfig({ focus_areas: technicalPrefill.focus_areas });
+    }
+    if (technicalPrefill.additional_instructions) {
+      setConfig({ additional_instructions: technicalPrefill.additional_instructions });
+    }
+    if (technicalPrefill.resume_id) {
+      setConfig({ resume_id: technicalPrefill.resume_id });
+    }
+    clearPrefill();
+  }, [technicalPrefill, clearPrefill, setConfig]);
 
   const toggleFocusArea = (area: string) => {
     if (area === "other") {
