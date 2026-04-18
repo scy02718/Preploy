@@ -97,6 +97,29 @@ stays clean, the gate stays consistent across stories, and `pr-reviewer`
 cannot be accidentally skipped because you already "saw" the diff. Manual
 orchestration must still follow the same sequence `/standup` enforces.
 
+### Delegation rule — use cheap subagents for bulk/repetitive work
+
+Running large greps, sweeping docs, auditing many files, or applying the
+same edit across dozens of files directly in the main conversation burns
+tokens fast. **Delegate these to the `Explore` or `general-purpose`
+subagent on a cheaper model:**
+
+- **Haiku** — default for pure discovery: secret scans, ref-usage audits,
+  file-pattern sweeps, staleness checks, "find all X" tasks.
+- **Sonnet** — when the work also requires reasoning or writing quality
+  prose/code: doc rewrites, bulk rename-with-judgment edits, summarizing
+  findings for a human reader.
+- **Opus** — only for the main conversation's own decisions and
+  orchestration, not for grep work.
+
+When to skip delegation: quick targeted lookups (1–2 greps in a known
+file) are faster inline. The rule kicks in for anything touching >5 files,
+sweeping git history, or reading files end-to-end.
+
+Parallelize independent scans in a single message (multiple `Agent` tool
+calls in the same turn). Ask subagents for **structured reports**, not
+raw output — the summary is what comes back to main context.
+
 ## Database schema changes
 
 When modifying `apps/web/lib/schema.ts`, always use versioned migrations:
