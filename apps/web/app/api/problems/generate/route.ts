@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimited = await checkRateLimit(session.user.id);
+  // GPT problem generation hits OpenAI — use the "openai" tier (5/min).
+  const rateLimited = await checkRateLimit(session.user.id, "openai");
   if (rateLimited) return rateLimited;
 
   const body = await request.json();

@@ -8,6 +8,13 @@ vi.mock("@/lib/auth", () => ({
   auth: () => mockAuth(),
 }));
 
+// Mock the rate limiter so tests don't exhaust the "openai" bucket (5/min)
+// when more than five cases fire sequentially inside one suite. Real
+// rate-limit behaviour is covered by `lib/ratelimit.test.ts`.
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
 // Mock OpenAI
 const mockChatCreate = vi.fn();
 vi.mock("openai", () => ({

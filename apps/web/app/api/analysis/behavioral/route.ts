@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/api-utils";
 import { runBehavioralAnalysis } from "@/lib/analysis-behavioral";
 import { feedbackRequestSchema } from "@/lib/analysis-schemas";
 import { createRequestLogger } from "@/lib/logger";
@@ -8,12 +10,22 @@ import { OpenAIRetryError } from "@/lib/openai-retry";
 /**
  * POST /api/analysis/behavioral
  *
- * Internal, server-to-server route. No auth. Thin HTTP wrapper around
- * `runBehavioralAnalysis()` in `@/lib/analysis-behavioral`; the feedback route
- * imports that function directly rather than self-fetching this endpoint.
+ * Thin HTTP wrapper around `runBehavioralAnalysis()` in
+ * `@/lib/analysis-behavioral`. Production code doesn't call this over HTTP
+ * (the feedback route imports the function directly), but the route is
+ * still Internet-reachable, so it must auth and rate-limit like any other
+ * OpenAI-burning endpoint — otherwise an attacker can run up the API bill.
  */
 export async function POST(request: NextRequest) {
   const log = createRequestLogger({ route: "POST /api/analysis/behavioral" });
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rateLimited = await checkRateLimit(session.user.id, "openai");
+  if (rateLimited) return rateLimited;
 
   let body: unknown;
   try {

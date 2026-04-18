@@ -4,7 +4,6 @@ import { LandingHowItWorks } from "@/components/landing/LandingHowItWorks";
 import { LandingPersonas } from "@/components/landing/LandingPersonas";
 import { LandingFeatures } from "@/components/landing/LandingFeatures";
 import { LandingFAQ } from "@/components/landing/LandingFAQ";
-import { LandingSocialProof } from "@/components/landing/LandingSocialProof";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
@@ -49,6 +48,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Uses AggregateOffer (not a single $0 Offer) because Preploy has a free
+// tier + a paid Pro tier. The canonical pricing listing lives at /pricing;
+// this structured-data block only needs to communicate the price range to
+// crawlers.
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
@@ -59,9 +62,12 @@ const jsonLd = {
   description:
     "Ace your next job interview with Preploy. Practice mock interviews with an AI interviewer and get instant, detailed feedback on your answers.",
   offers: {
-    "@type": "Offer",
-    price: "0",
+    "@type": "AggregateOffer",
+    lowPrice: "0",
+    highPrice: "15",
     priceCurrency: "USD",
+    offerCount: "2",
+    url: `${BASE_URL}/pricing`,
   },
 };
 
@@ -77,7 +83,10 @@ export default function Home() {
         <LandingHowItWorks />
         <LandingPersonas />
         <LandingFeatures />
-        <LandingSocialProof />
+        {/* LandingSocialProof intentionally dropped from the composition
+            while real testimonials don't exist — rendering an empty
+            `<section aria-label="Testimonials">` created a ghost landmark
+            and a visible gap. Re-add when testimonials ship. */}
         <LandingFAQ />
         <LandingFooter />
       </div>

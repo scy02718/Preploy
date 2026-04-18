@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/api-utils";
 import { runTechnicalAnalysis } from "@/lib/analysis-technical";
 import { technicalFeedbackRequestSchema } from "@/lib/analysis-schemas";
 import { createRequestLogger } from "@/lib/logger";
@@ -8,8 +10,10 @@ import { OpenAIRetryError } from "@/lib/openai-retry";
 /**
  * POST /api/analysis/technical
  *
- * Internal, server-to-server route. No auth. Thin HTTP wrapper around
- * `runTechnicalAnalysis()`; the feedback route imports that function directly.
+ * Thin HTTP wrapper around `runTechnicalAnalysis()`. Production code imports
+ * the function directly (feedback route); this HTTP surface is not used by
+ * the app, but it is Internet-reachable, so it must auth and rate-limit like
+ * every other OpenAI-burning endpoint.
  *
  * The deterministic timeline is built inside `runTechnicalAnalysis` via
  * `buildTimeline()` and overwrites whatever GPT returns for `timeline_analysis`
@@ -17,6 +21,14 @@ import { OpenAIRetryError } from "@/lib/openai-retry";
  */
 export async function POST(request: NextRequest) {
   const log = createRequestLogger({ route: "POST /api/analysis/technical" });
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rateLimited = await checkRateLimit(session.user.id, "openai");
+  if (rateLimited) return rateLimited;
 
   let body: unknown;
   try {

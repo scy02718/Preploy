@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
-// POST /api/realtime/token — get an ephemeral token for OpenAI Realtime API
+// POST /api/realtime/token — get an ephemeral token for OpenAI Realtime API.
+// Rate-limited on the "openai" tier (5/min): each token mints a billable
+// Realtime session, which is OpenAI's most expensive surface. Without this,
+// an authenticated attacker could loop-mint tokens to run up the API bill.
 export async function POST() {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rateLimited = await checkRateLimit(session.user.id, "openai");
+  if (rateLimited) return rateLimited;
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {

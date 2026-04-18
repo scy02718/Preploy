@@ -49,11 +49,15 @@ describe("LandingFAQ", () => {
     expect(contents[1].className).toContain("max-h-96");
   });
 
-  it("pricing answer mentions free beta", () => {
+  it("pricing answer describes free + Pro tiers", () => {
     render(<LandingFAQ />);
     const triggers = screen.getAllByTestId("faq-trigger");
     fireEvent.click(triggers[0]);
-    expect(screen.getByText(/free while in beta/i)).toBeTruthy();
+    // Copy changed when the Pro tier shipped; previously said "free while in
+    // beta", now describes both tiers and points at the /pricing page.
+    expect(screen.getByText(/free tier/i)).toBeTruthy();
+    expect(screen.getByText(/Pro/)).toBeTruthy();
+    expect(screen.getByText(/\$15\/month/)).toBeTruthy();
   });
 
   it("privacy answer explains audio handling", () => {

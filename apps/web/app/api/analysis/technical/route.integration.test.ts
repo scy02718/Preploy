@@ -22,6 +22,14 @@ vi.mock("openai", () => ({
   },
 }));
 
+// The route now auths + rate-limits like any other OpenAI-burning endpoint.
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn().mockResolvedValue({ user: { id: "test-user" } }),
+}));
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.stubEnv("OPENAI_API_KEY", "sk-integration-test");
 
 import { POST } from "./route";

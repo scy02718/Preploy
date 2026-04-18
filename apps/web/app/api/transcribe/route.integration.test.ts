@@ -20,6 +20,13 @@ vi.mock("@/lib/auth", () => ({
   auth: () => mockAuth(),
 }));
 
+// Mock the rate limiter so >5 sequential tests in this suite don't hit the
+// "openai" tier cap (5/min). Real rate-limit behaviour is covered in
+// `lib/ratelimit.test.ts`.
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
 // Point db import to the real test database
 vi.mock("@/lib/db", () => ({
   get db() {

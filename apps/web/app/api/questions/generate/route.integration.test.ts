@@ -20,6 +20,12 @@ vi.mock("@/lib/auth", () => ({
   auth: () => mockAuth(),
 }));
 
+// Mock the rate limiter — route now uses the "openai" tier (5/min). Real
+// behaviour is covered by `lib/ratelimit.test.ts`.
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("@/lib/db", () => ({
   get db() {
     return getTestDb();

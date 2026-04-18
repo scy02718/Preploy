@@ -22,6 +22,16 @@ vi.mock("openai", () => ({
   },
 }));
 
+// The route now auths + rate-limits like any other OpenAI-burning endpoint.
+// Tests stub both to return "signed-in, not rate-limited" by default; any
+// test that wants to exercise the 401 / 429 paths can override in-file.
+vi.mock("@/lib/auth", () => ({
+  auth: vi.fn().mockResolvedValue({ user: { id: "test-user" } }),
+}));
+vi.mock("@/lib/api-utils", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
 vi.stubEnv("OPENAI_API_KEY", "sk-integration-test");
 
 import { POST } from "./route";
