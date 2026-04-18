@@ -6,13 +6,18 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function LandingHero() {
+  // Reserved for a future in-page anchor to the "How it works" section —
+  // respects `prefers-reduced-motion` (smooth scroll is a vestibular trigger).
   const handleScrollToHowItWorks = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const section = document.getElementById("how-it-works");
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth" });
-    }
+    if (!section) return;
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    section.scrollIntoView({ behavior: prefersReduced ? "auto" : "smooth" });
   };
+  void handleScrollToHowItWorks;
 
   return (
     <section className="flex flex-col items-center justify-center text-center py-24 px-4 gap-8">

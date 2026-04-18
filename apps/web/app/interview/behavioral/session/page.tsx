@@ -198,12 +198,14 @@ export default function BehavioralSessionPage() {
       {/* Session timer — top-right, counts down from 20:00. Turns destructive
           red in the last minute so the user knows the session will auto-end. */}
       <div
-        className={`absolute top-4 right-4 z-10 rounded-md border bg-background/90 px-3 py-1.5 text-sm font-medium shadow backdrop-blur ${
+        className={`absolute top-4 right-4 z-10 rounded-md border bg-background/90 px-3 py-1.5 text-sm font-medium tabular-nums shadow backdrop-blur transition-colors motion-safe:duration-[var(--duration-base)] ${
           isLastMinute
             ? "border-destructive/60 text-destructive"
             : "text-muted-foreground"
         }`}
         data-testid="session-timer"
+        aria-live="polite"
+        aria-atomic="true"
         aria-label={`Time remaining: ${formattedRemaining}`}
       >
         {formattedRemaining} left
