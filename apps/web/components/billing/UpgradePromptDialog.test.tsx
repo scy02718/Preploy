@@ -50,12 +50,18 @@ describe("UpgradePromptDialog", () => {
     expect(screen.getByTestId("upgrade-dialog-limit").textContent).toBe("3");
   });
 
-  it("renders the Pro benefits list", () => {
+  it("renders the Pro benefits list, leading with the Pro-gated features", () => {
     render(
       <UpgradePromptDialog open={true} onClose={() => {}} used={3} limit={3} />
     );
+    // Copy changed when Planner + Resume moved behind the Pro tier: the
+    // benefits list now leads with the features-you-unlock rather than
+    // the quota bump. See `lib/features.ts` FEATURE_META and /pricing.
     expect(
-      screen.getAllByText(/Unlimited mock interviews/).length
+      screen.getAllByText(/Interview-day Planner/).length
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/Resume upload/).length
     ).toBeGreaterThanOrEqual(1);
   });
 

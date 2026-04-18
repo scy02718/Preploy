@@ -11,11 +11,15 @@ interface UpgradePromptDialogProps {
   limit: number;
 }
 
+// Lead with the Pro-exclusive tools so users understand that upgrading
+// unlocks *features*, not just more of the same quota. Kept in sync with
+// `FREE_FEATURES` / `PRO_FEATURES` in `/pricing` and `FEATURE_META` in
+// `lib/features.ts`.
 const PRO_BENEFITS = [
-  "Unlimited mock interviews — no monthly cap",
-  "Behavioral and technical interviews, both formats",
-  "Voice-to-voice practice with scored feedback",
-  "Save and revisit your STAR stories with AI scoring",
+  "Interview-day Planner — AI-generated prep schedule",
+  "Resume upload + resume-tailored questions",
+  "Company-specific question generation",
+  `${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month (up from 3)`,
 ];
 
 /**

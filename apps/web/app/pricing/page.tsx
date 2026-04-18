@@ -19,21 +19,26 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+// Shared free + Pro capabilities. The Pro-gated helpers (Planner, Resume)
+// are intentionally absent from the Free column below — pricing is the
+// canonical place users learn what upgrading unlocks.
 const FREE_FEATURES = [
   "3 mock interviews per month",
   "Behavioral & technical modes",
   "Voice-to-voice AI interviewer",
   "Scored feedback on every session",
   "STAR story prep with AI analysis",
+  "Coaching guides & progress dashboard",
 ];
 
 const PRO_FEATURES = [
-  `${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month`,
   "Everything in Free, plus:",
-  "Resume-tailored questions",
+  // Lead with the Pro-exclusive features so the value prop reads as
+  // "tools you can't get free", not just "a bigger quota."
+  "Interview-day Planner — AI-generated prep schedule",
+  "Resume upload + resume-tailored questions",
   "Company-specific question generation",
-  "Interview day planner with AI schedule",
-  "Progress tracking & streak badges",
+  `${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month (up from 3)`,
   "Priority during high-traffic periods",
 ];
 
