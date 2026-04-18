@@ -1,4 +1,4 @@
-import type { TechnicalSessionConfig } from "@interview-assistant/shared";
+import type { TechnicalSessionConfig } from "@preploy/shared";
 
 const INTERVIEW_TYPE_LABELS: Record<string, string> = {
   leetcode: "LeetCode-style coding problem",

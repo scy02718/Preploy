@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 env:
   NODE_VERSION: "20"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -66,7 +70,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: interview_assistant_test
+          POSTGRES_DB: preploy_test
         ports:
           - 5433:5432
         options: >-
@@ -92,7 +96,7 @@ jobs:
       - name: Run integration tests
         working-directory: apps/web
         env:
-          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/preploy_test
         run: npm run test:integration
 
   e2e:
@@ -106,7 +110,7 @@ jobs:
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: interview_assistant_test
+          POSTGRES_DB: preploy_test
         ports:
           - 5433:5432
         options: >-
@@ -151,14 +155,14 @@ jobs:
       - name: Apply database migrations
         working-directory: apps/web
         env:
-          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/preploy_test
         run: npm run db:migrate
 
       - name: Build Next.js app
         working-directory: apps/web
         env:
-          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/interview_assistant_test
-          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/preploy_test
+          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/preploy_test
           AUTH_SECRET: dummy-auth-secret-for-ci-only
           AUTH_URL: http://localhost:3000
         run: npm run build
@@ -166,8 +170,8 @@ jobs:
       - name: Run E2E smoke tests
         working-directory: apps/web
         env:
-          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/interview_assistant_test
-          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/interview_assistant_test
+          TEST_DATABASE_URL: postgresql://test:test@localhost:5433/preploy_test
+          SUPABASE_DB_URL: postgresql://test:test@localhost:5433/preploy_test
           AUTH_SECRET: dummy-auth-secret-for-ci-only
           AUTH_URL: http://localhost:3000
           PLAYWRIGHT_BASE_URL: http://localhost:3000

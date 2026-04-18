@@ -29,10 +29,10 @@ fi
 
 filters=()
 if echo "$changed" | grep -q '^apps/web/'; then
-  filters+=("--filter=@interview-assistant/web")
+  filters+=("--filter=@preploy/web")
 fi
 if echo "$changed" | grep -q '^packages/shared/'; then
-  filters+=("--filter=@interview-assistant/shared")
+  filters+=("--filter=@preploy/shared")
 fi
 
 # If turbo is not installed locally yet (fresh clone), skip silently.

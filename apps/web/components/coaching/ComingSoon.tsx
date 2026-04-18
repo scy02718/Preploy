@@ -16,7 +16,7 @@ export function ComingSoon({ title, issue }: ComingSoonProps) {
         <p className="text-xs">
           Tracked in{" "}
           <a
-            href={`https://github.com/scy02718/interview-assistant/issues/${issue.replace("#", "")}`}
+            href={`https://github.com/scy02718/preploy/issues/${issue.replace("#", "")}`}
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-foreground"

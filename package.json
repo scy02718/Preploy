@@ -1,5 +1,5 @@
 {
-  "name": "interview-assistant",
+  "name": "preploy",
   "private": true,
   "workspaces": [
     "apps/*",

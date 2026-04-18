@@ -1,143 +1,109 @@
 # Preploy
 
-AI-powered mock interview practice with real-time feedback. Practice behavioral and technical interviews, get scored by AI, and track your improvement over time. Deploy yourself.
+Practice mock interviews with AI. Get scored, track progress, get hired.
 
-**Two interview modes:**
-- **Behavioral** — Voice-to-voice mock interview with real-time AI conversation and STAR-method feedback
-- **Technical** — Split-panel coding session with Monaco editor, problem generation, mic recording for verbal explanations, and code + speech analysis
+## Features
 
-## Project Structure
+- **Behavioral interviews** — Voice-to-voice mock sessions with real-time AI conversation, STAR-method coaching, and scored feedback on structure and delivery
+- **Technical interviews** — Split-panel coding sessions with Monaco editor, problem statements, mic recording for verbal explanations, and AI feedback on correctness and approach
+- **Progress tracking** — Per-session feedback, trend charts, and a coaching hub that breaks down weak areas across behavioral, technical, and communication dimensions
+- **STAR practice** — Standalone STAR-method story builder for structuring behavioral answers
+- **Interview planner** — Session planning and preparation tooling
+- **Resume builder** — Resume editing integrated into the prep workflow
+- **Achievements** — Progress milestones to keep motivation high
+- **Optional gaze tracking** — MediaPipe Face Landmarker measures eye contact and presence during behavioral sessions (opt-in; all processing runs locally in-browser, nothing is sent to a server)
 
-Turborepo monorepo:
+## Tech stack
+
+Next.js 16 (App Router) • React 19 • TypeScript • Drizzle ORM + Supabase Postgres • NextAuth v5 (Google OAuth) • OpenAI • Upstash Redis (rate limiting) • Stripe (billing) • Tailwind v4 + shadcn/ui • Vitest + Playwright • Vercel (Sydney region)
+
+Monorepo managed by [Turborepo](https://turbo.build/):
 
 ```
 apps/
-  web/          Next.js 16 frontend + API routes (Drizzle ORM, Supabase Postgres)
+  web/              Next.js 16 app (frontend + API routes)
 packages/
-  shared/       Shared TypeScript types, constants, and schemas
+  shared/           Shared TypeScript types + constants
 ```
 
-## Prerequisites
-
-- **Node.js 20+** and **npm**
-- **Docker** (for local integration tests)
-- A [Supabase](https://supabase.com) account (free tier works)
-- An [OpenAI](https://platform.openai.com) API key
-- Google OAuth credentials (for login via NextAuth)
-
-## Setup
-
-### 1. Install dependencies
+## Quickstart
 
 ```bash
-npm install
+git clone https://github.com/scy02718/preploy.git
+cd preploy
+npm install                  # also runs scripts/setup-mediapipe.sh via postinstall
+cp apps/web/.env.local.example apps/web/.env.local
+# fill in required env vars (see below)
+npm run dev
 ```
 
-### 2. Configure environment variables
+Open http://localhost:3000.
+
+The `postinstall` script fetches MediaPipe WASM files and the face landmarker model into `apps/web/public/mediapipe/`. If you do not need gaze tracking locally, that step is harmless to skip — the feature is opt-in and the rest of the app works without it.
+
+## Environment variables
+
+**Minimum to boot locally:**
+
+| Variable | Purpose |
+|---|---|
+| `SUPABASE_DB_URL` | Postgres connection string for Drizzle. Use the Supabase Session pooler (port 5432). |
+| `AUTH_SECRET` | NextAuth v5 session signing secret. Generate with `openssl rand -base64 32`. |
+| `AUTH_URL` | Public URL of the app — `http://localhost:3000` for local dev. |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (Google Cloud Console → Credentials). |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. |
+| `OPENAI_API_KEY` | OpenAI API key for question generation, code analysis, and feedback. |
+
+**Optional (needed for billing, rate limiting, email, and error tracking):**
+
+| Variable | Purpose |
+|---|---|
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis URL for rate limiting. Falls back to in-memory limiter when unset (fine for dev, not for prod). |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token. |
+| `STRIPE_SECRET_KEY` | Stripe secret key for Pro-plan billing. |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (from `stripe listen`). |
+| `STRIPE_PRO_PRICE_ID` | Stripe Price ID for the monthly Pro plan. |
+| `STRIPE_PRO_PRICE_ID_ANNUAL` | Stripe Price ID for the annual Pro plan. |
+| `SENTRY_DSN` | Server-side Sentry DSN (leave blank to disable). |
+| `NEXT_PUBLIC_SENTRY_DSN` | Client-side Sentry DSN. |
+| `NEXT_PUBLIC_BASE_URL` | Canonical origin used for sitemap, robots, and OG tags. Defaults to `https://preploy.tech`. |
+| `RESEND_API_KEY` | Resend API key for transactional email. Emails are silently skipped when unset. |
+
+Full env reference (classifications, Docker wiring, Stripe setup): [`apps/web/README.md`](apps/web/README.md#environment-variables).
+
+## Development
+
+Run the full check suite before pushing:
 
 ```bash
-cp .env.example .env
+npx turbo lint typecheck test           # ESLint + tsc + unit/component tests
+cd apps/web && npm run test:integration # Integration tests (requires Docker)
+cd apps/web && npm run test:e2e:smoke   # Playwright E2E smoke suite
 ```
 
-Fill in your `.env` (or copy `apps/web/.env.local.example` → `apps/web/.env.local` for local-only overrides). The full env table with classifications lives in [`apps/web/README.md`](apps/web/README.md#environment-variables) — this is the minimum to get a dev server running:
-
-| Variable | Where to get it |
-|----------|----------------|
-| `SUPABASE_DB_URL` | Supabase dashboard → Settings → Database → Connection string → URI (use the **Session pooler** on port 5432 for local; works for both build-time migrations and runtime queries) |
-| `OPENAI_API_KEY` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| `GOOGLE_CLIENT_ID` | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → OAuth 2.0 Client |
-| `GOOGLE_CLIENT_SECRET` | Same as above |
-| `AUTH_SECRET` | Generate with `openssl rand -base64 32` |
-| `AUTH_URL` | `http://localhost:3000` for local dev; your deployed domain in prod |
-| `AUTH_TRUST_HOST` | `true` — required when running outside Vercel (Docker, Fly.io, self-hosted) so NextAuth accepts the request host. Optional on Vercel. |
-| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` for local dev. Used for canonical tags, sitemap, robots.txt, and OG image URLs. |
-| `STRIPE_SECRET_KEY` | Stripe Dashboard → Developers → API keys → Secret key (`sk_test_...` for test mode) |
-| `STRIPE_WEBHOOK_SECRET` | Output of `stripe listen --forward-to localhost:3000/api/billing/webhook` |
-| `STRIPE_PRO_PRICE_ID` | Stripe Dashboard → Products → Preploy Pro → Pricing → ⋯ → Copy ID (starts with `price_`, **not** `prod_`) |
-| `SENTRY_DSN` | [sentry.io](https://sentry.io) → Project Settings → Client Keys (optional — leave blank to disable Sentry) |
-| `NEXT_PUBLIC_SENTRY_DSN` | Same as `SENTRY_DSN` (needed for client-side error capture) |
-
-> Note: there is no longer a `SUPABASE_URL` or `SUPABASE_ANON_KEY` — Drizzle talks directly to Postgres via `SUPABASE_DB_URL`, and we don't use the Supabase client SDK in `apps/web`.
-
-### 3. Run database migrations
+Integration tests and E2E smoke tests require a local Postgres container:
 
 ```bash
-cd apps/web && npm run db:migrate
+docker compose --profile test up -d test-db
 ```
 
-> **For schema changes:** Edit `lib/schema.ts`, then run `npm run db:generate` to create a versioned SQL migration file. Commit the generated file in `drizzle/`. See CLAUDE.md for the full workflow.
+Detailed test docs: [`apps/web/README.md`](apps/web/README.md).
 
-### 4. Start development
-
-```bash
-npm run dev   # starts Next.js on :3000
-```
-
-## CI Pipeline
-
-Every push to `main` and every pull request runs the full CI pipeline via GitHub Actions:
+## Project structure
 
 ```
-lint-typecheck → unit-tests         → build
-               → integration-tests  ↗
+apps/
+  web/              Next.js 16 app (frontend + API routes)
+packages/
+  shared/           Shared TypeScript types + constants
+.github/workflows/  CI pipeline (lint, typecheck, unit, integration, E2E, build)
+dev_logs/           Archived design docs (e.g. parked AWS migration)
 ```
 
-| Job | What it runs |
-|-----|-------------|
-| **lint-typecheck** | ESLint (web) + `tsc --noEmit` |
-| **unit-tests** | Vitest unit/component tests |
-| **integration-tests** | Integration tests against a real Postgres service container |
-| **build** | `next build` production build |
+## Contributing
 
-No real API keys or secrets are needed — the pipeline uses dummy env vars from `.env.ci` and a Postgres container spun up automatically by GitHub Actions.
+This is a solo-maintained project, but bug reports and PRs are welcome. [Open an issue](https://github.com/scy02718/preploy/issues) or fork and submit a PR against `main`.
 
-## Running Tests
+## License
 
-### Unit Tests (no Docker needed)
-
-```bash
-turbo test                           # All unit tests
-
-cd apps/web && npm test              # Web unit tests only
-
-cd apps/web && npm run test:coverage # Web unit tests with coverage
-```
-
-### Integration Tests (requires Docker)
-
-Integration tests run against a real PostgreSQL database in Docker. Only `auth()` is mocked — all database queries are real, matching production behavior exactly.
-
-```bash
-# 1. Start the test database (stays running between test runs)
-docker compose up -d test-db
-
-# 2. Run integration tests
-cd apps/web && npm run test:integration
-
-# 3. When done for the day
-docker compose down
-```
-
-The test database:
-- Postgres 16 on **port 5433** (won't conflict with local Postgres on 5432)
-- Uses **tmpfs** (RAM disk) — fast, no data persists after container stops
-- Schema is **wiped and re-migrated** automatically each test run via `tests/global-setup.ts`
-
-### Where to Put Tests
-
-| Type | Location | Naming |
-|---|---|---|
-| Web unit tests | Next to the source file | `*.test.ts` / `*.test.tsx` |
-| Web integration tests | Next to the route handler | `*.integration.test.ts` |
-| Test DB helpers | `apps/web/tests/` | Shared setup/cleanup utilities |
-
-### Writing New Tests
-
-**Unit tests** — for pure logic (`lib/`, `services/`, `stores/`, utils):
-- Create `myfile.test.ts` next to `myfile.ts`
-- Import from vitest: `import { describe, it, expect } from "vitest"`
-
-**Integration tests** — for API routes that touch the database:
-- Create `route.integration.test.ts` next to `route.ts`
-- Mock `@/lib/auth` for auth simulation, mock `@/lib/db` to point at `getTestDb()` from `tests/setup-db.ts`
-- Use `beforeAll` to seed test users, `beforeEach` to clean data between tests
+All rights reserved. This source is publicly viewable for reference only — it is not open source and may not be copied, redistributed, or used to build a competing product. See [LICENSE](./LICENSE) for full terms.

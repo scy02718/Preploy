@@ -1,4 +1,4 @@
-# Interview Assistant - Phase 1: Foundation & Technical Spikes
+# Preploy - Phase 1: Foundation & Technical Spikes
 
 > **Timeline:** Week 1-2
 > **Goal:** Scaffold the project, get auth working, build basic page structure, and prove out the three hardest technical risks — voice conversation, 3D avatar lip-sync, and code execution.

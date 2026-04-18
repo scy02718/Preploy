@@ -11,7 +11,7 @@ import {
 } from "@/components/coaching/TechnicalFormatCarousel";
 import { usePrefillStore } from "@/stores/prefillStore";
 import { useRouter } from "next/navigation";
-import type { TechnicalInterviewType } from "@interview-assistant/shared";
+import type { TechnicalInterviewType } from "@preploy/shared";
 
 function Section({
   title,

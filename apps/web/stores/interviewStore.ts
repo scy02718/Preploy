@@ -6,7 +6,7 @@ import type {
   InterviewType,
   SessionStatus,
   TranscriptEntry,
-} from "@interview-assistant/shared";
+} from "@preploy/shared";
 
 /** Set on the store when POST /api/sessions returns 402 free_tier_limit_reached. */
 export interface QuotaError {

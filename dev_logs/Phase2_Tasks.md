@@ -1,4 +1,4 @@
-# Interview Assistant - Phase 2: Behavioral Interview MVP
+# Preploy - Phase 2: Behavioral Interview MVP
 
 > **Timeline:** Week 3-5
 > **Goal:** Build the full behavioral interview flow from setup → live interview with avatar → AI-generated feedback. Also introduce Zustand state management, input validation, and testing infrastructure.

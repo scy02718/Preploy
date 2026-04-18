@@ -7,7 +7,7 @@ import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
 import { useGazeCapture } from "@/hooks/useGazeCapture";
 import { buildBehavioralSystemPrompt } from "@/lib/prompts";
 import { BEHAVIORAL_SESSION_MAX_DURATION_SECONDS } from "@/lib/plans";
-import type { BehavioralSessionConfig } from "@interview-assistant/shared";
+import type { BehavioralSessionConfig } from "@preploy/shared";
 import { VideoCallLayout } from "@/components/interview/VideoCallLayout";
 import { SessionControls } from "@/components/interview/SessionControls";
 

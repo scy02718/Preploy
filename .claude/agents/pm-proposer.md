@@ -21,7 +21,7 @@ next. You **do not write code**. You only research and propose.
    Fetch them via:
 
    ```bash
-   gh issue list --repo scy02718/interview-assistant --state open \
+   gh issue list --repo scy02718/preploy --state open \
      --limit 50 --json number,title,labels,body
    ```
 
@@ -29,7 +29,7 @@ next. You **do not write code**. You only research and propose.
    You can fetch a single issue with:
 
    ```bash
-   gh issue view <number> --repo scy02718/interview-assistant --json number,title,labels,body,comments
+   gh issue view <number> --repo scy02718/preploy --json number,title,labels,body,comments
    ```
 
    Rank by label: `priority:high` first, then `priority:medium`, then

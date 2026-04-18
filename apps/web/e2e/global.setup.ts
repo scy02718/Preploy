@@ -33,7 +33,7 @@ const AUTH_SECRET =
 const DB_URL =
   process.env.TEST_DATABASE_URL ??
   process.env.SUPABASE_DB_URL ??
-  "postgresql://test:test@localhost:5433/interview_assistant_test";
+  "postgresql://test:test@localhost:5433/preploy_test";
 
 // Cookie name for non-HTTPS origins (NextAuth v5 default)
 const SESSION_COOKIE_NAME = "authjs.session-token";

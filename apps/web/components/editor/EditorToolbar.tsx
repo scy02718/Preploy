@@ -1,6 +1,6 @@
 "use client";
 
-import { SUPPORTED_LANGUAGES } from "@interview-assistant/shared";
+import { SUPPORTED_LANGUAGES } from "@preploy/shared";
 import { RotateCcw } from "lucide-react";
 
 interface EditorToolbarProps {

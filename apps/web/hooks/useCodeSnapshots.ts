@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import type { CodeEventType } from "@interview-assistant/shared";
+import type { CodeEventType } from "@preploy/shared";
 import { getBoilerplate } from "@/lib/code-templates";
 
 interface CodeSnapshot {

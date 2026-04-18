@@ -1,4 +1,4 @@
-# Interview Assistant — Phase 3: Technical Interview MVP
+# Preploy — Phase 3: Technical Interview MVP
 
 > **Timeline:** Week 6-8
 > **Goal:** Build the full technical interview flow: setup → live coding session with speech capture → AI-generated feedback correlating code with verbal explanations. No code execution — users code in Monaco and explain verbally (Google-style), then AI analyzes code + speech together. Expand test coverage and introduce CI.

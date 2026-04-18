@@ -1,4 +1,6 @@
-# @interview-assistant/web
+> `apps/web` — the Next.js app in the Preploy monorepo. Start with the [root README](../../README.md) for project overview, stack, and setup. This file covers app-level topics: E2E tests, gaze tracking, billing, local Docker.
+
+# @preploy/web
 
 Next.js 16 (App Router) application for Preploy — AI-powered mock interview
 practice. See the root `CLAUDE.md` and `apps/web/CLAUDE.md` for coding
@@ -63,18 +65,18 @@ to require E2E (tracked as a follow-up task after #41 merges).
 
 The gaze capture pipeline uses MediaPipe Face Landmarker, which requires WASM
 runtime files and a model weight file served from `public/mediapipe/`. These are
-**not** committed to git (they're ~15 MB of binaries). Run the setup script
-after `npm install`:
+**not** committed to git (they're ~15 MB of binaries).
+
+`scripts/setup-mediapipe.sh` runs automatically on `npm install` via the
+`postinstall` hook — you do not need to run it manually. It copies WASM files
+from `node_modules/@mediapipe/tasks-vision/wasm/` and downloads
+`face_landmarker.task` from Google's model storage. The files land in
+`public/mediapipe/` which is gitignored. Re-run the script manually only if you
+delete `public/mediapipe/`:
 
 ```bash
-cd apps/web
 bash scripts/setup-mediapipe.sh
 ```
-
-This copies WASM files from `node_modules/@mediapipe/tasks-vision/wasm/` and
-downloads `face_landmarker.task` from Google's model storage. The files land in
-`public/mediapipe/` which is gitignored. You only need to run this once (or
-after deleting `public/mediapipe/`).
 
 If you don't need gaze tracking locally, you can skip this step — the feature is
 opt-in and the app works without it.
