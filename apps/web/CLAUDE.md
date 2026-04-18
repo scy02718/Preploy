@@ -49,6 +49,27 @@ twice (PRs #52, #53).
 - **Never** put `if (!process.env.X) throw` at module top level — the build
   will hit it before your runtime env is in place.
 
+## Feature gating (Free vs Pro)
+
+When adding a route that should be Pro-only, the canonical pattern is:
+
+1. Add the feature key to `FEATURE_MATRIX` in `lib/features.ts`.
+2. In write API routes, call
+   `const gated = await requireProFeature(session.user.id, "<key>");
+   if (gated) return gated;` right after the auth + rate-limit checks.
+   It returns a 402 with
+   `{ error: "pro_plan_required", feature, currentPlan }`.
+3. For a new gated page, follow the `/planner` pattern
+   (`app/planner/page.tsx` is a server component that gates; the
+   interactive UI lives in `PlannerClient.tsx`). The server shell
+   renders `<FeaturePaywall feature="<key>" />` for free users with no
+   existing data, or the client in `isReadOnly` mode for grandfathered
+   users with data.
+4. Sidebar navigation: set `proOnly: true` on the nav item so the "Pro"
+   badge renders for free users.
+5. Full policy + grandfather rules: `dev_logs/pricing-model.md`.
+   Stripe descriptions: `dev_logs/stripe-pro-update-2026-04.md`.
+
 ## Database
 
 - Schema lives in `lib/schema.ts`. Relations are defined in the same file.
