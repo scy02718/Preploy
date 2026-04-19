@@ -8,7 +8,7 @@ const faqs = [
   {
     question: "How much does Preploy cost?",
     answer:
-      "Preploy has a free tier — 3 mock interviews a month, behavioral and technical, with full scored feedback. Pro is $15/month (or $120/year — roughly $10/month billed annually) and lifts the cap to 40 sessions a month plus resume-tailored questions, company-specific question generation, and the interview-day planner. Full breakdown on the pricing page.",
+      "Preploy has a free tier — 3 mock interviews a month, behavioral and technical, with full scored feedback, STAR prep, resume upload, and the interview-day planner. Pro is $15/month (or $120/year — roughly $10/month billed annually) and lifts the cap to 40 sessions a month, plus priority during high-traffic periods. Full breakdown on the pricing page.",
   },
   {
     question: "Does Preploy store my audio or transcripts?",
