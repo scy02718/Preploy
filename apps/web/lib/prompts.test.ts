@@ -183,4 +183,34 @@ describe("buildBehavioralSystemPrompt", () => {
     const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
     expect(prompt).not.toContain("RESUME");
   });
+
+  // Role-boundary regression tests — the "never speak as the candidate" rule
+  // must appear in EVERY behavioral prompt, not only when a resume is uploaded.
+  it("contains the 'never speak as the candidate' role boundary rule", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).toContain("Never speak as the candidate");
+    expect(prompt).toContain("Never answer your own question");
+  });
+
+  it("contains filler-word guidance in every prompt", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    // The spec lists these concrete filler examples
+    expect(prompt).toContain("good question");
+    expect(prompt).toContain("hmm");
+  });
+
+  it("includes the role boundary even without a resume", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      interview_style: 0.5,
+      difficulty: 0.5,
+      resume_text: undefined,
+    });
+    expect(prompt).toContain("Never speak as the candidate");
+    expect(prompt).toContain("Never answer your own question");
+  });
+
+  it("silence-handling section tells the AI not to answer its own question", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).toContain("Do NOT answer your own question");
+  });
 });
