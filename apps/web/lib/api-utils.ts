@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkTieredRateLimit, type RateLimitTier } from "./ratelimit";
+import { getCurrentUserPlan } from "./user-plan";
+import { hasFeature, type FeatureKey } from "./features";
 
 /**
  * Check rate limit for an authenticated user. Now async — all callers
@@ -41,4 +43,38 @@ export async function checkRateLimit(
   }
 
   return null;
+}
+
+/**
+ * Gate a route on a Pro-tier feature. Returns a 402 `NextResponse` if the
+ * current user's plan doesn't unlock the given feature, or `null` if they
+ * may proceed.
+ *
+ * Free users retain read access to their existing data (read-only
+ * grandfathering — see `dev_logs/pricing-model.md`), so this guard is
+ * applied to write handlers (POST/PATCH/DELETE) rather than GETs.
+ *
+ * Response shape is stable for UI consumers:
+ * ```json
+ * { "error": "pro_plan_required", "feature": "planner", "currentPlan": "free" }
+ * ```
+ * 402 "Payment Required" is the right status — 403 would signal an
+ * authorization failure the user can't fix, whereas the fix here is
+ * "upgrade your plan."
+ */
+export async function requireProFeature(
+  userId: string,
+  feature: FeatureKey
+): Promise<NextResponse | null> {
+  const plan = await getCurrentUserPlan(userId);
+  if (hasFeature(plan, feature)) return null;
+
+  return NextResponse.json(
+    {
+      error: "pro_plan_required",
+      feature,
+      currentPlan: plan,
+    },
+    { status: 402 }
+  );
 }

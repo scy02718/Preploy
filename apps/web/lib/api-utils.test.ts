@@ -1,5 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { checkRateLimit } from "./api-utils";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { checkRateLimit, requireProFeature } from "./api-utils";
+
+// Mock the plan lookup so the Pro-gating tests don't need a real DB.
+const mockGetCurrentUserPlan = vi.hoisted(() => vi.fn());
+vi.mock("./user-plan", () => ({
+  getCurrentUserPlan: mockGetCurrentUserPlan,
+}));
 
 // checkRateLimit is now async and delegates to the tiered Redis limiter.
 // Without Upstash env vars, it falls back to the in-memory limiter with
@@ -57,5 +63,41 @@ describe("checkRateLimit", () => {
       const r = await checkRateLimit("test-user-6", "read");
       expect(r).toBeNull();
     }
+  });
+});
+
+describe("requireProFeature", () => {
+  beforeEach(() => {
+    mockGetCurrentUserPlan.mockReset();
+  });
+
+  it("returns null when the user is on Pro", async () => {
+    mockGetCurrentUserPlan.mockResolvedValue("pro");
+    const result = await requireProFeature("user-pro", "planner");
+    expect(result).toBeNull();
+  });
+
+  it("returns a 402 Response when the user is on Free", async () => {
+    mockGetCurrentUserPlan.mockResolvedValue("free");
+    const result = await requireProFeature("user-free", "planner");
+    expect(result).not.toBeNull();
+    expect(result!.status).toBe(402);
+  });
+
+  it("402 body carries error code, feature key, and currentPlan", async () => {
+    mockGetCurrentUserPlan.mockResolvedValue("free");
+    const result = await requireProFeature("user-free", "resume");
+    const body = await result!.json();
+    expect(body).toEqual({
+      error: "pro_plan_required",
+      feature: "resume",
+      currentPlan: "free",
+    });
+  });
+
+  it("passes the userId through to the plan lookup", async () => {
+    mockGetCurrentUserPlan.mockResolvedValue("free");
+    await requireProFeature("user-abc", "planner");
+    expect(mockGetCurrentUserPlan).toHaveBeenCalledWith("user-abc");
   });
 });
