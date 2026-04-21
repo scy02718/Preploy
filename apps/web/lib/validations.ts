@@ -116,6 +116,11 @@ export const patchUserMeSchema = z.object({
   gaze_tracking_enabled: z.boolean().optional(),
   tour_completed_at: z.coerce.date().nullable().optional(),
   tour_skipped_at: z.coerce.date().nullable().optional(),
+  // IANA timezone name (e.g. "Pacific/Auckland"). The client syncs it on
+  // mount; the server uses it for time-of-day achievements (early_bird,
+  // night_owl, marathon_runner). Bounded length so we don't accept
+  // arbitrarily large strings.
+  timezone: z.string().trim().min(1).max(100).optional(),
 });
 export type PatchUserMeInput = z.infer<typeof patchUserMeSchema>;
 

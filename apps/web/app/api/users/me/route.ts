@@ -43,6 +43,7 @@ export async function GET() {
       gazeTrackingEnabled: users.gazeTrackingEnabled,
       tourCompletedAt: users.tourCompletedAt,
       tourSkippedAt: users.tourSkippedAt,
+      timezone: users.timezone,
       createdAt: users.createdAt,
     })
     .from(users)
@@ -120,6 +121,10 @@ export async function PATCH(request: NextRequest) {
     updates.tourSkippedAt = body.tour_skipped_at;
   }
 
+  if (body.timezone !== undefined) {
+    updates.timezone = body.timezone;
+  }
+
   if (Object.keys(updates).length === 0) {
     return NextResponse.json(
       { error: "No valid fields to update" },
@@ -141,6 +146,7 @@ export async function PATCH(request: NextRequest) {
       gazeTrackingEnabled: users.gazeTrackingEnabled,
       tourCompletedAt: users.tourCompletedAt,
       tourSkippedAt: users.tourSkippedAt,
+      timezone: users.timezone,
     });
 
   return NextResponse.json(updated);

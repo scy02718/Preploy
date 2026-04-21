@@ -60,6 +60,7 @@ export const users = pgTable("users", {
   gazeTrackingEnabled: boolean("gaze_tracking_enabled").notNull().default(false),
   tourCompletedAt: timestamp("tour_completed_at", { withTimezone: true }),
   tourSkippedAt: timestamp("tour_skipped_at", { withTimezone: true }),
+  timezone: text("timezone"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

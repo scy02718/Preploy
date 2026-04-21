@@ -392,4 +392,31 @@ describe("API /api/users/me (integration)", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  // ---- Timezone PATCH (bug fix: TZ-aware achievements) ----
+
+  it("PATCH accepts timezone and persists it on the users row", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await PATCH(makePatchRequest({ timezone: "Pacific/Auckland" }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.timezone).toBe("Pacific/Auckland");
+
+    const db = getTestDb();
+    const [row] = await db
+      .select({ timezone: users.timezone })
+      .from(users)
+      .where(eq(users.id, TEST_USER.id));
+    expect(row.timezone).toBe("Pacific/Auckland");
+
+    // Reset for other tests
+    await db.update(users).set({ timezone: null }).where(eq(users.id, TEST_USER.id));
+  });
+
+  it("PATCH rejects a timezone longer than 100 chars with 400", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const longTz = "America/" + "A".repeat(95); // > 100 chars total
+    const res = await PATCH(makePatchRequest({ timezone: longTz }));
+    expect(res.status).toBe(400);
+  });
 });

@@ -303,8 +303,8 @@ describe("Pro behavioral system prompt", () => {
     expect(BEHAVIORAL_SYSTEM_PROMPT_PRO.toLowerCase()).toContain("if you were me");
   });
 
-  it("Pro behavioral prompt contains 500-word summary requirement", () => {
-    expect(BEHAVIORAL_SYSTEM_PROMPT_PRO).toContain("500");
+  it("Pro behavioral prompt contains 300-word summary requirement", () => {
+    expect(BEHAVIORAL_SYSTEM_PROMPT_PRO).toContain("300");
   });
 
   it("Free behavioral prompt does NOT contain Pro-only markers", () => {
@@ -320,8 +320,8 @@ describe("Pro technical system prompt", () => {
     expect(TECHNICAL_SYSTEM_PROMPT_PRO.toLowerCase()).toContain("if you were me");
   });
 
-  it("Pro technical prompt contains extended critique word count (500)", () => {
-    expect(TECHNICAL_SYSTEM_PROMPT_PRO).toContain("500");
+  it("Pro technical prompt contains extended critique word count (300)", () => {
+    expect(TECHNICAL_SYSTEM_PROMPT_PRO).toContain("300");
   });
 
   it("Free technical prompt does NOT contain Pro-only markers", () => {

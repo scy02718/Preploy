@@ -248,8 +248,16 @@ export function useRealtimeVoice(
             currentAssistantTextRef.current += msg.delta;
             break;
 
-          // GA event names — assistant finished speaking; arm watchdog if
-          // the user is not currently speaking (108-A)
+          // GA event names — assistant text transcript complete. Do NOT arm
+          // the watchdog here: transcript.done arrives when text streaming
+          // ends, which is typically BEFORE the first audio chunk has been
+          // queued (let alone finished playing). The previous implementation
+          // gated on isSpeakingRef.current, but that flag flips true only
+          // after drainQueue() runs — so when transcript.done wins the race
+          // the watchdog armed mid-speech and the AI nudged the user while
+          // still talking. Instead: always mark the arm pending. The watchdog
+          // actually arms either from drainQueue's speakingTimeout (when
+          // playback truly ends) or from the response.done safety net below.
           case "response.output_audio_transcript.done":
           // Beta fallback
           case "response.audio_transcript.done":
@@ -264,15 +272,26 @@ export function useRealtimeVoice(
               ]);
             }
             currentAssistantTextRef.current = "";
-            // Arm watchdog once the user is silent. If TTS is still playing,
-            // defer until playback finishes so the timer starts from actual
-            // silence — not from mid-speech.
             if (!isListening) {
-              if (isSpeakingRef.current) {
-                pendingWatchdogArmRef.current = true;
-              } else {
-                armSilenceWatchdog();
-              }
+              pendingWatchdogArmRef.current = true;
+            }
+            break;
+
+          // Safety net — response.done means the server has finished sending
+          // the entire response. If drainQueue never ran (text-only response
+          // or the audio arrived and fully played before this event), arm the
+          // watchdog now so we don't get stuck with pendingWatchdogArmRef
+          // true forever. If audio IS still playing, drainQueue's
+          // speakingTimeout will consume pendingWatchdogArmRef when playback
+          // ends — we leave it alone here.
+          case "response.done":
+            if (
+              pendingWatchdogArmRef.current &&
+              !isSpeakingRef.current &&
+              audioQueueRef.current.length === 0
+            ) {
+              pendingWatchdogArmRef.current = false;
+              armSilenceWatchdog();
             }
             break;
 

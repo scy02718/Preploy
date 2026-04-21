@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Header } from "./Header";
 
@@ -39,6 +39,18 @@ vi.mock("next-themes", () => ({
 }));
 
 describe("Header", () => {
+  // useReportTimezone fires a PATCH on mount when session is authenticated.
+  // Stub fetch so tests don't see unexpected network calls or warnings.
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 200 }))
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
   it("renders the app title", () => {
     usePlanMock.mockReturnValue({ plan: undefined });
     mockUseSession.mockReturnValue({ data: null, status: "unauthenticated" });

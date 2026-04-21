@@ -12,6 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import { SILENCE_NUDGE_MS, SILENCE_HANDOFF_MS } from "@/lib/realtime-config";
 
 // ── MockWebSocket ────────────────────────────────────────────────────────────
 
@@ -173,9 +174,9 @@ function extraSends(): Record<string, unknown>[] {
 
 describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
   /**
-   * 108-B / 108-F — No send within the first 9.9s after speech_stopped.
+   * 108-B / 108-F — No send within the first (SILENCE_NUDGE_MS - 100)ms after speech_stopped.
    */
-  it("produces no send before 10s after speech_stopped (108-B / 108-F)", async () => {
+  it("produces no send before the nudge threshold after speech_stopped (108-B / 108-F)", async () => {
     const { result } = renderHook(() =>
       useRealtimeVoice({ systemPrompt: "Test" })
     );
@@ -184,25 +185,25 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
 
     deliver("input_audio_buffer.speech_stopped");
 
-    act(() => { vi.advanceTimersByTime(9_900); });
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS - 100); });
 
     // Watchdog must not have fired yet
     expect(mockWs.sends.length).toBe(countAfterSetup);
   });
 
   /**
-   * 108-A — At 10s+, nudge pair fires:
+   * 108-A — At SILENCE_NUDGE_MS+, nudge pair fires:
    *   [0] conversation.item.create (with nudge text)
    *   [1] response.create
    */
-  it("sends nudge pair at 10s mark after speech_stopped (108-A / 108-E)", async () => {
+  it("sends nudge pair at the nudge threshold after speech_stopped (108-A / 108-E)", async () => {
     const { result } = renderHook(() =>
       useRealtimeVoice({ systemPrompt: "Test" })
     );
     await openHook(result);
 
     deliver("input_audio_buffer.speech_stopped");
-    act(() => { vi.advanceTimersByTime(10_100); });
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS + 100); });
 
     const sends = extraSends();
     expect(sends.length).toBeGreaterThanOrEqual(2);
@@ -232,19 +233,21 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
     const countAfterSetup = mockWs.sends.length;
 
     deliver("input_audio_buffer.speech_stopped");
-    act(() => { vi.advanceTimersByTime(5_000); }); // 5s — below nudge threshold
+    // Advance well below threshold (SILENCE_NUDGE_MS - 1000ms)
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS - 1000); });
 
     deliver("input_audio_buffer.speech_started"); // user resumes speaking
 
-    act(() => { vi.advanceTimersByTime(5_500); }); // 10.5s total — would cross threshold
+    // Advance 5500ms more — total now exceeds SILENCE_NUDGE_MS, proving cancellation
+    act(() => { vi.advanceTimersByTime(5_500); });
 
     expect(mockWs.sends.length).toBe(countAfterSetup);
   });
 
   /**
-   * 108-E — At 60s+, hand-off pair fires after the earlier nudge.
+   * 108-E — At SILENCE_HANDOFF_MS+, hand-off pair fires after the earlier nudge.
    */
-  it("sends hand-off pair at 60s mark after speech_stopped (108-E)", async () => {
+  it("sends hand-off pair at the handoff threshold after speech_stopped (108-E)", async () => {
     const { result } = renderHook(() =>
       useRealtimeVoice({ systemPrompt: "Test" })
     );
@@ -252,10 +255,10 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
 
     deliver("input_audio_buffer.speech_stopped");
 
-    act(() => { vi.advanceTimersByTime(10_100); }); // cross the 10s nudge
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS + 100); }); // cross the nudge
     const countAfterNudge = mockWs.sends.length;
 
-    act(() => { vi.advanceTimersByTime(50_000); }); // 60.1s total — cross hand-off
+    act(() => { vi.advanceTimersByTime(SILENCE_HANDOFF_MS - SILENCE_NUDGE_MS + 100); }); // cross hand-off
 
     const handoffSends = mockWs.sends
       .slice(countAfterNudge)
@@ -285,17 +288,71 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
     await openHook(result);
 
     deliver("input_audio_buffer.speech_stopped");
-    act(() => { vi.advanceTimersByTime(5_000); }); // 5s — below nudge
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS - 1000); }); // below nudge
 
     const countBeforeDisconnect = mockWs.sends.length;
 
     act(() => { result.current.disconnect(); });
 
-    // Advance well past both 10s and 60s thresholds
-    act(() => { vi.advanceTimersByTime(60_000); });
+    // Advance well past both nudge and handoff thresholds
+    act(() => { vi.advanceTimersByTime(SILENCE_HANDOFF_MS); });
 
     // WebSocket is CLOSED after disconnect so sendSilenceNudge returns early;
     // no new sends must appear
     expect(mockWs.sends.length).toBe(countBeforeDisconnect);
+  });
+
+  /**
+   * Regression — transcript.done arrived while TTS was still playing (or
+   * before any audio chunks were queued). The previous implementation gated
+   * arming on isSpeakingRef, which is false at that moment because
+   * drainQueue hasn't run yet. That armed the 10s timer mid-speech and the
+   * AI "nudged" the user while still talking.
+   *
+   * Fix contract: transcript.done must NOT arm the watchdog on its own. It
+   * must only set pendingWatchdogArmRef — arming happens later from
+   * drainQueue's speakingTimeout or from response.done.
+   */
+  it("does NOT arm the watchdog on transcript.done alone (race fix)", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeVoice({ systemPrompt: "Test" })
+    );
+    await openHook(result);
+    const countAfterSetup = mockWs.sends.length;
+
+    // Transcript.done fires. isSpeakingRef is false (no audio deltas yet /
+    // drainQueue hasn't run in this test) — under the old code path the
+    // watchdog would arm and nudge at SILENCE_NUDGE_MS.
+    deliver("response.output_audio_transcript.done");
+
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS + 2000); });
+
+    expect(mockWs.sends.length).toBe(countAfterSetup);
+  });
+
+  /**
+   * Regression — response.done is the safety net. If no audio was ever
+   * queued (text-only response, or audio played and fully drained before
+   * response.done arrived), transcript.done sets pending but nothing clears
+   * it. response.done must arm the watchdog in that state.
+   */
+  it("arms the watchdog on response.done when nothing is speaking (safety net)", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeVoice({ systemPrompt: "Test" })
+    );
+    await openHook(result);
+    const countAfterSetup = mockWs.sends.length;
+
+    // Full sequence for a text-only / already-finished response.
+    deliver("response.output_audio_transcript.done");
+    deliver("response.done");
+
+    // Now the watchdog should be armed — nudge fires after SILENCE_NUDGE_MS.
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS + 100); });
+
+    expect(mockWs.sends.length).toBeGreaterThan(countAfterSetup);
+    const sends = extraSends();
+    const itemCreate = sends[0];
+    expect(itemCreate.type).toBe("conversation.item.create");
   });
 });

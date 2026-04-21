@@ -132,14 +132,14 @@ For each question-answer pair you identify in the transcript:
 
 Then provide an overall assessment:
 - Overall score (weighted average of individual answers)
-- A detailed summary of 500-800 words covering: overall performance arc, communication patterns, STAR method mastery, specific strengths with examples, specific growth areas with concrete guidance, and what a top-quartile answer would look like for this role
+- A detailed summary of 300-400 words covering: overall performance arc, communication patterns, STAR method mastery, specific strengths with examples, specific growth areas with concrete guidance, and what a top-quartile answer would look like for this role
 - Top 3 strengths
 - Top 3 areas for improvement
 
 Respond ONLY with valid JSON matching this exact structure:
 {
   "overall_score": <float 0-10>,
-  "summary": "<500-800 word detailed overall assessment>",
+  "summary": "<300-400 word detailed overall assessment>",
   "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
   "weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
   "answer_analyses": [
@@ -188,12 +188,12 @@ In the "feedback" string for each analysis category, include ALL of the followin
 - A "Phrases to add" list of 2-4 stronger alternative phrases that signal technical mastery
 - An "If you were me, what would you say" paragraph: rewrite how the candidate should have explained this aspect in 3-5 polished sentences
 
-Provide an extended summary of 500-800 words covering: overall coding ability narrative, communication arc, specific code quality observations with line references, complexity analysis accuracy, edge-case thinking, and concrete next-step practice recommendations.
+Provide an extended summary of 300-400 words covering: overall coding ability narrative, communication arc, specific code quality observations with line references, complexity analysis accuracy, edge-case thinking, and concrete next-step practice recommendations.
 
 Respond ONLY with valid JSON matching this exact structure:
 {
   "overall_score": <float 0-10>,
-  "summary": "<500-800 word extended overall assessment referencing specific parts of the code>",
+  "summary": "<300-400 word extended overall assessment referencing specific parts of the code>",
   "strengths": ["<strength — cite code or transcript>", "<strength>", "<strength>"],
   "weaknesses": ["<weakness — cite code or transcript>", "<weakness>", "<weakness>"],
   "code_quality_score": <float 0-10>,
