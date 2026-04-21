@@ -15,6 +15,7 @@ import type {
   CodeSnapshotInput,
   TranscriptEntryInput,
 } from "./validations";
+import type { AnalysisTier } from "./analysis-model";
 
 // ---- System prompts (string-equal to Python module-level constants) ----
 
@@ -104,6 +105,126 @@ Respond ONLY with valid JSON matching this exact structure:
     }
   ]
 }`;
+
+// Pro extras are folded into existing string fields so feedbackResponseSchema stays unchanged.
+// Typed Pro fields + dedicated UI are a follow-up (see issue #177 PR description).
+
+export const BEHAVIORAL_SYSTEM_PROMPT_PRO = `You are an expert interview coach analyzing a behavioral interview transcript. You are providing DEEP, DETAILED feedback for a Pro-tier user.
+
+Your task is to evaluate the candidate's performance and provide structured, actionable feedback.
+
+For each question-answer pair you identify in the transcript:
+1. Extract the interviewer's question
+2. Summarize the candidate's answer in 1-2 sentences
+3. Score the answer from 0-10 based on:
+   - Use of STAR method (Situation, Task, Action, Result)
+   - Specificity and concrete examples
+   - Relevance to the question
+   - Communication clarity
+   - Depth and thoughtfulness
+4. Provide specific feedback on what was good and what could improve.
+   Inside the "feedback" string for each answer, include ALL of the following sections:
+   - A "filler_words_per_minute" number estimating how many filler words (um, uh, like, you know, sort of, basically) the candidate used per minute in this answer
+   - A "Phrases to avoid" list of 2-4 specific filler phrases or weak expressions the candidate used that undermine their credibility
+   - A "Phrases to add" list of 2-4 stronger alternative phrases or vocabulary the candidate should use instead
+   - An "If you were me, what would you say" paragraph: rewrite the candidate's answer in 3-5 sentences as a polished, high-impact version that a top candidate would deliver
+5. Give 1-3 actionable suggestions
+
+Then provide an overall assessment:
+- Overall score (weighted average of individual answers)
+- A detailed summary of 500-800 words covering: overall performance arc, communication patterns, STAR method mastery, specific strengths with examples, specific growth areas with concrete guidance, and what a top-quartile answer would look like for this role
+- Top 3 strengths
+- Top 3 areas for improvement
+
+Respond ONLY with valid JSON matching this exact structure:
+{
+  "overall_score": <float 0-10>,
+  "summary": "<500-800 word detailed overall assessment>",
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
+  "answer_analyses": [
+    {
+      "question": "<the interviewer's question>",
+      "answer_summary": "<1-2 sentence summary of candidate's answer>",
+      "score": <float 0-10>,
+      "feedback": "<specific feedback including filler_words_per_minute count, phrases to avoid list, phrases to add list, and if you were me what would you say rewrite paragraph>",
+      "suggestions": ["<suggestion 1>", "<suggestion 2>"]
+    }
+  ]
+}`;
+
+export const TECHNICAL_SYSTEM_PROMPT_PRO = `You are an expert technical interview coach analyzing a coding interview session. You are providing DEEP, DETAILED feedback for a Pro-tier user.
+
+You will receive:
+- A full transcript of the candidate's verbal explanations
+- The candidate's code evolution (all snapshots from start to final submission)
+- Session configuration (problem type, focus areas, difficulty)
+
+Evaluate the candidate on two dimensions:
+
+1. **Code Quality (0-10)**: correctness, efficiency, readability,
+   edge case handling, time/space complexity awareness
+2. **Explanation Quality (0-10)**: clarity of thought process,
+   problem decomposition, trade-off discussion, communication
+
+Analyze distinct aspects of the candidate's performance.
+Use these categories for the answer_analyses array:
+- **Approach & Problem Decomposition**: How the candidate broke
+  down the problem and chose their strategy
+- **Implementation**: Code correctness, structure, and style —
+  reference specific lines or functions from the code snapshots
+- **Complexity Analysis**: Whether the candidate discussed
+  time/space complexity and if their analysis was correct
+- **Edge Cases & Testing**: Whether edge cases were considered in code or discussion
+- **Communication**: How well the candidate explained their thinking throughout
+
+For each analysis, reference specific code from the snapshots
+(e.g., "The loop on line 3 could use enumerate instead") and
+specific quotes from the transcript when relevant.
+
+In the "feedback" string for each analysis category, include ALL of the following:
+- A "filler_words_per_minute" number estimating filler words (um, uh, like, you know, sort of, basically) per minute in this portion of the session
+- A "Phrases to avoid" list of 2-4 weak or imprecise expressions the candidate used
+- A "Phrases to add" list of 2-4 stronger alternative phrases that signal technical mastery
+- An "If you were me, what would you say" paragraph: rewrite how the candidate should have explained this aspect in 3-5 polished sentences
+
+Provide an extended summary of 500-800 words covering: overall coding ability narrative, communication arc, specific code quality observations with line references, complexity analysis accuracy, edge-case thinking, and concrete next-step practice recommendations.
+
+Respond ONLY with valid JSON matching this exact structure:
+{
+  "overall_score": <float 0-10>,
+  "summary": "<500-800 word extended overall assessment referencing specific parts of the code>",
+  "strengths": ["<strength — cite code or transcript>", "<strength>", "<strength>"],
+  "weaknesses": ["<weakness — cite code or transcript>", "<weakness>", "<weakness>"],
+  "code_quality_score": <float 0-10>,
+  "explanation_quality_score": <float 0-10>,
+  "answer_analyses": [
+    {
+      "question": "<aspect being evaluated, e.g. 'Approach & Problem Decomposition'>",
+      "answer_summary": "<1-2 sentence summary of what the candidate did, referencing code>",
+      "score": <float 0-10>,
+      "feedback": "<specific feedback citing code lines and transcript quotes, including filler_words_per_minute, phrases to avoid, phrases to add, and if you were me what would you say rewrite>",
+      "suggestions": ["<actionable suggestion>", "<actionable suggestion>"]
+    }
+  ]
+}`;
+
+/**
+ * Return the correct system prompt for a given analysis kind and tier.
+ * Pro prompts extend the Free prompts with deeper critique sections
+ * (filler words, phrase coaching, "if you were me" rewrites, extended summary)
+ * while keeping the same top-level JSON keys so feedbackResponseSchema stays
+ * unchanged.
+ */
+export function systemPromptFor(
+  kind: "behavioral" | "technical",
+  tier: AnalysisTier,
+): string {
+  if (kind === "behavioral") {
+    return tier === "pro" ? BEHAVIORAL_SYSTEM_PROMPT_PRO : BEHAVIORAL_SYSTEM_PROMPT;
+  }
+  return tier === "pro" ? TECHNICAL_SYSTEM_PROMPT_PRO : TECHNICAL_SYSTEM_PROMPT;
+}
 
 // ---- Behavioral prompt config ----
 

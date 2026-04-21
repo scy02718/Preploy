@@ -13,7 +13,7 @@ import OpenAI from "openai";
 
 import {
   buildBehavioralPrompt,
-  BEHAVIORAL_SYSTEM_PROMPT,
+  systemPromptFor,
   type PreparedStarStory,
 } from "@/lib/analysis-prompts";
 import {
@@ -22,12 +22,15 @@ import {
   feedbackResponseSchema,
 } from "@/lib/analysis-schemas";
 import { OpenAIRetryError, withOpenAIRetry } from "@/lib/openai-retry";
+import { modelFor, type AnalysisTier } from "@/lib/analysis-model";
 
 export interface RunBehavioralAnalysisOptions {
   log: pino.Logger;
   userId?: string;
   /** Optional prepared STAR story for drift analysis */
   preparedStory?: PreparedStarStory;
+  /** User tier — determines model and system prompt depth */
+  tier: AnalysisTier;
 }
 
 /**
@@ -44,15 +47,17 @@ export async function runBehavioralAnalysis(
   opts: RunBehavioralAnalysisOptions,
 ): Promise<FeedbackResponse> {
   const { log } = opts;
+  const model = modelFor(opts.tier);
+  const systemPrompt = systemPromptFor("behavioral", opts.tier);
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const prompt = buildBehavioralPrompt(input.transcript, input.config, opts.preparedStory);
 
   return withOpenAIRetry(
     () =>
       openai.chat.completions.create({
-        model: "gpt-5.4-mini",
+        model,
         messages: [
-          { role: "system", content: BEHAVIORAL_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
@@ -72,6 +77,6 @@ export async function runBehavioralAnalysis(
       }
       return validated.data;
     },
-    { service: "behavioral-analysis", log, userId: opts.userId, model: "gpt-5.4-mini" },
+    { service: "behavioral-analysis", log, userId: opts.userId, model },
   );
 }

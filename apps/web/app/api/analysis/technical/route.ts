@@ -6,6 +6,8 @@ import { runTechnicalAnalysis } from "@/lib/analysis-technical";
 import { technicalFeedbackRequestSchema } from "@/lib/analysis-schemas";
 import { createRequestLogger } from "@/lib/logger";
 import { OpenAIRetryError } from "@/lib/openai-retry";
+import { getCurrentUserPlan } from "@/lib/user-plan";
+import type { AnalysisTier } from "@/lib/analysis-model";
 
 /**
  * POST /api/analysis/technical
@@ -57,8 +59,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Plan is read once per feedback request, not cached from session creation —
+  // in-flight analyses finish at the tier the user has at the moment they hit
+  // POST. Downgrade mid-session → Free output on this POST if the DB flip
+  // landed first. Next session always uses the then-current tier.
+  const plan = await getCurrentUserPlan(session.user.id);
+  const tier: AnalysisTier = plan === "pro" ? "pro" : "free";
+
   try {
-    const result = await runTechnicalAnalysis(parsed.data, { log });
+    const result = await runTechnicalAnalysis(parsed.data, { log, tier });
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof OpenAIRetryError) {

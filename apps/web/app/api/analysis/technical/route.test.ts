@@ -17,6 +17,9 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/api-utils", () => ({
   checkRateLimit: vi.fn().mockResolvedValue(null),
 }));
+vi.mock("@/lib/user-plan", () => ({
+  getCurrentUserPlan: vi.fn().mockResolvedValue("free"),
+}));
 
 import { POST } from "./route";
 

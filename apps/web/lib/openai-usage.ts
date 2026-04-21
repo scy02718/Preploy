@@ -30,6 +30,8 @@ export const OPENAI_MODEL_PRICING: Record<string, ModelPrice> = {
   "gpt-5.4-mini": { inputPer1MTokens: 0.75, outputPer1MTokens: 4.5 },
   "gpt-4o-mini": { inputPer1MTokens: 0.15, outputPer1MTokens: 0.6 },
   "gpt-4o": { inputPer1MTokens: 2.5, outputPer1MTokens: 10.0 },
+  // TODO: replace with official gpt-5 prices when OpenAI publishes.
+  "gpt-5": { inputPer1MTokens: 5.0, outputPer1MTokens: 30.0 },
   // Whisper is priced per minute, not per token — tracked separately.
   // Add new models here as they're adopted in the codebase.
 };
@@ -133,6 +135,10 @@ export async function recordOpenAIUsage(
   inputTokens: number,
   outputTokens: number
 ): Promise<void> {
+  if (!OPENAI_MODEL_PRICING[model]) {
+    console.warn("recordOpenAIUsage: unknown model, skipping", { model });
+    return;
+  }
   const cost = computeCostMillis(model, inputTokens, outputTokens);
   const today = todayUtcString();
   await db

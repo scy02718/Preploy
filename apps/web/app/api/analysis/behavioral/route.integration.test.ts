@@ -9,13 +9,22 @@
  *
  * Story 22 acceptance criteria: "Integration tests mock OpenAI and assert
  * full Zod-validated response shapes."
+ *
+ * Story 177: tier tests verify Pro users get the stronger model + Pro prompt.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { getTestDb } from "../../../../tests/setup-db";
+import { users } from "@/lib/schema";
+import { eq, or } from "drizzle-orm";
 
-const mockChatCreate = vi.fn();
+const { mockChatCreate, mockAuthFn } = vi.hoisted(() => ({
+  mockChatCreate: vi.fn(),
+  mockAuthFn: vi.fn(),
+}));
+
 vi.mock("openai", () => ({
   default: class MockOpenAI {
     chat = { completions: { create: mockChatCreate } };
@@ -26,16 +35,29 @@ vi.mock("openai", () => ({
 // Tests stub both to return "signed-in, not rate-limited" by default; any
 // test that wants to exercise the 401 / 429 paths can override in-file.
 vi.mock("@/lib/auth", () => ({
-  auth: vi.fn().mockResolvedValue({ user: { id: "test-user" } }),
+  auth: () => mockAuthFn(),
 }));
 vi.mock("@/lib/api-utils", () => ({
   checkRateLimit: vi.fn().mockResolvedValue(null),
+}));
+
+// getCurrentUserPlan queries @/lib/db — redirect to test DB so the function
+// can run for real (unknown users fall back to "free"; pro tests seed a pro user).
+vi.mock("@/lib/db", () => ({
+  get db() {
+    return getTestDb();
+  },
 }));
 
 vi.stubEnv("OPENAI_API_KEY", "sk-integration-test");
 
 import { POST } from "./route";
 import { feedbackResponseSchema } from "@/lib/analysis-schemas";
+import {
+  BEHAVIORAL_SYSTEM_PROMPT,
+  BEHAVIORAL_SYSTEM_PROMPT_PRO,
+} from "@/lib/analysis-prompts";
+
 
 const VALID_GPT_RESPONSE = readFileSync(
   join(__dirname, "..", "__fixtures__", "behavioral-gpt-response.json"),
@@ -68,6 +90,10 @@ const VALID_BODY = {
   },
 };
 
+// Auth mock returns this user ID by default
+const FREE_USER_ID = "bbbbbbbb-0000-0000-0000-000000000001";
+const PRO_USER_ID = "bbbbbbbb-0000-0000-0000-000000000002";
+
 function makeRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost:3000/api/analysis/behavioral", {
     method: "POST",
@@ -77,8 +103,37 @@ function makeRequest(body: unknown): NextRequest {
 }
 
 describe("POST /api/analysis/behavioral (integration)", () => {
+  beforeAll(async () => {
+    const db = getTestDb();
+    await db
+      .insert(users)
+      .values({ id: FREE_USER_ID, email: "free-behavioral@example.com", name: "Free User" })
+      .onConflictDoNothing();
+    await db
+      .insert(users)
+      .values({ id: PRO_USER_ID, email: "pro-behavioral@example.com", name: "Pro User", plan: "pro" })
+      .onConflictDoNothing();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: authenticated as free user
+    mockAuthFn.mockResolvedValue({ user: { id: FREE_USER_ID } });
+    // Ensure OPENAI_API_KEY is always set — vi.unstubAllEnvs() in afterEach
+    // would clear the module-level vi.stubEnv call otherwise.
+    vi.stubEnv("OPENAI_API_KEY", "sk-integration-test");
+  });
+
+  afterEach(() => {
+    // Only unstub test-specific env overrides; re-stub of OPENAI_API_KEY happens in beforeEach.
+    vi.unstubAllEnvs();
+  });
+
+  afterAll(async () => {
+    // Only clean up the users we seeded — don't tear down the shared test DB
+    // connection or delete other test suites' data.
+    const db = getTestDb();
+    await db.delete(users).where(or(eq(users.id, FREE_USER_ID), eq(users.id, PRO_USER_ID)));
   });
 
   it("returns 400 on empty transcript", async () => {
@@ -147,5 +202,39 @@ describe("POST /api/analysis/behavioral (integration)", () => {
     const body = await res.json();
     expect(feedbackResponseSchema.safeParse(body).success).toBe(true);
     expect(body.overall_score).toBe(7.5);
+  });
+
+  it("pro user: uses PRO_ANALYSIS_MODEL + Pro system prompt", async () => {
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+    // Authenticate as pro user (seeded in beforeAll with plan="pro")
+    mockAuthFn.mockResolvedValue({ user: { id: PRO_USER_ID } });
+
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: VALID_GPT_RESPONSE } }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    expect(mockChatCreate).toHaveBeenCalledOnce();
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5-test-pro");
+    expect(call.messages[0].content).toBe(BEHAVIORAL_SYSTEM_PROMPT_PRO);
+  });
+
+  it("free user: uses gpt-5.4-mini + Free system prompt", async () => {
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+    // Authenticate as free user (seeded in beforeAll with plan="free" default)
+    mockAuthFn.mockResolvedValue({ user: { id: FREE_USER_ID } });
+
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: VALID_GPT_RESPONSE } }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    expect(res.status).toBe(200);
+    expect(mockChatCreate).toHaveBeenCalledOnce();
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5.4-mini");
+    expect(call.messages[0].content).toBe(BEHAVIORAL_SYSTEM_PROMPT);
   });
 });

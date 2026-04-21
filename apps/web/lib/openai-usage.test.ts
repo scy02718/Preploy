@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   computeCostMillis,
+  recordOpenAIUsage,
   OPENAI_MODEL_PRICING,
   OpenAICapError,
   getPerUserDailyCapMillis,
@@ -72,5 +73,44 @@ describe("cap constants", () => {
 
   it("default global cap is $50 = 50000 millidollars", () => {
     expect(getGlobalDailyCapMillis()).toBe(50000);
+  });
+});
+
+// Mock @/lib/db so recordOpenAIUsage tests don't need a real database
+const mockInsert = vi.fn().mockReturnValue({
+  values: vi.fn().mockReturnValue({
+    onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+  }),
+});
+vi.mock("@/lib/db", () => ({
+  get db() {
+    return { insert: mockInsert };
+  },
+}));
+
+describe("recordOpenAIUsage — unknown model guard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("recordOpenAIUsage skips silently with a warn when model is unknown", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await recordOpenAIUsage("user-1", "gpt-99-unknown-model", 1000, 500);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "recordOpenAIUsage: unknown model, skipping",
+      { model: "gpt-99-unknown-model" }
+    );
+    // No DB insert call should have happened
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("computeCostMillis still throws on unknown model (regression guard)", () => {
+    expect(() => computeCostMillis("gpt-99-unknown-model", 1000, 500)).toThrow(
+      /Unknown model.*gpt-99-unknown-model/
+    );
   });
 });

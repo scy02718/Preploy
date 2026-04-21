@@ -27,6 +27,8 @@ import type {
   TechnicalFeedbackResponse,
 } from "@/lib/analysis-schemas";
 import { OpenAIRetryError } from "@/lib/openai-retry";
+import { getCurrentUserPlan } from "@/lib/user-plan";
+import type { AnalysisTier } from "@/lib/analysis-model";
 
 // POST /api/sessions/[id]/feedback — trigger feedback generation
 export async function POST(
@@ -62,6 +64,14 @@ export async function POST(
   }
 
   setSentryContext({ sessionType: found.type, sessionId: id });
+
+  // Plan is read once per feedback request, not cached from session creation —
+  // in-flight analyses finish at the tier the user has at the moment they hit
+  // POST. Downgrade mid-session → Free output on this POST if the DB flip
+  // landed first. Next session always uses the then-current tier.
+  const plan = await getCurrentUserPlan(session.user.id);
+  const tier: AnalysisTier = plan === "pro" ? "pro" : "free";
+  log.info({ tier, sessionId: id }, "feedback tier resolved");
 
   // Check if feedback already exists
   const [existing] = await db
@@ -160,7 +170,7 @@ export async function POST(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           config: (found.config ?? {}) as any,
         },
-        { log, userId: session.user.id },
+        { log, userId: session.user.id, tier },
       );
     } else {
       feedbackData = await runBehavioralAnalysis(
@@ -170,7 +180,7 @@ export async function POST(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           config: (found.config ?? {}) as any,
         },
-        { log, userId: session.user.id, preparedStory },
+        { log, userId: session.user.id, preparedStory, tier },
       );
     }
   } catch (err) {
