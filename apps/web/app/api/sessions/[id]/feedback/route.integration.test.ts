@@ -857,4 +857,82 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     expect(freeBody.answerAnalyses).toBeDefined();
     expect(proBody.answerAnalyses).toBeDefined();
   });
+
+  it("POST persists analysisTier='free' on the feedback row for Free users (#188)", async () => {
+    const db = getTestDb();
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(
+      makePostRequest(behavioralSessionId),
+      makeParams(behavioralSessionId)
+    );
+    expect(res.status).toBe(201);
+
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, behavioralSessionId));
+    expect(row.analysisTier).toBe("free");
+  });
+
+  it("POST persists analysisTier='pro' on the feedback row for Pro users (#188)", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    const [proSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: proSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(
+      makePostRequest(proSession.id),
+      makeParams(proSession.id)
+    );
+    expect(res.status).toBe(201);
+
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, proSession.id));
+    expect(row.analysisTier).toBe("pro");
+  });
+
+  it("GET returns analysisTier in the response body (#188)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    // Generate the feedback first
+    const postRes = await POST(
+      makePostRequest(behavioralSessionId),
+      makeParams(behavioralSessionId)
+    );
+    expect(postRes.status).toBe(201);
+
+    const getRes = await GET(
+      new NextRequest(`http://localhost/api/sessions/${behavioralSessionId}/feedback`),
+      makeParams(behavioralSessionId)
+    );
+    expect(getRes.status).toBe(200);
+    const body = await getRes.json();
+    expect(body.analysisTier).toBe("free");
+  });
 });

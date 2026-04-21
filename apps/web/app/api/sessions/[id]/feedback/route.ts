@@ -261,6 +261,7 @@ export async function POST(
       gazeDistribution,
       gazeCoverage,
       gazeTimeline,
+      analysisTier: tier,
     })
     .returning();
 
