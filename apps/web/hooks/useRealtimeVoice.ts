@@ -230,6 +230,13 @@ export function useRealtimeVoice(
           case "response.output_audio.delta":
           // Beta fallback
           case "response.audio.delta": {
+            // AI audio has started arriving — cancel any silence watchdog that was
+            // armed by the preceding speech_stopped event. Leaving it armed lets the
+            // 6s nudge timer fire mid-speech. A fresh watchdog arms after playback
+            // via drainQueue's speakingTimeout (and the response.done safety net
+            // further down).
+            clearSilenceWatchdog();
+
             // Decode base64 audio and queue for playback
             const binaryString = atob(msg.delta);
             const bytes = new Uint8Array(binaryString.length);

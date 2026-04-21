@@ -355,4 +355,32 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
     const itemCreate = sends[0];
     expect(itemCreate.type).toBe("conversation.item.create");
   });
+
+  /**
+   * Regression — the main reported bug. speech_stopped arms the watchdog.
+   * The AI then starts speaking via audio.delta. Without the fix, the timer
+   * armed by speech_stopped keeps ticking through the AI's TTS playback and
+   * nudges the user mid-speech.
+   */
+  it("clears the watchdog when audio.delta arrives after speech_stopped (mid-speech nudge fix)", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeVoice({ systemPrompt: "Test" })
+    );
+    await openHook(result);
+    const countAfterSetup = mockWs.sends.length;
+
+    // User finishes speaking — watchdog arms.
+    deliver("input_audio_buffer.speech_stopped");
+
+    // 3s of silence (below nudge threshold) — watchdog still pending.
+    act(() => { vi.advanceTimersByTime(3_000); });
+
+    // AI starts responding. audio.delta must clear the watchdog.
+    deliver("response.output_audio.delta", { delta: "AAAA" });
+
+    // Advance well past the original threshold — with the fix, no nudge fires.
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS + 2_000); });
+
+    expect(mockWs.sends.length).toBe(countAfterSetup);
+  });
 });
