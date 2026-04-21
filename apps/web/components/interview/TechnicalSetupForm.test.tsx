@@ -1,10 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TechnicalSetupForm } from "./TechnicalSetupForm";
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
+}));
+
+// ProAnalysisToggle calls usePlan — mock it to "free" so the toggle is
+// hidden and does not interfere with existing TechnicalSetupForm tests.
+vi.mock("@/hooks/usePlan", () => ({
+  usePlan: () => ({ plan: "free" }),
+}));
+
+// ProAnalysisToggle also uses next-auth/react session status.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ status: "authenticated" }),
 }));
 
 const { mockSetType, mockSetConfig, mockCreateSession, configOverride, prefillOverride } = vi.hoisted(() => ({
@@ -53,6 +64,13 @@ describe("TechnicalSetupForm", () => {
     vi.clearAllMocks();
     configOverride.value = {};
     prefillOverride.value = null;
+    // Stub fetch so ProAnalysisToggle (hidden for free plan) never makes a
+    // real network call during TechnicalSetupForm tests.
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("renders interview type options", () => {

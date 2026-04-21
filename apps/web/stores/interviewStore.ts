@@ -36,7 +36,7 @@ interface InterviewState {
   // Actions
   setType: (type: InterviewType) => void;
   setConfig: (partial: Partial<SessionConfig>) => void;
-  createSession: (extraFields?: { source_star_story_id?: string }) => Promise<string | null>;
+  createSession: (extraFields?: { source_star_story_id?: string; use_pro_analysis?: boolean }) => Promise<string | null>;
   clearQuotaError: () => void;
   startSession: () => Promise<void>;
   endSession: () => Promise<void>;
@@ -79,7 +79,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
       config: { ...state.config, ...partial } as SessionConfig,
     })),
 
-  createSession: async (extraFields?: { source_star_story_id?: string }) => {
+  createSession: async (extraFields?: { source_star_story_id?: string; use_pro_analysis?: boolean }) => {
     const { config, type } = get();
     const sessionType = type ?? "behavioral";
     set({ error: null, quotaError: null });

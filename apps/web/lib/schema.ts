@@ -141,6 +141,7 @@ export const interviewSessions = pgTable("interview_sessions", {
     (): AnyPgColumn => starStories.id,
     { onDelete: "set null" }
   ),
+  useProAnalysis: boolean("use_pro_analysis").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

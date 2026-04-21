@@ -1,0 +1,1 @@
+ALTER TABLE "interview_sessions" ADD COLUMN "use_pro_analysis" boolean DEFAULT false NOT NULL;

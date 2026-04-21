@@ -8,6 +8,17 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+// ProAnalysisToggle calls usePlan — mock it to "free" so the toggle is
+// hidden and does not interfere with existing BehavioralSetupForm tests.
+vi.mock("@/hooks/usePlan", () => ({
+  usePlan: () => ({ plan: "free" }),
+}));
+
+// ProAnalysisToggle also uses next-auth/react session status.
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ status: "authenticated" }),
+}));
+
 const { mockSetType, mockSetConfig, mockCreateSession } = vi.hoisted(() => ({
   mockSetType: vi.fn(),
   mockSetConfig: vi.fn(),
@@ -45,10 +56,13 @@ vi.mock("@/stores/prefillStore", () => ({
   }),
 }));
 
-// Mock fetch for question generation and user profile (gaze preference)
+// Mock fetch for question generation, user profile (gaze preference), and pro-analysis-usage
 const mockFetch = vi.fn().mockImplementation((url: string) => {
   if (typeof url === "string" && url.includes("/api/users/me")) {
     return Promise.resolve({ ok: true, json: async () => ({ gazeTrackingEnabled: false }) });
+  }
+  if (typeof url === "string" && url.includes("/api/users/pro-analysis-usage")) {
+    return Promise.resolve({ ok: true, json: async () => ({ plan: "free", used: 0, limit: 0, periodEnd: null }) });
   }
   return Promise.resolve({ ok: false, json: async () => ({}) });
 });

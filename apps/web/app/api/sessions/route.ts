@@ -11,6 +11,7 @@ import {
 } from "@/lib/validations";
 import { checkRateLimit, requireProFeature } from "@/lib/api-utils";
 import { tryConsumeInterviewSlot } from "@/lib/usage";
+import { getCurrentUserPlan } from "@/lib/user-plan";
 
 // GET /api/sessions — list sessions with pagination, type/score filters
 // Query params: page (1-based), limit, type, minScore, maxScore
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { type, config, source_star_story_id } = parsed.data;
+  const { type, config, source_star_story_id, use_pro_analysis } = parsed.data;
 
   // Validate config based on interview type
   if (config) {
@@ -159,6 +160,17 @@ export async function POST(request: NextRequest) {
     if (!configResult.success) {
       return NextResponse.json(
         { error: "Invalid session config", details: configResult.error.issues },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Pro gate for use_pro_analysis flag. Free users sending true get 400.
+  if (use_pro_analysis === true) {
+    const userPlan = await getCurrentUserPlan(session.user.id);
+    if (userPlan !== "pro") {
+      return NextResponse.json(
+        { error: "use_pro_analysis_requires_pro_plan" },
         { status: 400 }
       );
     }
@@ -233,6 +245,7 @@ export async function POST(request: NextRequest) {
           type,
           config: config ?? {},
           sourceStarStoryId: source_star_story_id ?? null,
+          useProAnalysis: use_pro_analysis ?? false,
         })
         .returning();
       return row;
