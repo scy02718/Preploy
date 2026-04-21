@@ -120,6 +120,13 @@
       "when": 1776743552291,
       "tag": "0016_rich_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1776750968823,
+      "tag": "0017_sharp_raider",
+      "breakpoints": true
     }
   ]
 }

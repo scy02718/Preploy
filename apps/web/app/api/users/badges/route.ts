@@ -15,6 +15,10 @@ import { and, desc, eq, sql, count as countFn } from "drizzle-orm";
 import { calculateStreaks } from "@/lib/streaks";
 import { checkNewBadges } from "@/lib/badge-checker";
 import { createRequestLogger } from "@/lib/logger";
+import {
+  getHourInTimezone,
+  getDateStringInTimezone,
+} from "@/lib/timezone";
 
 // POST /api/users/badges — check and award new badges for the authenticated user
 export async function POST() {
@@ -106,28 +110,35 @@ export async function POST() {
     .from(interviewPlans)
     .where(eq(interviewPlans.userId, userId));
 
-  // Latest session hour (UTC)
-  const latestSession = sessions[0];
-  const latestSessionHour = latestSession?.startedAt
-    ? new Date(latestSession.startedAt).getUTCHours()
-    : latestSession?.createdAt
-      ? new Date(latestSession.createdAt).getUTCHours()
-      : null;
-
-  // Sessions today (UTC)
-  const today = new Date();
-  const todayStr = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}-${String(today.getUTCDate()).padStart(2, "0")}`;
-  const sessionsToday = sessions.filter((s) => {
-    const d = new Date(s.createdAt);
-    const ds = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-    return ds === todayStr;
-  }).length;
-
-  // User plan
+  // User plan + timezone. Timezone is optional — null means the client
+  // hasn't synced yet; we fall back to UTC for achievement checks in that
+  // case (same as the pre-timezone behavior).
   const [userRow] = await db
-    .select({ plan: users.plan })
+    .select({ plan: users.plan, timezone: users.timezone })
     .from(users)
     .where(eq(users.id, userId));
+
+  const tz = userRow?.timezone ?? null;
+
+  // Latest session hour — evaluated in the user's local timezone so
+  // early_bird / night_owl fire at the right time of day. Previously this
+  // used UTC hours, which awarded "Early Bird" to a user in NZ running in
+  // the afternoon (2pm local = 2am UTC).
+  const latestSession = sessions[0];
+  const latestSessionHour = latestSession?.startedAt
+    ? getHourInTimezone(new Date(latestSession.startedAt), tz)
+    : latestSession?.createdAt
+      ? getHourInTimezone(new Date(latestSession.createdAt), tz)
+      : null;
+
+  // Sessions today — "today" is the user's local calendar day, not the
+  // server's UTC day. Same reason as above: marathon_runner should count
+  // sessions within the user's day, not sessions that happen to fall in
+  // the same UTC date.
+  const todayStr = getDateStringInTimezone(new Date(), tz);
+  const sessionsToday = sessions.filter((s) => {
+    return getDateStringInTimezone(new Date(s.createdAt), tz) === todayStr;
+  }).length;
 
   // Already earned
   const earned = await db

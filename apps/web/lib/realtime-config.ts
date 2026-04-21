@@ -16,9 +16,8 @@ export const VAD_PREFIX_PADDING_MS = 300;
 export const VAD_SILENCE_DURATION_MS = 3000; // server waits 3s of silence before declaring user-turn end
 
 /** Wall-clock milliseconds from user-turn end to the first gentle nudge.
- *  At 10s the AI sends a one-sentence prompt ("Take your time…") injected
- *  as a system message so the candidate knows the session is still live. */
-export const SILENCE_NUDGE_MS = 10_000; // wall-clock from user-turn end → first gentle nudge
+ *  Reduced from 10s to 6s after user testing — 10s felt too slow mid-session. */
+export const SILENCE_NUDGE_MS = 6_000; // wall-clock from user-turn end → first gentle nudge
 
 /** Wall-clock milliseconds from user-turn end to the polite hand-off.
  *  At 60s the AI acknowledges the silence and moves to the next question.

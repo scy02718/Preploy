@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "next-themes";
 import { Sidebar } from "./Sidebar";
 import { usePlan, signOutAndClearPlan } from "@/hooks/usePlan";
+import { useReportTimezone } from "@/hooks/useReportTimezone";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -37,6 +38,7 @@ export function Header() {
   const { data: session, status } = useSession();
   const { theme, setTheme } = useTheme();
   const { plan } = usePlan();
+  useReportTimezone();
   const user = session?.user;
 
   const toggleTheme = () => {
