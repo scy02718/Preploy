@@ -35,6 +35,7 @@ interface FeedbackData {
   gazeCoverage?: number | null;
   gazeTimeline?: GazeTimelineBucket[] | null;
   driftAnalysis?: DriftAnalysis | null;
+  analysisTier?: "free" | "pro" | null;
 }
 
 const MAX_POLL_ATTEMPTS = 40; // 40 × 3s = 2 minutes max
@@ -123,6 +124,7 @@ export default function FeedbackPage() {
           gazeCoverage: data.gazeCoverage ?? undefined,
           gazeTimeline: data.gazeTimeline ?? undefined,
           driftAnalysis: data.driftAnalysis ?? undefined,
+          analysisTier: data.analysisTier ?? data.analysis_tier ?? null,
         });
         setIsLoading(false);
         // Done — no more polling

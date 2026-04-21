@@ -4,7 +4,6 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Download, Sparkles } from "lucide-react";
-import { usePlan } from "@/hooks/usePlan";
 import { ScoreCard } from "./ScoreCard";
 import { StrengthsWeaknesses } from "./StrengthsWeaknesses";
 import { AnswerBreakdown } from "./AnswerBreakdown";
@@ -36,6 +35,7 @@ interface FeedbackData {
   gazeCoverage?: number | null;
   gazeTimeline?: GazeTimelineBucket[] | null;
   driftAnalysis?: DriftAnalysis | null;
+  analysisTier?: "free" | "pro" | null;
 }
 
 interface FeedbackDashboardProps {
@@ -49,7 +49,6 @@ export function FeedbackDashboard({
   sessionType = "behavioral",
 }: FeedbackDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
-  const { plan } = usePlan();
   const isTechnical = sessionType === "technical";
   const setupLink = isTechnical
     ? "/interview/technical/setup"
@@ -115,13 +114,13 @@ export function FeedbackDashboard({
         </div>
       </div>
 
-      {/* Pro analysis banner — visible reinforcement that a Pro user's
-          feedback ran through the deeper model (shipped in #177). Gated
-          on the current user's plan via usePlan(); a user who upgraded
-          AFTER generating this feedback will still see the banner even
-          though this specific feedback was free-tier — accepted edge case
-          until tier is persisted on the feedback row. */}
-      {plan === "pro" && (
+      {/* Pro analysis banner — visible reinforcement that THIS specific
+          feedback ran through the deeper model. Driven by the persisted
+          analysis_tier column on the feedback row (#188), so upgrading
+          or downgrading after generation does not flip the banner on old
+          feedback. Rows written before the column existed have tier null
+          and render no banner. */}
+      {feedback.analysisTier === "pro" && (
         <div
           className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3"
           data-testid="pro-analysis-banner"

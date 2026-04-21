@@ -1,22 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
-
-const { usePlanMock } = vi.hoisted(() => ({
-  usePlanMock: vi.fn(() => ({ plan: "free" as "free" | "pro" | undefined })),
-}));
-
-vi.mock("@/hooks/usePlan", () => ({
-  usePlan: usePlanMock,
-  clearPlanCache: vi.fn(),
-  signOutAndClearPlan: vi.fn(),
-}));
-
 import { FeedbackDashboard } from "./FeedbackDashboard";
-
-beforeEach(() => {
-  usePlanMock.mockReturnValue({ plan: "free" });
-});
 
 const BEHAVIORAL_FEEDBACK = {
   overallScore: 7.5,
@@ -178,26 +163,39 @@ describe("FeedbackDashboard", () => {
     expect(screen.queryByText("Eye Contact")).toBeNull();
   });
 
-  it("renders Pro analysis banner when plan is 'pro'", () => {
-    usePlanMock.mockReturnValue({ plan: "pro" });
+  it("renders Pro analysis banner when feedback.analysisTier is 'pro'", () => {
     render(
-      <FeedbackDashboard feedback={BEHAVIORAL_FEEDBACK} sessionId="test-id" />
+      <FeedbackDashboard
+        feedback={{ ...BEHAVIORAL_FEEDBACK, analysisTier: "pro" }}
+        sessionId="test-id"
+      />
     );
     const banner = screen.getByTestId("pro-analysis-banner");
     expect(banner).toBeInTheDocument();
     expect(banner.textContent).toContain("Pro analysis");
   });
 
-  it("does not render Pro analysis banner when plan is 'free'", () => {
-    usePlanMock.mockReturnValue({ plan: "free" });
+  it("does not render Pro analysis banner when feedback.analysisTier is 'free'", () => {
     render(
-      <FeedbackDashboard feedback={BEHAVIORAL_FEEDBACK} sessionId="test-id" />
+      <FeedbackDashboard
+        feedback={{ ...BEHAVIORAL_FEEDBACK, analysisTier: "free" }}
+        sessionId="test-id"
+      />
     );
     expect(screen.queryByTestId("pro-analysis-banner")).toBeNull();
   });
 
-  it("does not render Pro analysis banner when plan is undefined (loading)", () => {
-    usePlanMock.mockReturnValue({ plan: undefined });
+  it("does not render Pro analysis banner when feedback.analysisTier is null (old pre-column row)", () => {
+    render(
+      <FeedbackDashboard
+        feedback={{ ...BEHAVIORAL_FEEDBACK, analysisTier: null }}
+        sessionId="test-id"
+      />
+    );
+    expect(screen.queryByTestId("pro-analysis-banner")).toBeNull();
+  });
+
+  it("does not render Pro analysis banner when feedback.analysisTier is undefined", () => {
     render(
       <FeedbackDashboard feedback={BEHAVIORAL_FEEDBACK} sessionId="test-id" />
     );
