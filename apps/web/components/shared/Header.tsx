@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -12,11 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Menu, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "next-themes";
 import { Sidebar } from "./Sidebar";
+import { usePlan, signOutAndClearPlan } from "@/hooks/usePlan";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -34,6 +36,7 @@ export function Header() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { theme, setTheme } = useTheme();
+  const { plan } = usePlan();
   const user = session?.user;
 
   const toggleTheme = () => {
@@ -103,31 +106,43 @@ export function Header() {
         {status === "loading" ? (
           <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
         ) : user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger className="rounded-full">
-              <Avatar className="h-8 w-8">
-                {user.image && (
-                  <AvatarImage src={user.image} alt={user.name ?? ""} />
-                )}
-                <AvatarFallback className="text-xs">
-                  {user.name?.charAt(0).toUpperCase() ?? "U"}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <>
+            {/* Intentionally no skeleton: a 20×14px badge chip is too small for a
+                skeleton placeholder — absence during load is better UX here. */}
+            {plan === "pro" && (
+              <Badge
+                aria-label="Pro plan"
+                className="h-auto bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--primary)] border-transparent"
+              >
+                Pro
+              </Badge>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  {user.image && (
+                    <AvatarImage src={user.image} alt={user.name ?? ""} />
+                  )}
+                  <AvatarFallback className="text-xs">
+                    {user.name?.charAt(0).toUpperCase() ?? "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOutAndClearPlan({ callbackUrl: "/" })}>
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         ) : (
           <Link
             href="/login"

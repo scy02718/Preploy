@@ -77,6 +77,21 @@ describe("API /api/users/me (integration)", () => {
     expect(data.plan).toBe("free");
   });
 
+  it("GET returns plan === \"pro\" when the user row is pro", async () => {
+    const db = getTestDb();
+    // Set plan to "pro" for this test
+    await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.plan).toBe("pro");
+
+    // Reset to "free" for other tests
+    await db.update(users).set({ plan: "free" }).where(eq(users.id, TEST_USER.id));
+  });
+
   it("GET returns gazeTrackingEnabled field", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     const res = await GET();
