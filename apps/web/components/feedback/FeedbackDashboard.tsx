@@ -3,7 +3,8 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Sparkles } from "lucide-react";
+import { usePlan } from "@/hooks/usePlan";
 import { ScoreCard } from "./ScoreCard";
 import { StrengthsWeaknesses } from "./StrengthsWeaknesses";
 import { AnswerBreakdown } from "./AnswerBreakdown";
@@ -48,6 +49,7 @@ export function FeedbackDashboard({
   sessionType = "behavioral",
 }: FeedbackDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const { plan } = usePlan();
   const isTechnical = sessionType === "technical";
   const setupLink = isTechnical
     ? "/interview/technical/setup"
@@ -112,6 +114,32 @@ export function FeedbackDashboard({
           </Link>
         </div>
       </div>
+
+      {/* Pro analysis banner — visible reinforcement that a Pro user's
+          feedback ran through the deeper model (shipped in #177). Gated
+          on the current user's plan via usePlan(); a user who upgraded
+          AFTER generating this feedback will still see the banner even
+          though this specific feedback was free-tier — accepted edge case
+          until tier is persisted on the feedback row. */}
+      {plan === "pro" && (
+        <div
+          className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3"
+          data-testid="pro-analysis-banner"
+        >
+          <Sparkles
+            className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+            aria-hidden="true"
+          />
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-primary">Pro analysis</p>
+            <p className="text-sm text-muted-foreground">
+              You&apos;re getting our deeper feedback mode — extended
+              per-answer critique, filler-word stats, phrase coaching, and
+              an &ldquo;if you were me&rdquo; rewrite on every answer.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Scores row — ScoreCard + CodeQualityCard side-by-side on desktop */}
       {isTechnical &&
