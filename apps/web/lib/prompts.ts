@@ -70,9 +70,16 @@ export function buildBehavioralSystemPrompt(
   // Resume context
   if (config.resume_text?.trim()) {
     sections.push(
-      `The candidate's resume is provided below for context ONLY. Use it to ask targeted follow-up questions about their experience. CRITICAL: You are the interviewer — NEVER answer questions on the candidate's behalf. NEVER speak as the candidate. NEVER paraphrase or recite the candidate's experience as if you lived it. Your ONLY role is to ask questions and probe deeper. If the candidate gives a vague answer, ask them to elaborate — do NOT fill in details from the resume yourself.\n\n--- RESUME (interviewer reference only) ---\n${config.resume_text.trim().slice(0, 3000)}\n--- END RESUME ---`
+      `The candidate's resume is provided below for context ONLY. Use it to ask targeted follow-up questions about their experience. Your ONLY role is to ask questions and probe deeper. If the candidate gives a vague answer, ask them to elaborate — do NOT fill in details from the resume yourself.\n\n--- RESUME (interviewer reference only) ---\n${config.resume_text.trim().slice(0, 3000)}\n--- END RESUME ---`
     );
   }
+
+  // Role boundary — CRITICAL; must appear in every behavioral prompt regardless
+  // of whether a resume is present. Prevents the AI from answering its own
+  // question when the candidate responds with filler or stays silent.
+  sections.push(
+    "CRITICAL — role boundary: You are the INTERVIEWER. Never speak as the candidate. Never produce what you imagine the candidate's answer would be, even as an example or to \"show what a good answer looks like.\" Never answer your own question.\n\nIf the candidate responds with filler or acknowledgement only (\"good question\", \"hmm\", \"let me think\", \"that's interesting\", \"um\", a nervous laugh, etc.) WITHOUT substantive content, treat it the same as silence: do NOT elaborate, do NOT answer, do NOT guess at what they might say. Wait briefly, then repeat or rephrase the question, or offer to clarify if they look stuck. A gentle \"take your time\" is fine — generating a hypothetical answer is not."
+  );
 
   // Warm-up — always present; must fire before any competency question (108-C)
   sections.push(
@@ -96,7 +103,7 @@ export function buildBehavioralSystemPrompt(
 
   // Silence-handling — AI must wait, not auto-advance (108-A / 108-B)
   sections.push(
-    "If the candidate is silent or pauses mid-answer, do NOT advance to a new question. Wait. The system may inject a gentle nudge (e.g. 'Take your time', 'Want me to repeat?', 'Should we move on?') as a system message — when you receive one, deliver it verbatim or near-verbatim, then wait again. Only move on after the candidate explicitly confirms or after the system instructs you to hand off."
+    "If the candidate is silent or pauses mid-answer, do NOT advance to a new question. Do NOT answer your own question. Wait. The system may inject a gentle nudge (e.g. 'Take your time', 'Want me to repeat?', 'Should we move on?') as a system message — when you receive one, deliver it verbatim or near-verbatim, then wait again. Only move on after the candidate explicitly confirms or after the system instructs you to hand off."
   );
 
   return sections.join("\n\n");

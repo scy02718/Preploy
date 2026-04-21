@@ -127,13 +127,13 @@ export function useRealtimeVoice(
 
     silenceTimerRef.current = setTimeout(() => {
       sendSilenceNudge(
-        "The candidate has been silent for ~10 seconds. Gently nudge them — for example, 'Take your time' or 'Want me to repeat the question?' Keep it to one sentence."
+        "The candidate has been silent. Gently nudge them with ONE short sentence — e.g. 'Take your time' or 'Want me to repeat the question?'. Do NOT answer the question yourself. Do NOT generate a sample answer. Do NOT continue past the nudge. Wait for the candidate to respond."
       );
     }, SILENCE_NUDGE_MS);
 
     handoffTimerRef.current = setTimeout(() => {
       sendSilenceNudge(
-        "The candidate has been silent for ~60 seconds. Acknowledge politely and move to the next question, e.g. 'Let\u2019s come back to this later \u2014 next\u2026'"
+        "The candidate has been silent for ~60 seconds. Acknowledge politely and move to the next question — e.g. 'Let\u2019s come back to this later \u2014 next\u2026'. Do NOT answer the previous question yourself. Do NOT give a sample answer. Just move on."
       );
       clearSilenceWatchdog();
     }, SILENCE_HANDOFF_MS);

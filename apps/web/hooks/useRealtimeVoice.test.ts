@@ -357,6 +357,32 @@ describe("useRealtimeVoice silence watchdog (108-A / 108-B / 108-E)", () => {
   });
 
   /**
+   * Regression guard — the nudge system message must explicitly tell the AI
+   * NOT to answer the question itself. "Gently nudge them" alone was
+   * interpreted as license to fill silence with a hypothetical answer.
+   */
+  it("nudge system message tells the AI not to answer the question itself", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeVoice({ systemPrompt: "Test" })
+    );
+    await openHook(result);
+
+    deliver("input_audio_buffer.speech_stopped");
+    act(() => { vi.advanceTimersByTime(SILENCE_NUDGE_MS + 100); });
+
+    const sends = extraSends();
+    expect(sends.length).toBeGreaterThanOrEqual(2);
+
+    const itemCreate = sends[0];
+    expect(itemCreate.type).toBe("conversation.item.create");
+
+    const item = itemCreate.item as { content?: Array<{ text?: string }> };
+    const nudgeText = item?.content?.[0]?.text ?? "";
+    expect(nudgeText).toContain("Do NOT answer");
+    expect(nudgeText).toContain("Do NOT generate a sample answer");
+  });
+
+  /**
    * Regression — the main reported bug. speech_stopped arms the watchdog.
    * The AI then starts speaking via audio.delta. Without the fix, the timer
    * armed by speech_stopped keeps ticking through the AI's TTS playback and
