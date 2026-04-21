@@ -4,7 +4,7 @@
  * Mirrors the mock pattern used in
  * `app/api/analysis/technical/route.integration.test.ts`.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import pino from "pino";
@@ -25,6 +25,10 @@ import {
 } from "@/lib/analysis-schemas";
 import { buildTimeline } from "@/lib/timeline-correlator";
 import { OpenAIRetryError } from "@/lib/openai-retry";
+import {
+  TECHNICAL_SYSTEM_PROMPT,
+  TECHNICAL_SYSTEM_PROMPT_PRO,
+} from "@/lib/analysis-prompts";
 
 const VALID_GPT_RESPONSE_RAW = readFileSync(
   join(
@@ -83,6 +87,10 @@ describe("runTechnicalAnalysis", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("happy path: returns a valid TechnicalFeedbackResponse from a fixture GPT reply", async () => {
     mockChatCreate.mockResolvedValueOnce({
       choices: [{ message: { content: VALID_GPT_RESPONSE_RAW } }],
@@ -90,6 +98,7 @@ describe("runTechnicalAnalysis", () => {
 
     const result = await runTechnicalAnalysis(VALID_INPUT, {
       log: silentLogger,
+      tier: "free",
     });
 
     const reparsed = technicalFeedbackResponseSchema.safeParse(result);
@@ -109,6 +118,7 @@ describe("runTechnicalAnalysis", () => {
 
     const result = await runTechnicalAnalysis(VALID_INPUT, {
       log: silentLogger,
+      tier: "free",
     });
 
     const expectedTimeline = buildTimeline(SAMPLE_TRANSCRIPT, SAMPLE_SNAPSHOTS);
@@ -130,8 +140,48 @@ describe("runTechnicalAnalysis", () => {
     });
 
     await expect(
-      runTechnicalAnalysis(VALID_INPUT, { log: silentLogger }),
+      runTechnicalAnalysis(VALID_INPUT, { log: silentLogger, tier: "free" }),
     ).rejects.toThrow(OpenAIRetryError);
     expect(mockChatCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it("free tier uses gpt-5.4-mini and Free system prompt", async () => {
+    mockChatCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: VALID_GPT_RESPONSE_RAW } }],
+    });
+
+    await runTechnicalAnalysis(VALID_INPUT, { log: silentLogger, tier: "free" });
+
+    expect(mockChatCreate).toHaveBeenCalledTimes(1);
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5.4-mini");
+    expect(call.messages[0].content).toBe(TECHNICAL_SYSTEM_PROMPT);
+  });
+
+  it("pro tier uses PRO_ANALYSIS_MODEL env override and Pro system prompt", async () => {
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+    mockChatCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: VALID_GPT_RESPONSE_RAW } }],
+    });
+
+    await runTechnicalAnalysis(VALID_INPUT, { log: silentLogger, tier: "pro" });
+
+    expect(mockChatCreate).toHaveBeenCalledTimes(1);
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5-test-pro");
+    expect(call.messages[0].content).toBe(TECHNICAL_SYSTEM_PROMPT_PRO);
+  });
+
+  it("pro tier without env override defaults to gpt-5", async () => {
+    vi.stubEnv("PRO_ANALYSIS_MODEL", undefined as unknown as string);
+    mockChatCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: VALID_GPT_RESPONSE_RAW } }],
+    });
+
+    await runTechnicalAnalysis(VALID_INPUT, { log: silentLogger, tier: "pro" });
+
+    expect(mockChatCreate).toHaveBeenCalledTimes(1);
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5");
   });
 });

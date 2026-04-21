@@ -4,6 +4,11 @@ import { join } from "node:path";
 import {
   buildBehavioralPrompt,
   buildTechnicalPrompt,
+  BEHAVIORAL_SYSTEM_PROMPT,
+  BEHAVIORAL_SYSTEM_PROMPT_PRO,
+  TECHNICAL_SYSTEM_PROMPT,
+  TECHNICAL_SYSTEM_PROMPT_PRO,
+  systemPromptFor,
   type BehavioralPromptConfig,
   type TechnicalPromptConfig,
   type PreparedStarStory,
@@ -276,5 +281,69 @@ describe("buildTechnicalPrompt", () => {
     );
     const actual = buildTechnicalPrompt(TECH_TRANSCRIPT, TECH_SNAPSHOTS, TECH_CONFIG);
     expect(actual).toBe(expected);
+  });
+});
+
+// ---- System prompt tier selection (Pro vs Free) ----
+
+describe("Pro behavioral system prompt", () => {
+  it("Pro behavioral prompt contains filler_words_per_minute marker", () => {
+    expect(BEHAVIORAL_SYSTEM_PROMPT_PRO).toContain("filler_words_per_minute");
+  });
+
+  it("Pro behavioral prompt contains 'phrases to avoid' instruction", () => {
+    expect(BEHAVIORAL_SYSTEM_PROMPT_PRO.toLowerCase()).toContain("phrases to avoid");
+  });
+
+  it("Pro behavioral prompt contains 'phrases to add' instruction", () => {
+    expect(BEHAVIORAL_SYSTEM_PROMPT_PRO.toLowerCase()).toContain("phrases to add");
+  });
+
+  it("Pro behavioral prompt contains 'if you were me' rewrite instruction", () => {
+    expect(BEHAVIORAL_SYSTEM_PROMPT_PRO.toLowerCase()).toContain("if you were me");
+  });
+
+  it("Pro behavioral prompt contains 500-word summary requirement", () => {
+    expect(BEHAVIORAL_SYSTEM_PROMPT_PRO).toContain("500");
+  });
+
+  it("Free behavioral prompt does NOT contain Pro-only markers", () => {
+    expect(BEHAVIORAL_SYSTEM_PROMPT).not.toContain("filler_words_per_minute");
+    expect(BEHAVIORAL_SYSTEM_PROMPT.toLowerCase()).not.toContain("phrases to avoid");
+    expect(BEHAVIORAL_SYSTEM_PROMPT.toLowerCase()).not.toContain("phrases to add");
+    expect(BEHAVIORAL_SYSTEM_PROMPT.toLowerCase()).not.toContain("if you were me");
+  });
+});
+
+describe("Pro technical system prompt", () => {
+  it("Pro technical prompt contains 'if you were me' rewrite instruction", () => {
+    expect(TECHNICAL_SYSTEM_PROMPT_PRO.toLowerCase()).toContain("if you were me");
+  });
+
+  it("Pro technical prompt contains extended critique word count (500)", () => {
+    expect(TECHNICAL_SYSTEM_PROMPT_PRO).toContain("500");
+  });
+
+  it("Free technical prompt does NOT contain Pro-only markers", () => {
+    expect(TECHNICAL_SYSTEM_PROMPT).not.toContain("filler_words_per_minute");
+    expect(TECHNICAL_SYSTEM_PROMPT.toLowerCase()).not.toContain("if you were me");
+  });
+});
+
+describe("systemPromptFor", () => {
+  it("systemPromptFor('behavioral', 'free') returns BEHAVIORAL_SYSTEM_PROMPT", () => {
+    expect(systemPromptFor("behavioral", "free")).toBe(BEHAVIORAL_SYSTEM_PROMPT);
+  });
+
+  it("systemPromptFor('behavioral', 'pro') returns BEHAVIORAL_SYSTEM_PROMPT_PRO", () => {
+    expect(systemPromptFor("behavioral", "pro")).toBe(BEHAVIORAL_SYSTEM_PROMPT_PRO);
+  });
+
+  it("systemPromptFor('technical', 'free') returns TECHNICAL_SYSTEM_PROMPT", () => {
+    expect(systemPromptFor("technical", "free")).toBe(TECHNICAL_SYSTEM_PROMPT);
+  });
+
+  it("systemPromptFor('technical', 'pro') returns TECHNICAL_SYSTEM_PROMPT_PRO", () => {
+    expect(systemPromptFor("technical", "pro")).toBe(TECHNICAL_SYSTEM_PROMPT_PRO);
   });
 });

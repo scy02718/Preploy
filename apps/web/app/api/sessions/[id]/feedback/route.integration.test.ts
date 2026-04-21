@@ -6,6 +6,7 @@ import {
   beforeAll,
   beforeEach,
   afterAll,
+  afterEach,
 } from "vitest";
 import { NextRequest } from "next/server";
 import { readFileSync } from "node:fs";
@@ -37,6 +38,13 @@ vi.mock("@/lib/db", () => ({
     return getTestDb();
   },
 }));
+
+import {
+  BEHAVIORAL_SYSTEM_PROMPT,
+  BEHAVIORAL_SYSTEM_PROMPT_PRO,
+  TECHNICAL_SYSTEM_PROMPT,
+  TECHNICAL_SYSTEM_PROMPT_PRO,
+} from "@/lib/analysis-prompts";
 
 // Mock OpenAI at module scope — same pattern as the analysis route integration
 // tests. The extracted `runBehavioralAnalysis` / `runTechnicalAnalysis` lib
@@ -73,6 +81,13 @@ const OTHER_USER = {
   name: "Other User",
 };
 
+const PRO_USER = {
+  id: "00000000-0000-0000-0000-000000000003",
+  email: "pro@example.com",
+  name: "Pro User",
+  plan: "pro" as const,
+};
+
 let behavioralSessionId: string;
 let technicalSessionId: string;
 
@@ -104,6 +119,7 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const db = getTestDb();
     await db.insert(users).values(TEST_USER).onConflictDoNothing();
     await db.insert(users).values(OTHER_USER).onConflictDoNothing();
+    await db.insert(users).values(PRO_USER).onConflictDoNothing();
   });
 
   beforeEach(async () => {
@@ -164,6 +180,10 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
         eventType: "submit",
       },
     ]);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   afterAll(async () => {
@@ -589,5 +609,252 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     expect(body.gazeDistribution).not.toBeNull();
     expect(body.gazeDistribution.center_pct).toBe(82.5);
     expect(body.gazeTimeline).toHaveLength(1);
+  });
+
+  // ---- Tier / model selection tests ----
+
+  it("POST uses gpt-5.4-mini + Free system prompt for Free users (behavioral)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(
+      makePostRequest(behavioralSessionId),
+      makeParams(behavioralSessionId)
+    );
+    expect(res.status).toBe(201);
+    expect(mockChatCreate).toHaveBeenCalledOnce();
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5.4-mini");
+    expect(call.messages[0].content).toBe(BEHAVIORAL_SYSTEM_PROMPT);
+  });
+
+  it("POST uses PRO_ANALYSIS_MODEL + Pro system prompt for Pro users (behavioral)", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    // Create a behavioral session owned by the Pro user
+    const [proSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: proSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(
+      makePostRequest(proSession.id),
+      makeParams(proSession.id)
+    );
+    expect(res.status).toBe(201);
+    expect(mockChatCreate).toHaveBeenCalledOnce();
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5-test-pro");
+    expect(call.messages[0].content).toBe(BEHAVIORAL_SYSTEM_PROMPT_PRO);
+  });
+
+  it("POST uses gpt-5.4-mini for Free users (technical)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: TECHNICAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(
+      makePostRequest(technicalSessionId),
+      makeParams(technicalSessionId)
+    );
+    expect(res.status).toBe(201);
+    expect(mockChatCreate).toHaveBeenCalledOnce();
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5.4-mini");
+    expect(call.messages[0].content).toBe(TECHNICAL_SYSTEM_PROMPT);
+  });
+
+  it("POST uses PRO_ANALYSIS_MODEL for Pro users (technical)", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    // Create a technical session owned by the Pro user
+    const [proTechSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "technical",
+        config: { interview_type: "leetcode", focus_areas: ["arrays"], language: "python", difficulty: "medium" },
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: proTechSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    await db.insert(codeSnapshots).values([
+      {
+        sessionId: proTechSession.id,
+        code: "def solution(): pass",
+        language: "python",
+        timestampMs: 1000,
+        eventType: "edit",
+      },
+    ]);
+
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: TECHNICAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(
+      makePostRequest(proTechSession.id),
+      makeParams(proTechSession.id)
+    );
+    expect(res.status).toBe(201);
+    expect(mockChatCreate).toHaveBeenCalledOnce();
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5-test-pro");
+    expect(call.messages[0].content).toBe(TECHNICAL_SYSTEM_PROMPT_PRO);
+  });
+
+  it("POST re-reads the plan on each request (downgrade semantics)", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    // Create a behavioral session owned by Pro user
+    const [proSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: proSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    // First POST — Pro user → should use Pro model
+    const res1 = await POST(
+      makePostRequest(proSession.id),
+      makeParams(proSession.id)
+    );
+    expect(res1.status).toBe(201);
+    const call1 = mockChatCreate.mock.calls[0][0];
+    expect(call1.model).toBe("gpt-5-test-pro");
+
+    // Downgrade: flip plan to "free" in DB
+    await db
+      .update(users)
+      .set({ plan: "free" })
+      .where(eq(users.id, PRO_USER.id));
+
+    // Clean up the feedback row so we can POST again
+    await db
+      .delete(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, proSession.id));
+
+    vi.clearAllMocks();
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    // Second POST — plan now "free" → should use Free model
+    const res2 = await POST(
+      makePostRequest(proSession.id),
+      makeParams(proSession.id)
+    );
+    expect(res2.status).toBe(201);
+    const call2 = mockChatCreate.mock.calls[0][0];
+    expect(call2.model).toBe("gpt-5.4-mini");
+
+    // Restore Pro plan to not pollute other tests' PRO_USER assertions
+    await db
+      .update(users)
+      .set({ plan: "pro" })
+      .where(eq(users.id, PRO_USER.id));
+  });
+
+  it("POST persists the same response shape regardless of tier", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    // Create a Pro session
+    const [proSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: proSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    // POST as Free user (TEST_USER owns behavioralSessionId)
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const resFree = await POST(
+      makePostRequest(behavioralSessionId),
+      makeParams(behavioralSessionId)
+    );
+    expect(resFree.status).toBe(201);
+    const freeBody = await resFree.json();
+
+    vi.clearAllMocks();
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    // POST as Pro user
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    const resPro = await POST(
+      makePostRequest(proSession.id),
+      makeParams(proSession.id)
+    );
+    expect(resPro.status).toBe(201);
+    const proBody = await resPro.json();
+
+    // Both rows must have the same DB column set populated — no new columns
+    const freeKeys = Object.keys(freeBody).sort();
+    const proKeys = Object.keys(proBody).sort();
+    expect(proKeys).toEqual(freeKeys);
+
+    // Core response fields present in both
+    expect(freeBody.overallScore).toBeDefined();
+    expect(proBody.overallScore).toBeDefined();
+    expect(freeBody.summary).toBeDefined();
+    expect(proBody.summary).toBeDefined();
+    expect(freeBody.strengths).toBeDefined();
+    expect(proBody.strengths).toBeDefined();
+    expect(freeBody.answerAnalyses).toBeDefined();
+    expect(proBody.answerAnalyses).toBeDefined();
   });
 });

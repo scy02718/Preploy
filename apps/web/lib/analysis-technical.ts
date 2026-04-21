@@ -14,7 +14,7 @@ import OpenAI from "openai";
 
 import {
   buildTechnicalPrompt,
-  TECHNICAL_SYSTEM_PROMPT,
+  systemPromptFor,
 } from "@/lib/analysis-prompts";
 import {
   TechnicalFeedbackRequest,
@@ -23,10 +23,13 @@ import {
 } from "@/lib/analysis-schemas";
 import { OpenAIRetryError, withOpenAIRetry } from "@/lib/openai-retry";
 import { buildTimeline } from "@/lib/timeline-correlator";
+import { modelFor, type AnalysisTier } from "@/lib/analysis-model";
 
 export interface RunTechnicalAnalysisOptions {
   log: pino.Logger;
   userId?: string;
+  /** User tier — determines model and system prompt depth */
+  tier: AnalysisTier;
 }
 
 export async function runTechnicalAnalysis(
@@ -34,6 +37,8 @@ export async function runTechnicalAnalysis(
   opts: RunTechnicalAnalysisOptions,
 ): Promise<TechnicalFeedbackResponse> {
   const { log } = opts;
+  const model = modelFor(opts.tier);
+  const systemPrompt = systemPromptFor("technical", opts.tier);
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const prompt = buildTechnicalPrompt(
     input.transcript,
@@ -49,9 +54,9 @@ export async function runTechnicalAnalysis(
   return withOpenAIRetry(
     () =>
       openai.chat.completions.create({
-        model: "gpt-5.4-mini",
+        model,
         messages: [
-          { role: "system", content: TECHNICAL_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
         response_format: { type: "json_object" },
@@ -73,6 +78,6 @@ export async function runTechnicalAnalysis(
       }
       return validated.data;
     },
-    { service: "technical-analysis", log, userId: opts.userId, model: "gpt-5.4-mini" },
+    { service: "technical-analysis", log, userId: opts.userId, model },
   );
 }

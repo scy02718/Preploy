@@ -3,7 +3,7 @@
  * exercises happy-path + retry-exhaustion branches. Mirrors the mock pattern
  * used in `app/api/analysis/behavioral/route.integration.test.ts`.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import pino from "pino";
@@ -23,6 +23,10 @@ import {
   feedbackResponseSchema,
 } from "@/lib/analysis-schemas";
 import { OpenAIRetryError } from "@/lib/openai-retry";
+import {
+  BEHAVIORAL_SYSTEM_PROMPT,
+  BEHAVIORAL_SYSTEM_PROMPT_PRO,
+} from "@/lib/analysis-prompts";
 
 const VALID_GPT_RESPONSE = readFileSync(
   join(
@@ -76,6 +80,10 @@ describe("runBehavioralAnalysis", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("happy path: returns a valid FeedbackResponse from a fixture GPT reply", async () => {
     mockChatCreate.mockResolvedValueOnce({
       choices: [{ message: { content: VALID_GPT_RESPONSE } }],
@@ -83,6 +91,7 @@ describe("runBehavioralAnalysis", () => {
 
     const result = await runBehavioralAnalysis(VALID_INPUT, {
       log: silentLogger,
+      tier: "free",
     });
 
     // Re-parse with the schema to prove every Zod constraint passes.
@@ -99,8 +108,48 @@ describe("runBehavioralAnalysis", () => {
     });
 
     await expect(
-      runBehavioralAnalysis(VALID_INPUT, { log: silentLogger }),
+      runBehavioralAnalysis(VALID_INPUT, { log: silentLogger, tier: "free" }),
     ).rejects.toThrow(OpenAIRetryError);
     expect(mockChatCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it("free tier uses gpt-5.4-mini and Free system prompt", async () => {
+    mockChatCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: VALID_GPT_RESPONSE } }],
+    });
+
+    await runBehavioralAnalysis(VALID_INPUT, { log: silentLogger, tier: "free" });
+
+    expect(mockChatCreate).toHaveBeenCalledTimes(1);
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5.4-mini");
+    expect(call.messages[0].content).toBe(BEHAVIORAL_SYSTEM_PROMPT);
+  });
+
+  it("pro tier uses PRO_ANALYSIS_MODEL env override and Pro system prompt", async () => {
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+    mockChatCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: VALID_GPT_RESPONSE } }],
+    });
+
+    await runBehavioralAnalysis(VALID_INPUT, { log: silentLogger, tier: "pro" });
+
+    expect(mockChatCreate).toHaveBeenCalledTimes(1);
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5-test-pro");
+    expect(call.messages[0].content).toBe(BEHAVIORAL_SYSTEM_PROMPT_PRO);
+  });
+
+  it("pro tier without env override defaults to gpt-5", async () => {
+    vi.stubEnv("PRO_ANALYSIS_MODEL", undefined as unknown as string);
+    mockChatCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: VALID_GPT_RESPONSE } }],
+    });
+
+    await runBehavioralAnalysis(VALID_INPUT, { log: silentLogger, tier: "pro" });
+
+    expect(mockChatCreate).toHaveBeenCalledTimes(1);
+    const call = mockChatCreate.mock.calls[0][0];
+    expect(call.model).toBe("gpt-5");
   });
 });
