@@ -55,7 +55,11 @@ describe("UpgradePromptDialog", () => {
       <UpgradePromptDialog open={true} onClose={() => {}} used={3} limit={3} />
     );
     expect(
-      screen.getAllByText(/Unlimited mock interviews/).length
+      // Copy updated in issue #172 — the old "Unlimited mock interviews"
+      // claim misrepresented Pro (cap is 40/month, not unlimited). Also,
+      // the benefits now lead with the genuine quota bump rather than
+      // listing free-tier features.
+      screen.getAllByText(/40 mock interviews per month/).length
     ).toBeGreaterThanOrEqual(1);
   });
 

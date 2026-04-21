@@ -11,11 +11,15 @@ interface UpgradePromptDialogProps {
   limit: number;
 }
 
+// Modal fires on quota exhaustion — so the value prop has to be honest
+// about what Pro actually delivers beyond the quota bump the user just
+// hit. Everything listed below is either the quota bump itself or a
+// genuine Pro-exclusive capability. See issue #172 for the prior copy
+// (which listed free-tier features as Pro benefits).
 const PRO_BENEFITS = [
-  "Unlimited mock interviews — no monthly cap",
-  "Behavioral and technical interviews, both formats",
-  "Voice-to-voice practice with scored feedback",
-  "Save and revisit your STAR stories with AI scoring",
+  `${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month (up from 3)`,
+  "Priority during high-traffic periods",
+  "Cancel anytime from your profile",
 ];
 
 /**

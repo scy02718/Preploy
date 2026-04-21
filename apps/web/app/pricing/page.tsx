@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PLAN_DEFINITIONS } from "@/lib/plans";
+import { PLAN_DEFINITIONS, FREE_PLAN_MONTHLY_INTERVIEW_LIMIT } from "@/lib/plans";
 
 export const dynamic = "force-static";
 
@@ -19,21 +19,25 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+// These lists describe what each tier actually delivers today. Nothing
+// listed under Pro is also available on Free — that mismatch confused
+// users in an earlier cut of this page (see issue #172). New Pro-only
+// capabilities (e.g. a deeper feedback mode) will land in separate PRs
+// alongside the code that gates them.
 const FREE_FEATURES = [
-  "3 mock interviews per month",
+  `${FREE_PLAN_MONTHLY_INTERVIEW_LIMIT} mock interviews per month`,
   "Behavioral & technical modes",
   "Voice-to-voice AI interviewer",
   "Scored feedback on every session",
   "STAR story prep with AI analysis",
+  "Interview-day planner with AI schedule",
+  "Resume upload + resume-tailored questions",
+  "Coaching guides & progress dashboard",
 ];
 
 const PRO_FEATURES = [
-  `${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month`,
   "Everything in Free, plus:",
-  "Resume-tailored questions",
-  "Company-specific question generation",
-  "Interview day planner with AI schedule",
-  "Progress tracking & streak badges",
+  `${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month (up from ${FREE_PLAN_MONTHLY_INTERVIEW_LIMIT})`,
   "Priority during high-traffic periods",
 ];
 
