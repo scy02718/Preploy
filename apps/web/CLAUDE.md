@@ -224,3 +224,5 @@ When editing an existing UI file, the self-check before opening a PR is:
 "does this look like every other shadcn+tailwind starter?" and "would a
 real user hit a dead end or confusion here?" If either answer is yes,
 push further.
+
+Pro-only UI affordances use the cedar accent (`text-[color:var(--primary)]`) with a `<Sparkles>` Lucide icon — first instance is `ProAnalysisToggle` (#190).

@@ -807,6 +807,59 @@ describe("API /api/sessions (integration)", () => {
     expect(res.status).toBe(400);
   });
 
+  // ---- #190: use_pro_analysis field ----
+
+  it("POST persists use_pro_analysis=true on the session row for a Pro user", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const db = getTestDb();
+    const { eq } = await import("drizzle-orm");
+    await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+    const res = await POST(
+      makePostRequest({ type: "behavioral", use_pro_analysis: true })
+    );
+    expect(res.status).toBe(201);
+    const data = await res.json();
+
+    // Verify the column was persisted
+    const { interviewSessions } = await import("@/lib/schema");
+    const [row] = await db
+      .select()
+      .from(interviewSessions)
+      .where(eq(interviewSessions.id, data.id));
+    expect(row.useProAnalysis).toBe(true);
+  });
+
+  it("POST returns 400 use_pro_analysis_requires_pro_plan for a Free user", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    // TEST_USER is reset to free plan by beforeEach
+
+    const res = await POST(
+      makePostRequest({ type: "behavioral", use_pro_analysis: true })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("use_pro_analysis_requires_pro_plan");
+  });
+
+  it("POST defaults use_pro_analysis to false when the client omits the field", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    const res = await POST(makePostRequest({ type: "behavioral" }));
+    expect(res.status).toBe(201);
+    const data = await res.json();
+
+    const db = getTestDb();
+    const { interviewSessions } = await import("@/lib/schema");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db
+      .select()
+      .from(interviewSessions)
+      .where(eq(interviewSessions.id, data.id));
+    expect(row.useProAnalysis).toBe(false);
+  });
+
   // Regression: the parallel bypass path for the Resume feature. A free
   // user could previously POST a session config containing
   // `resume_text` or `resume_id` and land a resume-aware interviewer

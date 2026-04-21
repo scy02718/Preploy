@@ -28,6 +28,7 @@ import type {
 } from "@/lib/analysis-schemas";
 import { OpenAIRetryError } from "@/lib/openai-retry";
 import { getCurrentUserPlan } from "@/lib/user-plan";
+import { getProAnalysisUsage } from "@/lib/usage";
 import type { AnalysisTier } from "@/lib/analysis-model";
 
 // POST /api/sessions/[id]/feedback — trigger feedback generation
@@ -69,8 +70,25 @@ export async function POST(
   // in-flight analyses finish at the tier the user has at the moment they hit
   // POST. Downgrade mid-session → Free output on this POST if the DB flip
   // landed first. Next session always uses the then-current tier.
+  //
+  // Tier is Pro iff ALL three conditions hold:
+  //   1. User's current plan is "pro"
+  //   2. Session was opted in to Pro analysis (useProAnalysis === true)
+  //   3. User still has Pro-analysis quota remaining this period
+  // Quota exhaustion falls through to Free silently — never 402.
   const plan = await getCurrentUserPlan(session.user.id);
-  const tier: AnalysisTier = plan === "pro" ? "pro" : "free";
+  let tier: AnalysisTier = "free";
+  if (plan === "pro" && found.useProAnalysis) {
+    const { used, limit } = await getProAnalysisUsage(session.user.id);
+    if (used < limit) {
+      tier = "pro";
+    } else {
+      log.info(
+        { userId: session.user.id, sessionId: id, proAnalysisFallback: true, used, limit },
+        "Pro user opted into Pro analysis but is at quota — falling back to Free tier"
+      );
+    }
+  }
   log.info({ tier, sessionId: id }, "feedback tier resolved");
 
   // Check if feedback already exists

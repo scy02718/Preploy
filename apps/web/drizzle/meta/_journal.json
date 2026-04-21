@@ -127,6 +127,13 @@
       "when": 1776750968823,
       "tag": "0017_sharp_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1776780410797,
+      "tag": "0018_lethal_taskmaster",
+      "breakpoints": true
     }
   ]
 }

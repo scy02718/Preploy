@@ -24,6 +24,7 @@ import {
   sessionFeedback,
   gazeSamples,
 } from "@/lib/schema";
+import { currentFreePeriodStart } from "@/lib/usage";
 import { eq } from "drizzle-orm";
 
 // Mock auth
@@ -636,13 +637,14 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const db = getTestDb();
     vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
 
-    // Create a behavioral session owned by the Pro user
+    // Create a behavioral session owned by the Pro user with useProAnalysis opted in
     const [proSession] = await db
       .insert(interviewSessions)
       .values({
         userId: PRO_USER.id,
         type: "behavioral",
         config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: true,
       })
       .returning();
 
@@ -690,13 +692,14 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const db = getTestDb();
     vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
 
-    // Create a technical session owned by the Pro user
+    // Create a technical session owned by the Pro user with useProAnalysis opted in
     const [proTechSession] = await db
       .insert(interviewSessions)
       .values({
         userId: PRO_USER.id,
         type: "technical",
         config: { interview_type: "leetcode", focus_areas: ["arrays"], language: "python", difficulty: "medium" },
+        useProAnalysis: true,
       })
       .returning();
 
@@ -735,13 +738,14 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const db = getTestDb();
     vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
 
-    // Create a behavioral session owned by Pro user
+    // Create a behavioral session owned by Pro user with useProAnalysis opted in
     const [proSession] = await db
       .insert(interviewSessions)
       .values({
         userId: PRO_USER.id,
         type: "behavioral",
         config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: true,
       })
       .returning();
 
@@ -800,13 +804,14 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const db = getTestDb();
     vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
 
-    // Create a Pro session
+    // Create a Pro session with useProAnalysis opted in
     const [proSession] = await db
       .insert(interviewSessions)
       .values({
         userId: PRO_USER.id,
         type: "behavioral",
         config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: true,
       })
       .returning();
 
@@ -882,12 +887,14 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     const db = getTestDb();
     vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
 
+    // useProAnalysis: true is required for Pro tier (introduced in #190)
     const [proSession] = await db
       .insert(interviewSessions)
       .values({
         userId: PRO_USER.id,
         type: "behavioral",
         config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: true,
       })
       .returning();
 
@@ -934,5 +941,165 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     expect(getRes.status).toBe(200);
     const body = await getRes.json();
     expect(body.analysisTier).toBe("free");
+  });
+
+  // ---- #190: 3-way AND tier resolution ----
+
+  it("POST writes analysisTier='pro' when user is Pro, session opted in, and quota has room", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    // Pro session with useProAnalysis: true and no prior pro feedback rows
+    const [proSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: true,
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: proSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(makePostRequest(proSession.id), makeParams(proSession.id));
+    expect(res.status).toBe(201);
+
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, proSession.id));
+    expect(row.analysisTier).toBe("pro");
+  });
+
+  it("POST falls back to analysisTier='free' (not 402) when Pro user opted in but is at 10/10", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    const periodStart = currentFreePeriodStart();
+
+    // Seed 10 pro-tier feedback rows in the current period to exhaust the quota
+    for (let i = 0; i < 10; i++) {
+      const [s] = await db
+        .insert(interviewSessions)
+        .values({ userId: PRO_USER.id, type: "behavioral", config: {} })
+        .returning();
+      await db.insert(sessionFeedback).values({
+        sessionId: s.id,
+        analysisTier: "pro",
+        createdAt: new Date(periodStart.getTime() + i * 1000),
+      });
+    }
+
+    // Create the 11th session with useProAnalysis opted in
+    const [exhaustedSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: true,
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: exhaustedSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    // Should NOT return 402 — must fall through to Free tier silently
+    const res = await POST(makePostRequest(exhaustedSession.id), makeParams(exhaustedSession.id));
+    expect(res.status).toBe(201);
+    expect(res.status).not.toBe(402);
+
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, exhaustedSession.id));
+    expect(row.analysisTier).toBe("free");
+  });
+
+  it("POST writes analysisTier='free' for a Pro user whose session did not opt in", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    // Pro session with useProAnalysis: false (default)
+    const [proSessionOff] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: PRO_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: false,
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: proSessionOff.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockAuth.mockResolvedValue({ user: { id: PRO_USER.id } });
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(makePostRequest(proSessionOff.id), makeParams(proSessionOff.id));
+    expect(res.status).toBe(201);
+
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, proSessionOff.id));
+    expect(row.analysisTier).toBe("free");
+  });
+
+  it("POST writes analysisTier='free' for a Free user even if the session row somehow has useProAnalysis=true", async () => {
+    const db = getTestDb();
+    vi.stubEnv("PRO_ANALYSIS_MODEL", "gpt-5-test-pro");
+
+    // Forcibly insert a session with useProAnalysis=true for a Free user
+    // (simulates a state-leak scenario — the route should still produce Free tier)
+    const [freeSession] = await db
+      .insert(interviewSessions)
+      .values({
+        userId: TEST_USER.id,
+        type: "behavioral",
+        config: { interview_style: 0.5, difficulty: 0.5 },
+        useProAnalysis: true,
+      })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: freeSession.id,
+      entries: SAMPLE_TRANSCRIPT,
+    });
+
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } }); // TEST_USER is Free plan
+    mockChatCreate.mockResolvedValue({
+      choices: [{ message: { content: BEHAVIORAL_GPT_RESPONSE_RAW } }],
+    });
+
+    const res = await POST(makePostRequest(freeSession.id), makeParams(freeSession.id));
+    expect(res.status).toBe(201);
+
+    const [row] = await db
+      .select()
+      .from(sessionFeedback)
+      .where(eq(sessionFeedback.sessionId, freeSession.id));
+    expect(row.analysisTier).toBe("free");
   });
 });

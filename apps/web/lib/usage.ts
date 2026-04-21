@@ -17,10 +17,10 @@
  * period_start key that doesn't match any existing row.
  */
 import { createHash } from "crypto";
-import { sql } from "drizzle-orm";
-import { eq, and } from "drizzle-orm";
+import { sql, count } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { interviewUsage, deletedUsage } from "@/lib/schema";
+import { interviewUsage, deletedUsage, users, interviewSessions, sessionFeedback } from "@/lib/schema";
 import { getPlanLimits } from "@/lib/plans";
 import { getCurrentUserPlan } from "@/lib/user-plan";
 
@@ -193,6 +193,72 @@ export async function tryConsumeInterviewSlot(
   }
 
   return { allowed: true, used: newCount, limit };
+}
+
+// ---------------------------------------------------------------------------
+// Pro-analysis quota
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns how many Pro-tier feedback rows the user has generated in the
+ * current billing period, plus the plan limit and period end.
+ *
+ * - `periodStart` defaults to `users.planPeriodStart` if set (Stripe billing
+ *   anchor), else falls back to `currentFreePeriodStart()` (calendar month).
+ * - `limit` comes from `getPlanLimits(plan).proAnalysisMonthly`:
+ *   0 for Free, 10 for Pro.
+ * - `used` = COUNT of session_feedback rows with analysis_tier = 'pro'
+ *   joined to sessions owned by this user within the period window.
+ * - `periodEnd` is `users.planPeriodEnd` when set, else the calendar-month end.
+ */
+export async function getProAnalysisUsage(
+  userId: string,
+  periodStart?: Date
+): Promise<{ used: number; limit: number; periodEnd: Date | null }> {
+  const plan = await getCurrentUserPlan(userId);
+  const limit = getPlanLimits(plan).proAnalysisMonthly;
+
+  // Derive period start: use the passed-in value, then the user's billing
+  // anchor from the DB, then fall back to calendar-month start.
+  let effectivePeriodStart: Date;
+  let periodEnd: Date | null = null;
+
+  if (periodStart) {
+    effectivePeriodStart = periodStart;
+  } else {
+    const [userRow] = await db
+      .select({ planPeriodStart: users.planPeriodStart, planPeriodEnd: users.planPeriodEnd })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    effectivePeriodStart = userRow?.planPeriodStart ?? currentFreePeriodStart();
+    periodEnd = userRow?.planPeriodEnd ?? null;
+  }
+
+  if (!periodEnd && !periodStart) {
+    // Compute calendar-month end when no Stripe period end is set
+    const now = new Date();
+    const lastDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+    periodEnd = lastDay;
+  }
+
+  const [row] = await db
+    .select({ used: count() })
+    .from(sessionFeedback)
+    .innerJoin(interviewSessions, eq(sessionFeedback.sessionId, interviewSessions.id))
+    .where(
+      and(
+        eq(interviewSessions.userId, userId),
+        eq(sessionFeedback.analysisTier, "pro"),
+        gte(sessionFeedback.createdAt, effectivePeriodStart)
+      )
+    );
+
+  return {
+    used: row?.used ?? 0,
+    limit,
+    periodEnd,
+  };
 }
 
 // ---------------------------------------------------------------------------

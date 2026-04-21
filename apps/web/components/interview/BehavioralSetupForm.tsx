@@ -15,6 +15,7 @@ import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
 import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
 import { usePrefillStore } from "@/stores/prefillStore";
+import { ProAnalysisToggle } from "./ProAnalysisToggle";
 import type { BehavioralSessionConfig } from "@preploy/shared";
 
 interface CompanyQuestion {
@@ -49,6 +50,7 @@ export function BehavioralSetupForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gazeTrackingEnabled, setGazeTrackingEnabled] = useState(false);
+  const [useProAnalysis, setUseProAnalysis] = useState(false);
 
   // Company question generation state
   const [generatedQuestions, setGeneratedQuestions] = useState<CompanyQuestion[]>([]);
@@ -164,9 +166,10 @@ export function BehavioralSetupForm() {
     setError(null);
     setIsSubmitting(true);
 
-    const sessionId = await createSession(
-      sourceStarStoryId ? { source_star_story_id: sourceStarStoryId } : undefined
-    );
+    const sessionId = await createSession({
+      ...(sourceStarStoryId ? { source_star_story_id: sourceStarStoryId } : {}),
+      use_pro_analysis: useProAnalysis,
+    });
     setIsSubmitting(false);
 
     if (sessionId) {
@@ -441,6 +444,9 @@ export function BehavioralSetupForm() {
           </Label>
         </div>
       )}
+
+      {/* Pro analysis toggle */}
+      <ProAnalysisToggle value={useProAnalysis} onChange={setUseProAnalysis} />
 
       {/* Error */}
       {error && (

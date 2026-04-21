@@ -213,6 +213,7 @@ task definition / secrets manager.
 | `RESEND_API_KEY`             | RUNTIME_ONLY       | Resend API key for transactional email (welcome, feedback-ready, upgrade nudge). Create at [resend.com](https://resend.com). Emails silently skipped when unset. |
 | `RESEND_FROM_ADDRESS`        | RUNTIME_ONLY       | Override the FROM address for transactional emails. Defaults to `Preploy <onboarding@resend.dev>`. Switch to your verified domain (e.g. `Preploy <noreply@preploy.tech>`) after DNS verification in Resend. |
 | `PRO_ANALYSIS_MODEL`       | RUNTIME_ONLY       | Override model used for Pro users' session feedback analysis (default: `gpt-5`). Set per environment; point at an available model (e.g. `gpt-4o`) until `gpt-5` is GA. |
+| `PRO_ANALYSIS_MONTHLY_LIMIT` | RUNTIME_ONLY     | Monthly cap on Pro-tier analysis per user. Default `10`. Consumed by `/api/users/pro-analysis-usage` and the feedback tier resolver in `/api/sessions/[id]/feedback`. |
 
 Server-only secrets (`SUPABASE_DB_URL`, `OPENAI_API_KEY`, `GOOGLE_CLIENT_SECRET`,
 `SENTRY_DSN`) must never be referenced from a file marked `"use client"` and

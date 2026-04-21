@@ -59,6 +59,8 @@ export interface PlanLimits {
   monthlyInterviews: number | null;
   /** Maximum daily sessions (for in-app quota checks). */
   dailySessions: number;
+  /** Maximum Pro-tier analysis runs per billing period. 0 = not available on this plan. */
+  proAnalysisMonthly: number;
 }
 
 export interface PlanDefinition {
@@ -79,6 +81,7 @@ export interface PlanDefinition {
 
 export const FREE_PLAN_MONTHLY_INTERVIEW_LIMIT = 3;
 export const PRO_PLAN_MONTHLY_INTERVIEW_LIMIT = 40;
+export const PRO_ANALYSIS_MONTHLY_LIMIT = 10;
 
 export const PLAN_DEFINITIONS: Record<Plan, PlanDefinition> = {
   free: {
@@ -92,6 +95,7 @@ export const PLAN_DEFINITIONS: Record<Plan, PlanDefinition> = {
     limits: {
       monthlyInterviews: FREE_PLAN_MONTHLY_INTERVIEW_LIMIT,
       dailySessions: 3,
+      proAnalysisMonthly: 0,
     },
   },
   pro: {
@@ -109,6 +113,7 @@ export const PLAN_DEFINITIONS: Record<Plan, PlanDefinition> = {
     limits: {
       monthlyInterviews: PRO_PLAN_MONTHLY_INTERVIEW_LIMIT,
       dailySessions: 40,
+      proAnalysisMonthly: PRO_ANALYSIS_MONTHLY_LIMIT,
     },
   },
 };

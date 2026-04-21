@@ -20,6 +20,7 @@ import { usePrefillStore } from "@/stores/prefillStore";
 import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
 import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
+import { ProAnalysisToggle } from "./ProAnalysisToggle";
 import {
   SUPPORTED_LANGUAGES,
   FOCUS_AREAS_BY_TYPE,
@@ -70,6 +71,7 @@ export function TechnicalSetupForm() {
   const clearQuotaError = useInterviewStore((s) => s.clearQuotaError);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useProAnalysis, setUseProAnalysis] = useState(false);
 
   const { technicalPrefill, clearPrefill } = usePrefillStore();
 
@@ -159,7 +161,7 @@ export function TechnicalSetupForm() {
     }
 
     setIsSubmitting(true);
-    const sessionId = await createSession();
+    const sessionId = await createSession({ use_pro_analysis: useProAnalysis });
     setIsSubmitting(false);
 
     if (sessionId) {
@@ -349,6 +351,9 @@ export function TechnicalSetupForm() {
           </Card>
         </div>
       </div>
+
+      {/* Pro analysis toggle */}
+      <ProAnalysisToggle value={useProAnalysis} onChange={setUseProAnalysis} />
 
       {/* Error */}
       {error && (
