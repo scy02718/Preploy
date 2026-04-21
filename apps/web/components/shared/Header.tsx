@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -12,11 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Menu, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "next-themes";
 import { Sidebar } from "./Sidebar";
+import { usePlan, signOutAndClearPlan } from "@/hooks/usePlan";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -34,6 +36,7 @@ export function Header() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { theme, setTheme } = useTheme();
+  const { plan } = usePlan();
   const user = session?.user;
 
   const toggleTheme = () => {
@@ -103,6 +106,15 @@ export function Header() {
         {status === "loading" ? (
           <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
         ) : user ? (
+          <>
+            {plan === "pro" && (
+              <Badge
+                aria-label="Pro plan"
+                className="h-auto bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--primary)] border-transparent"
+              >
+                Pro
+              </Badge>
+            )}
           <DropdownMenu>
             <DropdownMenuTrigger className="rounded-full">
               <Avatar className="h-8 w-8">
@@ -123,11 +135,12 @@ export function Header() {
               <DropdownMenuItem onClick={() => router.push("/profile")}>
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+              <DropdownMenuItem onClick={() => signOutAndClearPlan({ callbackUrl: "/" })}>
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </>
         ) : (
           <Link
             href="/login"
