@@ -34,4 +34,15 @@ describe("ScoreCard", () => {
     expect(container.querySelector("[class*='text-blue']")).toBeTruthy();
     expect(screen.getByText("Excellent")).toBeInTheDocument();
   });
+
+  it("caps the summary height so Pro-tier 500-800 word summaries scroll inside the card", () => {
+    // Pro-tier prompts ask for a 500-800 word overall summary, which was
+    // blowing out the card height on the feedback dashboard. Guard against
+    // regression by asserting the summary stays bounded + scrollable.
+    const longSummary = "x".repeat(2000);
+    render(<ScoreCard score={5} summary={longSummary} />);
+    const summary = screen.getByText(longSummary);
+    expect(summary.className).toContain("max-h-40");
+    expect(summary.className).toContain("overflow-y-auto");
+  });
 });

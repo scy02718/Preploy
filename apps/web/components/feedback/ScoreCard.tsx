@@ -24,7 +24,12 @@ export function ScoreCard({ score, summary }: ScoreCardProps) {
           </div>
           <span className={`mt-1 text-sm font-medium ${text}`}>{label}</span>
         </div>
-        <p className="flex-1 text-sm text-muted-foreground leading-relaxed">{summary}</p>
+        {/* Pro-tier summaries can run 500–800 words — cap the visible height
+            so the card stays compact on the dashboard and the reader can
+            scroll within the widget instead of the whole page jumping. */}
+        <p className="flex-1 max-h-40 overflow-y-auto text-sm text-muted-foreground leading-relaxed">
+          {summary}
+        </p>
       </CardContent>
     </Card>
   );
