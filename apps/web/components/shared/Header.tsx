@@ -107,6 +107,8 @@ export function Header() {
           <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
         ) : user ? (
           <>
+            {/* Intentionally no skeleton: a 20×14px badge chip is too small for a
+                skeleton placeholder — absence during load is better UX here. */}
             {plan === "pro" && (
               <Badge
                 aria-label="Pro plan"
@@ -115,31 +117,31 @@ export function Header() {
                 Pro
               </Badge>
             )}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="rounded-full">
-              <Avatar className="h-8 w-8">
-                {user.image && (
-                  <AvatarImage src={user.image} alt={user.name ?? ""} />
-                )}
-                <AvatarFallback className="text-xs">
-                  {user.name?.charAt(0).toUpperCase() ?? "U"}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => signOutAndClearPlan({ callbackUrl: "/" })}>
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  {user.image && (
+                    <AvatarImage src={user.image} alt={user.name ?? ""} />
+                  )}
+                  <AvatarFallback className="text-xs">
+                    {user.name?.charAt(0).toUpperCase() ?? "U"}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOutAndClearPlan({ callbackUrl: "/" })}>
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         ) : (
           <Link

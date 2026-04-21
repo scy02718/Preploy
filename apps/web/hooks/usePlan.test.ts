@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor, act } from "@testing-library/react";
 
 // NOTE: We do NOT wrap with <StrictMode> here. In StrictMode, React double-
 // invokes effects in development, but usePlan guards against double-fetch via
 // the `cancelled` flag and the `if (plan !== undefined) return` early exit
 // from the cached sessionStorage value on the second invocation.
 
-// Mock next-auth/react so signOut is controllable
+// Mock next-auth/react so signOut and useSession are controllable
 const mockSignOut = vi.fn();
+const mockUseSession = vi.fn();
 vi.mock("next-auth/react", () => ({
   signOut: (...args: Parameters<typeof mockSignOut>) => mockSignOut(...args),
+  useSession: () => mockUseSession(),
 }));
 
 // Import after mocks are registered
@@ -17,10 +19,20 @@ import { usePlan, clearPlanCache, signOutAndClearPlan } from "./usePlan";
 
 const PLAN_CACHE_KEY = "preploy:plan";
 
+// Default: authenticated session for tests that don't override it
+function setAuthenticatedSession() {
+  mockUseSession.mockReturnValue({
+    status: "authenticated",
+    data: { user: { id: "test" } },
+  });
+}
+
 describe("usePlan", () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.clearAllMocks();
+    // Most tests run with an authenticated session; individual tests may override
+    setAuthenticatedSession();
   });
 
   it("first call with empty sessionStorage fires exactly one fetch to /api/users/me and exposes plan", async () => {
@@ -139,5 +151,80 @@ describe("usePlan", () => {
     expect(cacheValueAtSignOutTime).toBeNull();
     expect(mockSignOut).toHaveBeenCalledTimes(1);
     expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: "/" });
+  });
+
+  it("does not cache or set plan when fetch returns a non-2xx response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({}),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => usePlan());
+
+    // Give the effect time to settle
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(result.current.plan).toBeUndefined();
+    expect(sessionStorage.getItem(PLAN_CACHE_KEY)).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not cache or set plan when fetch rejects with a network error", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => usePlan());
+
+    // Give the effect time to settle
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(result.current.plan).toBeUndefined();
+    expect(sessionStorage.getItem(PLAN_CACHE_KEY)).toBeNull();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not fetch when useSession returns status: \"unauthenticated\"", async () => {
+    mockUseSession.mockReturnValue({ status: "unauthenticated", data: null });
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => usePlan());
+
+    // Give effects time to settle
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    expect(result.current.plan).toBeUndefined();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("clears stale cached value when status transitions to \"unauthenticated\"", async () => {
+    // Seed a stale pro cache (simulating a prior authenticated session)
+    sessionStorage.setItem(PLAN_CACHE_KEY, "pro");
+
+    // Start as unauthenticated
+    mockUseSession.mockReturnValue({ status: "unauthenticated", data: null });
+
+    const { result } = renderHook(() => usePlan());
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Stale cached value must be cleared
+    expect(result.current.plan).toBeUndefined();
+    expect(sessionStorage.getItem(PLAN_CACHE_KEY)).toBeNull();
   });
 });
