@@ -16,6 +16,8 @@ import { ResumeSelector } from "./ResumeSelector";
 import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
 import { usePrefillStore } from "@/stores/prefillStore";
 import { ProAnalysisToggle } from "./ProAnalysisToggle";
+import { usePlan } from "@/hooks/usePlan";
+import { ProbeDepthControl } from "./ProbeDepthControl";
 import type { BehavioralSessionConfig } from "@preploy/shared";
 
 interface CompanyQuestion {
@@ -43,6 +45,7 @@ function difficultyLabel(v: number): string {
 
 export function BehavioralSetupForm() {
   const router = useRouter();
+  const { plan } = usePlan();
   const { config, setConfig, setType, createSession } = useInterviewStore();
   const quotaError = useInterviewStore((s) => s.quotaError);
   const clearQuotaError = useInterviewStore((s) => s.clearQuotaError);
@@ -342,6 +345,11 @@ export function BehavioralSetupForm() {
                   <span>Senior / Staff</span>
                 </div>
               </div>
+
+              <ProbeDepthControl
+                value={behavioralConfig.probe_depth ?? (plan === "pro" ? 2 : 0)}
+                onChange={(n) => setConfig({ probe_depth: n })}
+              />
             </CardContent>
           </Card>
 

@@ -96,6 +96,16 @@ export function buildBehavioralSystemPrompt(
 5. End with a polite closing.`
   );
 
+  // Follow-up pressure (probe_depth) — Pro-only. Injected AFTER "Interview flow"
+  // and BEFORE "Conciseness". When probe_depth is 0 or absent, this section is
+  // omitted entirely so Free-tier behavior is identical to today. See #178.
+  if (config.probe_depth && config.probe_depth > 0) {
+    const n = config.probe_depth;
+    sections.push(
+      `Follow-up depth for this session: ${n}. After the candidate's initial answer to each behavioral question, probe up to ${n} follow-up turns before moving on. Each probe must target a different dimension, in this order of preference: (1) business impact — "What was the measurable outcome? Numbers if you have them.", (2) reasoning — "Why that approach over the alternatives?", (3) counterfactual — "Knowing what you know now, what would you do differently?". Stop probing early if the candidate has already covered a dimension or is clearly out of material — do NOT repeat yourself and do NOT probe past ${n} turns. After the final probe, acknowledge briefly ("Got it — thanks.") and move to the next question. Probing is conversational, not adversarial: stay warm, one question at a time, never stack three questions in one turn. This directive overrides any earlier "ask one follow-up" instruction for this session.`
+    );
+  }
+
   // Conciseness — replaces the old "2-3 sentences maximum" constraint (108-D)
   sections.push(
     "Be conversational, not essayistic. Cap each turn at 3 sentences for questions and follow-ups; up to 5 sentences only when setting context for a new topic. This is a voice conversation — long monologues feel unnatural."

@@ -137,13 +137,15 @@ describe("API /api/sessions (integration)", () => {
     });
   });
 
-  it("POST creates a session without config", async () => {
+  it("POST creates a session without config (free user gets probe_depth=0 default)", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    // TEST_USER is free by beforeEach default
 
     const res = await POST(makePostRequest({ type: "behavioral" }));
     expect(res.status).toBe(201);
     const data = await res.json();
-    expect(data.config).toEqual({});
+    // probe_depth defaults to 0 for free users (#178)
+    expect(data.config).toEqual({ probe_depth: 0 });
   });
 
   // ---- POST validation errors ----
@@ -858,6 +860,199 @@ describe("API /api/sessions (integration)", () => {
       .from(interviewSessions)
       .where(eq(interviewSessions.id, data.id));
     expect(row.useProAnalysis).toBe(false);
+  });
+
+  // ---- #178: probe_depth gating ----
+
+  describe("probe_depth gating", () => {
+    it("Free + probe_depth: 3 → 402 pro_plan_required", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, probe_depth: 3 },
+        })
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "follow_up_probing",
+        currentPlan: "free",
+      });
+    });
+
+    it("Free + probe_depth: 1 → 402 pro_plan_required", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, probe_depth: 1 },
+        })
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "follow_up_probing",
+        currentPlan: "free",
+      });
+    });
+
+    it("Pro + probe_depth: 3 → 201 and persists probe_depth=3 in config", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, probe_depth: 3 },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const { interviewSessions } = await import("@/lib/schema");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      expect((row.config as Record<string, unknown>).probe_depth).toBe(3);
+    });
+
+    it("Free + probe_depth: 0 → 201 and persists probe_depth=0", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, probe_depth: 0 },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const db = getTestDb();
+      const { interviewSessions } = await import("@/lib/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      expect((row.config as Record<string, unknown>).probe_depth).toBe(0);
+    });
+
+    it("Free + no probe_depth → 201 and persisted probe_depth defaults to 0", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5 },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const db = getTestDb();
+      const { interviewSessions } = await import("@/lib/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      expect((row.config as Record<string, unknown>).probe_depth).toBe(0);
+    });
+
+    it("Pro + no probe_depth → 201 and persisted probe_depth defaults to 2", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5 },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const { interviewSessions } = await import("@/lib/schema");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      expect((row.config as Record<string, unknown>).probe_depth).toBe(2);
+    });
+
+    it("probe_depth out of range (4) → 400 Invalid session config", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, probe_depth: 4 },
+        })
+      );
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("Invalid session config");
+    });
+
+    it("probe_depth non-integer (1.5) → 400 Invalid session config", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, probe_depth: 1.5 },
+        })
+      );
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain("Invalid session config");
+    });
+
+    it("Technical sessions ignore probe_depth entirely (Pro user, technical config, no gate)", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "technical",
+          config: {
+            interview_type: "leetcode",
+            focus_areas: ["arrays"],
+            language: "python",
+            difficulty: "medium",
+          },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const { interviewSessions } = await import("@/lib/schema");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      // Technical sessions must NOT have probe_depth written into their config
+      expect((row.config as Record<string, unknown>).probe_depth).toBeUndefined();
+    });
   });
 
   // Regression: the parallel bypass path for the Resume feature. A free

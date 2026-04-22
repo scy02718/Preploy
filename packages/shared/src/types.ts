@@ -48,6 +48,10 @@ export interface BehavioralSessionConfig {
   resume_id?: string;
   resume_text?: string; // populated at session start, not stored in DB
   gaze_enabled?: boolean; // per-session opt-in (only shown when user has gaze_tracking_enabled)
+  // Pro-only. Number of interviewer follow-up layers per question during the
+  // behavioral session. 0 = no probing (Free default). 2 = Pro default
+  // (Standard). 3 = Intense. See #178.
+  probe_depth?: 0 | 1 | 2 | 3;
 }
 
 export interface TechnicalSessionConfig {

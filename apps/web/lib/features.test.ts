@@ -37,3 +37,13 @@ describe("FEATURE_MATRIX", () => {
     }
   });
 });
+
+describe("follow_up_probing feature (#178)", () => {
+  it("pro plan HAS follow_up_probing", () => {
+    expect(hasFeature("pro", "follow_up_probing")).toBe(true);
+  });
+
+  it("free plan does NOT have follow_up_probing", () => {
+    expect(hasFeature("free", "follow_up_probing")).toBe(false);
+  });
+});

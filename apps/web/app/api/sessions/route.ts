@@ -192,6 +192,36 @@ export async function POST(request: NextRequest) {
     if (gated) return gated;
   }
 
+  // Resolve probe_depth for behavioral sessions. Technical sessions are
+  // explicitly untouched — follow-up pressure applies only to behavioral
+  // sessions. See #178.
+  // Technical sessions ignore probe_depth — follow-up pressure applies only
+  // to behavioral sessions. See #178.
+  let resolvedConfig = config ?? {};
+  if (type === "behavioral") {
+    const rawProbeDepth = config && typeof config === "object"
+      ? (config as Record<string, unknown>).probe_depth
+      : undefined;
+
+    if (typeof rawProbeDepth === "number" && rawProbeDepth > 0) {
+      // Non-zero probe_depth requires Pro
+      const gated = await requireProFeature(session.user.id, "follow_up_probing");
+      if (gated) return gated;
+      // Value already validated by Zod — keep as-is
+      resolvedConfig = { ...resolvedConfig, probe_depth: rawProbeDepth };
+    } else if (rawProbeDepth === 0) {
+      // Explicitly set to 0 — persist it (free users may send 0 explicitly)
+      resolvedConfig = { ...resolvedConfig, probe_depth: 0 };
+    } else {
+      // probe_depth was omitted — apply server-side default based on plan
+      const userPlan = await getCurrentUserPlan(session.user.id);
+      resolvedConfig = {
+        ...resolvedConfig,
+        probe_depth: userPlan === "pro" ? 2 : 0,
+      };
+    }
+  }
+
   // Capture once so the transaction callback closure has a narrowed string
   // (TypeScript loses the `session.user.id` non-null narrowing across the
   // async boundary).
@@ -243,7 +273,7 @@ export async function POST(request: NextRequest) {
         .values({
           userId,
           type,
-          config: config ?? {},
+          config: resolvedConfig,
           sourceStarStoryId: source_star_story_id ?? null,
           useProAnalysis: use_pro_analysis ?? false,
         })
