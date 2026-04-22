@@ -1,15 +1,24 @@
 import type { BehavioralSessionConfig } from "@preploy/shared";
+import {
+  getBehavioralPersona,
+  DEFAULT_BEHAVIORAL_PERSONA_ID,
+} from "./personas";
 
 export function buildBehavioralSystemPrompt(
   config: BehavioralSessionConfig
 ): string {
   const sections: string[] = [];
 
+  // Resolve persona — falls back to "default" for unknown or absent ids.
+  // The route handler already validated and persisted a known persona id, so
+  // this fallback is defense-in-depth (handles bogus ids in unit tests, etc.)
+  const persona =
+    getBehavioralPersona(config.persona) ??
+    getBehavioralPersona(DEFAULT_BEHAVIORAL_PERSONA_ID)!;
+
   // Base persona — give the interviewer a fixed name so it never
   // accidentally uses the candidate's name from the resume.
-  sections.push(
-    "You are Alex, an experienced hiring manager conducting a behavioral interview. Your name is Alex — always introduce yourself as Alex. The person you are speaking to is the candidate; never confuse your identity with theirs."
-  );
+  sections.push(persona.basePrompt);
 
   // Company context
   if (config.company_name?.trim()) {
@@ -104,6 +113,12 @@ export function buildBehavioralSystemPrompt(
     sections.push(
       `Follow-up depth for this session: ${n}. After the candidate's initial answer to each behavioral question, probe up to ${n} follow-up turns before moving on. Each probe must target a different dimension, in this order of preference: (1) business impact — "What was the measurable outcome? Numbers if you have them.", (2) reasoning — "Why that approach over the alternatives?", (3) counterfactual — "Knowing what you know now, what would you do differently?". Stop probing early if the candidate has already covered a dimension or is clearly out of material — do NOT repeat yourself and do NOT probe past ${n} turns. After the final probe, acknowledge briefly ("Got it — thanks.") and move to the next question. Probing is conversational, not adversarial: stay warm, one question at a time, never stack three questions in one turn. This directive overrides any earlier "ask one follow-up" instruction for this session.`
     );
+  }
+
+  // Persona texture suffix — injected AFTER probe_depth and BEFORE Conciseness.
+  // Empty for the default persona so no extra section is added.
+  if (persona.systemPromptSuffix) {
+    sections.push(persona.systemPromptSuffix);
   }
 
   // Conciseness — replaces the old "2-3 sentences maximum" constraint (108-D)

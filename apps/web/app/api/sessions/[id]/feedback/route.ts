@@ -345,5 +345,7 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ ...feedback, type: found.type });
+  // Include config so the feedback page can read config.persona and other
+  // session-level fields without a separate /api/sessions/:id round-trip.
+  return NextResponse.json({ ...feedback, type: found.type, config: found.config });
 }

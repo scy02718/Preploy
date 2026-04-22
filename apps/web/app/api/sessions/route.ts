@@ -12,6 +12,11 @@ import {
 import { checkRateLimit, requireProFeature } from "@/lib/api-utils";
 import { tryConsumeInterviewSlot } from "@/lib/usage";
 import { getCurrentUserPlan } from "@/lib/user-plan";
+import {
+  getBehavioralPersona,
+  DEFAULT_BEHAVIORAL_PERSONA_ID,
+  applyProbeStyleCap,
+} from "@/lib/personas";
 
 // GET /api/sessions — list sessions with pagination, type/score filters
 // Query params: page (1-based), limit, type, minScore, maxScore
@@ -152,7 +157,10 @@ export async function POST(request: NextRequest) {
 
   const { type, config, source_star_story_id, use_pro_analysis } = parsed.data;
 
-  // Validate config based on interview type
+  // Validate config based on interview type. For technical sessions the
+  // parsed data (Zod strips unknown keys) becomes the resolved config so that
+  // stray fields like `persona` never reach the DB. See #179.
+  let parsedConfigData: Record<string, unknown> | undefined;
   if (config) {
     const configSchema =
       type === "behavioral" ? behavioralConfigSchema : technicalConfigSchema;
@@ -163,6 +171,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    // Capture the Zod-parsed output so unknown fields (e.g. `persona` on a
+    // technical config) are stripped before persistence. The behavioral
+    // persona-resolution block below will further enrich/override this.
+    parsedConfigData = configResult.data as Record<string, unknown>;
   }
 
   // Pro gate for use_pro_analysis flag. Free users sending true get 400.
@@ -197,7 +209,7 @@ export async function POST(request: NextRequest) {
   // sessions. See #178.
   // Technical sessions ignore probe_depth — follow-up pressure applies only
   // to behavioral sessions. See #178.
-  let resolvedConfig = config ?? {};
+  let resolvedConfig = parsedConfigData ?? config ?? {};
   if (type === "behavioral") {
     const rawProbeDepth = config && typeof config === "object"
       ? (config as Record<string, unknown>).probe_depth
@@ -218,6 +230,42 @@ export async function POST(request: NextRequest) {
       resolvedConfig = {
         ...resolvedConfig,
         probe_depth: userPlan === "pro" ? 2 : 0,
+      };
+    }
+  }
+
+  // Resolve and gate persona for behavioral sessions. Unknown id → 400.
+  // Pro-only persona from free user → 402. Always persist a persona id
+  // (defaults to "default") so the feedback page has a deterministic value.
+  // Technical sessions: if the client somehow sent config.persona, silently
+  // ignore it — do NOT touch the technical branch. See #179.
+  if (type === "behavioral") {
+    const rawPersonaId = (resolvedConfig as Record<string, unknown>).persona;
+    const personaId =
+      typeof rawPersonaId === "string" ? rawPersonaId : DEFAULT_BEHAVIORAL_PERSONA_ID;
+    const persona = getBehavioralPersona(personaId);
+    if (!persona) {
+      return NextResponse.json({ error: "Invalid persona" }, { status: 400 });
+    }
+    if (persona.proOnly) {
+      const gate = await requireProFeature(session.user.id, "interviewer_personas");
+      if (gate) return gate;
+    }
+    resolvedConfig = { ...resolvedConfig, persona: persona.id };
+
+    // Apply probe_depth cap from persona.probeStyle (cap rule #179).
+    // The cap is applied here before persistence — the prompt builder reads
+    // the already-capped value and does NOT re-apply the cap.
+    if (
+      persona.probeStyle !== undefined &&
+      typeof (resolvedConfig as Record<string, unknown>).probe_depth === "number"
+    ) {
+      resolvedConfig = {
+        ...resolvedConfig,
+        probe_depth: applyProbeStyleCap(
+          (resolvedConfig as Record<string, unknown>).probe_depth as 0 | 1 | 2 | 3,
+          persona.probeStyle
+        ),
       };
     }
   }

@@ -18,6 +18,7 @@ import { usePrefillStore } from "@/stores/prefillStore";
 import { ProAnalysisToggle } from "./ProAnalysisToggle";
 import { usePlan } from "@/hooks/usePlan";
 import { ProbeDepthControl } from "./ProbeDepthControl";
+import { PersonaPicker } from "./PersonaPicker";
 import type { BehavioralSessionConfig } from "@preploy/shared";
 
 interface CompanyQuestion {
@@ -345,6 +346,11 @@ export function BehavioralSetupForm() {
                   <span>Senior / Staff</span>
                 </div>
               </div>
+
+              <PersonaPicker
+                value={behavioralConfig.persona ?? "default"}
+                onChange={(id) => setConfig({ persona: id })}
+              />
 
               <ProbeDepthControl
                 value={behavioralConfig.probe_depth ?? (plan === "pro" ? 2 : 0)}

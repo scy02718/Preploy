@@ -12,6 +12,7 @@ import { TimelineView, type TimelineEvent } from "./TimelineView";
 import { GazePresenceCard } from "./GazePresenceCard";
 import { PreparedVsSpokenCard, type DriftAnalysis } from "./PreparedVsSpokenCard";
 import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
+import { PracticedWithBadge } from "./PracticedWithBadge";
 
 interface AnswerAnalysis {
   question: string;
@@ -42,11 +43,14 @@ interface FeedbackDashboardProps {
   feedback: FeedbackData;
   sessionId: string;
   sessionType?: "behavioral" | "technical";
+  /** Persona id from config.persona — renders PracticedWithBadge when non-default. */
+  persona?: string;
 }
 
 export function FeedbackDashboard({
   feedback,
   sessionType = "behavioral",
+  persona,
 }: FeedbackDashboardProps) {
   const [isExporting, setIsExporting] = useState(false);
   const isTechnical = sessionType === "technical";
@@ -88,9 +92,12 @@ export function FeedbackDashboard({
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Interview Feedback</h1>
-        <div className="flex gap-2">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-2xl font-bold">Interview Feedback</h1>
+          <PracticedWithBadge personaId={persona} />
+        </div>
+        <div className="flex shrink-0 gap-2">
           <Button
             variant="outline"
             onClick={handleExportPDF}

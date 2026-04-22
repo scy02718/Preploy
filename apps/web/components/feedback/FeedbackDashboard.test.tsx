@@ -201,4 +201,48 @@ describe("FeedbackDashboard", () => {
     );
     expect(screen.queryByTestId("pro-analysis-banner")).toBeNull();
   });
+
+  // ---- #179: PracticedWithBadge persona chip ----
+
+  it("renders PracticedWithBadge when persona is a non-default Pro persona", () => {
+    render(
+      <FeedbackDashboard
+        feedback={BEHAVIORAL_FEEDBACK}
+        sessionId="test-id"
+        persona="amazon-lp"
+      />
+    );
+    expect(
+      screen.getAllByText(/Practiced with: Amazon LP/).length
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not render PracticedWithBadge when persona is 'default'", () => {
+    render(
+      <FeedbackDashboard
+        feedback={BEHAVIORAL_FEEDBACK}
+        sessionId="test-id"
+        persona="default"
+      />
+    );
+    expect(screen.queryByText(/Practiced with:/)).toBeNull();
+  });
+
+  it("does not render PracticedWithBadge when persona is undefined", () => {
+    render(
+      <FeedbackDashboard feedback={BEHAVIORAL_FEEDBACK} sessionId="test-id" />
+    );
+    expect(screen.queryByText(/Practiced with:/)).toBeNull();
+  });
+
+  it("does not render PracticedWithBadge for an unknown persona id", () => {
+    render(
+      <FeedbackDashboard
+        feedback={BEHAVIORAL_FEEDBACK}
+        sessionId="test-id"
+        persona="bogus-persona"
+      />
+    );
+    expect(screen.queryByText(/Practiced with:/)).toBeNull();
+  });
 });

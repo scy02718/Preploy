@@ -48,6 +48,7 @@ export default function FeedbackPage() {
   const [sessionType, setSessionType] = useState<
     "behavioral" | "technical" | null
   >(null);
+  const [persona, setPersona] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // Retry nonce — bumped by the Retry button to re-arm the polling effect
@@ -105,6 +106,13 @@ export default function FeedbackPage() {
         // null and the loading skeleton gates the <FeedbackDashboard /> render
         // below until both pieces of state are set in this same commit.
         setSessionType(data.type === "technical" ? "technical" : "behavioral");
+        // Thread persona from config.persona — the feedback API returns the
+        // full config jsonb, so config.persona is available here.
+        setPersona(
+          typeof data.config?.persona === "string"
+            ? data.config.persona
+            : undefined
+        );
         setFeedback({
           overallScore: data.overallScore ?? data.overall_score ?? 0,
           summary: data.summary ?? "",
@@ -263,6 +271,7 @@ export default function FeedbackPage() {
         feedback={feedback}
         sessionId={params.id}
         sessionType={sessionType}
+        persona={persona}
       />
     </>
   );

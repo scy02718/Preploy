@@ -52,6 +52,9 @@ export interface BehavioralSessionConfig {
   // behavioral session. 0 = no probing (Free default). 2 = Pro default
   // (Standard). 3 = Intense. See #178.
   probe_depth?: 0 | 1 | 2 | 3;
+  // Pro-only. Selects an interviewer persona ("amazon-lp", "google-star",
+  // "warm-peer", "hostile-panel", or "default"). See #179.
+  persona?: string;
 }
 
 export interface TechnicalSessionConfig {

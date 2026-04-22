@@ -137,15 +137,15 @@ describe("API /api/sessions (integration)", () => {
     });
   });
 
-  it("POST creates a session without config (free user gets probe_depth=0 default)", async () => {
+  it("POST creates a session without config (free user gets probe_depth=0 and persona=default)", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
     // TEST_USER is free by beforeEach default
 
     const res = await POST(makePostRequest({ type: "behavioral" }));
     expect(res.status).toBe(201);
     const data = await res.json();
-    // probe_depth defaults to 0 for free users (#178)
-    expect(data.config).toEqual({ probe_depth: 0 });
+    // probe_depth defaults to 0 for free users (#178); persona defaults to "default" (#179)
+    expect(data.config).toEqual({ probe_depth: 0, persona: "default" });
   });
 
   // ---- POST validation errors ----
@@ -1132,6 +1132,207 @@ describe("API /api/sessions (integration)", () => {
         })
       );
       expect(res.status).toBe(201);
+    });
+  });
+
+  // ---- #179: persona gating ----
+
+  describe("persona gating", () => {
+    it("Free + persona 'amazon-lp' → 402 pro_plan_required for interviewer_personas", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, persona: "amazon-lp" },
+        })
+      );
+      expect(res.status).toBe(402);
+      const data = await res.json();
+      expect(data).toEqual({
+        error: "pro_plan_required",
+        feature: "interviewer_personas",
+        currentPlan: "free",
+      });
+    });
+
+    it("Pro + persona 'amazon-lp' → 201, DB has config.persona === 'amazon-lp'", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, persona: "amazon-lp" },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const { interviewSessions } = await import("@/lib/schema");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      expect((row.config as Record<string, unknown>).persona).toBe("amazon-lp");
+    });
+
+    it("Free + persona 'default' → 201, DB has config.persona === 'default'", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, persona: "default" },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const db = getTestDb();
+      const { interviewSessions } = await import("@/lib/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      expect((row.config as Record<string, unknown>).persona).toBe("default");
+    });
+
+    it("Free + no persona → 201, server writes config.persona === 'default'", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5 },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const db = getTestDb();
+      const { interviewSessions } = await import("@/lib/schema");
+      const { eq } = await import("drizzle-orm");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      expect((row.config as Record<string, unknown>).persona).toBe("default");
+    });
+
+    it("Free + persona 'bogus' → 400 { error: 'Invalid persona' }", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+      // Plan is "free" by beforeEach default
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: { interview_style: 0.5, difficulty: 0.5, persona: "bogus" },
+        })
+      );
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("Invalid persona");
+    });
+
+    it("Pro + persona 'warm-peer' + probe_depth 3 → 201, DB has probe_depth=1 (capped by gentle) and persona='warm-peer'", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: {
+            interview_style: 0.5,
+            difficulty: 0.5,
+            probe_depth: 3,
+            persona: "warm-peer",
+          },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const { interviewSessions } = await import("@/lib/schema");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      const cfg = row.config as Record<string, unknown>;
+      expect(cfg.probe_depth).toBe(1);
+      expect(cfg.persona).toBe("warm-peer");
+    });
+
+    it("Pro + persona 'amazon-lp' + probe_depth 3 → 201, DB has probe_depth=3 (aggressive is ceiling-only, no cap)", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "behavioral",
+          config: {
+            interview_style: 0.5,
+            difficulty: 0.5,
+            probe_depth: 3,
+            persona: "amazon-lp",
+          },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const { interviewSessions } = await import("@/lib/schema");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      const cfg = row.config as Record<string, unknown>;
+      expect(cfg.probe_depth).toBe(3);
+      expect(cfg.persona).toBe("amazon-lp");
+    });
+
+    it("Technical session with config.persona set is stripped — persona NOT persisted", async () => {
+      mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+      const db = getTestDb();
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+      const res = await POST(
+        makePostRequest({
+          type: "technical",
+          config: {
+            interview_type: "leetcode",
+            focus_areas: ["arrays"],
+            language: "python",
+            difficulty: "medium",
+            persona: "amazon-lp", // Must be stripped by the technical branch
+          },
+        })
+      );
+      expect(res.status).toBe(201);
+      const data = await res.json();
+
+      const { interviewSessions } = await import("@/lib/schema");
+      const [row] = await db
+        .select()
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, data.id));
+      // Technical sessions must NOT have persona written into their config
+      expect((row.config as Record<string, unknown>).persona).toBeUndefined();
     });
   });
 });

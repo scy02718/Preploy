@@ -47,3 +47,13 @@ describe("follow_up_probing feature (#178)", () => {
     expect(hasFeature("free", "follow_up_probing")).toBe(false);
   });
 });
+
+describe("interviewer_personas feature (#179)", () => {
+  it("pro plan HAS interviewer_personas", () => {
+    expect(hasFeature("pro", "interviewer_personas")).toBe(true);
+  });
+
+  it("free plan does NOT have interviewer_personas", () => {
+    expect(hasFeature("free", "interviewer_personas")).toBe(false);
+  });
+});
