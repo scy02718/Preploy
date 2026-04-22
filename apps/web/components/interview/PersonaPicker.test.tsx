@@ -93,6 +93,27 @@ describe("PersonaPicker", () => {
     }
   });
 
+  it("clicking a locked Pro item does NOT call onChange (free user)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    mockUsePlan.mockReturnValue({ plan: "free" });
+
+    render(<PersonaPicker value="default" onChange={onChange} />);
+
+    // Open the select trigger
+    const trigger = screen.getByRole("combobox");
+    await user.click(trigger);
+
+    // Click a Pro-locked option — "Amazon LP"
+    // The item has aria-disabled="true" which shadcn/base-ui SelectItem honours
+    // by intercepting pointer events so the underlying select value never changes,
+    // meaning onChange is never invoked.
+    const lockedItem = screen.getAllByText(/Amazon LP/i);
+    await user.click(lockedItem[lockedItem.length - 1]);
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("plan=undefined: renders nothing", () => {
     mockUsePlan.mockReturnValue({ plan: undefined });
     const { container } = render(

@@ -1304,7 +1304,7 @@ describe("API /api/sessions (integration)", () => {
       expect(cfg.persona).toBe("amazon-lp");
     });
 
-    it("Technical session with config.persona 'amazon-lp' → 201 but config.persona NOT persisted in DB", async () => {
+    it("Technical session with config.persona set is stripped — persona NOT persisted", async () => {
       mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
       const db = getTestDb();
@@ -1319,9 +1319,7 @@ describe("API /api/sessions (integration)", () => {
             focus_areas: ["arrays"],
             language: "python",
             difficulty: "medium",
-            // Extra field — technically not in technicalConfigSchema, but
-            // createSessionSchema accepts record so it passes top-level validation.
-            // The technical path must NOT write persona to DB.
+            persona: "amazon-lp", // Must be stripped by the technical branch
           },
         })
       );

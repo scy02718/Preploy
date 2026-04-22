@@ -157,7 +157,10 @@ export async function POST(request: NextRequest) {
 
   const { type, config, source_star_story_id, use_pro_analysis } = parsed.data;
 
-  // Validate config based on interview type
+  // Validate config based on interview type. For technical sessions the
+  // parsed data (Zod strips unknown keys) becomes the resolved config so that
+  // stray fields like `persona` never reach the DB. See #179.
+  let parsedConfigData: Record<string, unknown> | undefined;
   if (config) {
     const configSchema =
       type === "behavioral" ? behavioralConfigSchema : technicalConfigSchema;
@@ -168,6 +171,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    // Capture the Zod-parsed output so unknown fields (e.g. `persona` on a
+    // technical config) are stripped before persistence. The behavioral
+    // persona-resolution block below will further enrich/override this.
+    parsedConfigData = configResult.data as Record<string, unknown>;
   }
 
   // Pro gate for use_pro_analysis flag. Free users sending true get 400.
@@ -202,7 +209,7 @@ export async function POST(request: NextRequest) {
   // sessions. See #178.
   // Technical sessions ignore probe_depth — follow-up pressure applies only
   // to behavioral sessions. See #178.
-  let resolvedConfig = config ?? {};
+  let resolvedConfig = parsedConfigData ?? config ?? {};
   if (type === "behavioral") {
     const rawProbeDepth = config && typeof config === "object"
       ? (config as Record<string, unknown>).probe_depth
