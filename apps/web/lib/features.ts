@@ -28,7 +28,10 @@ export type FeatureKey =
   | "resume"
   /** Interviewer follow-up pressure — probes up to 3 layers deep per question.
    *  See #178. */
-  | "follow_up_probing";
+  | "follow_up_probing"
+  /** Behavioral interviewer personas — Amazon LP, Google STAR, hostile panel,
+   *  warm peer, or the default Alex. See #179. */
+  | "interviewer_personas";
 
 /**
  * Which plan tiers grant access to each feature. A feature is unlocked iff
@@ -38,6 +41,7 @@ export const FEATURE_MATRIX: Record<FeatureKey, readonly Plan[]> = {
   planner: ["pro"],
   resume: ["pro"],
   follow_up_probing: ["pro"],
+  interviewer_personas: ["pro"],
 };
 
 /**
@@ -99,6 +103,17 @@ export const FEATURE_META: Record<
       "Interviewer asks follow-ups per question before moving on",
       "Gentle / Standard / Intense — pick how hard you want to be pushed",
       "Trains you to go past surface-level STAR answers",
+    ],
+  },
+  interviewer_personas: {
+    label: "Interviewer Personas",
+    href: "/pricing#interviewer_personas",
+    tagline:
+      "Practice against Amazon LP, Google STAR, hostile panels, warm peers — pick the interviewer style that matches your target.",
+    benefits: [
+      "Five behavioral interviewer personas to pick from",
+      "Amazon Leadership Principles, Google STAR discipline, hostile panel, warm peer, or the default friendly Alex",
+      "Matches the interviewer texture to the companies you're targeting",
     ],
   },
 };

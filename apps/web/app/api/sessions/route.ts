@@ -12,6 +12,11 @@ import {
 import { checkRateLimit, requireProFeature } from "@/lib/api-utils";
 import { tryConsumeInterviewSlot } from "@/lib/usage";
 import { getCurrentUserPlan } from "@/lib/user-plan";
+import {
+  getBehavioralPersona,
+  DEFAULT_BEHAVIORAL_PERSONA_ID,
+  applyProbeStyleCap,
+} from "@/lib/personas";
 
 // GET /api/sessions — list sessions with pagination, type/score filters
 // Query params: page (1-based), limit, type, minScore, maxScore
@@ -218,6 +223,42 @@ export async function POST(request: NextRequest) {
       resolvedConfig = {
         ...resolvedConfig,
         probe_depth: userPlan === "pro" ? 2 : 0,
+      };
+    }
+  }
+
+  // Resolve and gate persona for behavioral sessions. Unknown id → 400.
+  // Pro-only persona from free user → 402. Always persist a persona id
+  // (defaults to "default") so the feedback page has a deterministic value.
+  // Technical sessions: if the client somehow sent config.persona, silently
+  // ignore it — do NOT touch the technical branch. See #179.
+  if (type === "behavioral") {
+    const rawPersonaId = (resolvedConfig as Record<string, unknown>).persona;
+    const personaId =
+      typeof rawPersonaId === "string" ? rawPersonaId : DEFAULT_BEHAVIORAL_PERSONA_ID;
+    const persona = getBehavioralPersona(personaId);
+    if (!persona) {
+      return NextResponse.json({ error: "Invalid persona" }, { status: 400 });
+    }
+    if (persona.proOnly) {
+      const gate = await requireProFeature(session.user.id, "interviewer_personas");
+      if (gate) return gate;
+    }
+    resolvedConfig = { ...resolvedConfig, persona: persona.id };
+
+    // Apply probe_depth cap from persona.probeStyle (cap rule #179).
+    // The cap is applied here before persistence — the prompt builder reads
+    // the already-capped value and does NOT re-apply the cap.
+    if (
+      persona.probeStyle !== undefined &&
+      typeof (resolvedConfig as Record<string, unknown>).probe_depth === "number"
+    ) {
+      resolvedConfig = {
+        ...resolvedConfig,
+        probe_depth: applyProbeStyleCap(
+          (resolvedConfig as Record<string, unknown>).probe_depth as 0 | 1 | 2 | 3,
+          persona.probeStyle
+        ),
       };
     }
   }

@@ -257,3 +257,84 @@ describe("buildBehavioralSystemPrompt", () => {
     expect(prompt).toContain("This directive overrides any earlier");
   });
 });
+
+// ---- #179: Behavioral interviewer personas ----
+
+describe("buildBehavioralSystemPrompt — personas (#179)", () => {
+  it("persona 'amazon-lp' includes 'Leadership Principles' and 'Priya' but not STAR/warm/hostile cross-contamination", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "amazon-lp",
+    });
+    expect(prompt).toContain("Leadership Principles");
+    expect(prompt).toContain("Priya");
+    expect(prompt).not.toContain("STAR discipline");
+    expect(prompt).not.toContain("warm peer");
+    expect(prompt).not.toContain("hostile panel");
+  });
+
+  it("persona 'hostile-panel' includes 'hostile panel', 'Dr. Harlan', and 'skeptical senior'", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "hostile-panel",
+    });
+    expect(prompt).toContain("hostile panel");
+    expect(prompt).toContain("Dr. Harlan");
+    expect(prompt).toContain("skeptical senior interviewer");
+  });
+
+  it("persona 'default' matches snapshot (byte-identical to pre-personas baseline)", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "default",
+    });
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it("persona undefined produces byte-identical output to persona 'default'", () => {
+    const withDefault = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "default",
+    });
+    const withUndefined = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(withUndefined).toBe(withDefault);
+  });
+
+  it("persona 'bogus-id' falls back to default silently (defense-in-depth)", () => {
+    const defaultPrompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "default",
+    });
+    const bogusPrompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "bogus-id",
+    });
+    expect(bogusPrompt).toBe(defaultPrompt);
+  });
+
+  it("persona 'warm-peer' with probe_depth 3 outputs depth line '3' (cap applied at route, NOT prompt builder)", () => {
+    // The prompt builder reads the already-persisted probe_depth value.
+    // If warm-peer is combined with depth=3 in the prompt builder directly
+    // (as happens in unit tests, before the route caps it), it should
+    // output depth=3 faithfully — the cap happens upstream at the route.
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "warm-peer",
+      probe_depth: 3,
+    });
+    expect(prompt).toContain("Follow-up depth for this session: 3");
+    expect(prompt).toContain("warm peer");
+  });
+
+  it("persona 'google-star' suffix appears after probe_depth block", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "google-star",
+      probe_depth: 2,
+    });
+    const probeIdx = prompt.indexOf("Follow-up depth for this session: 2");
+    const suffixIdx = prompt.indexOf("STAR discipline");
+    expect(probeIdx).toBeGreaterThan(-1);
+    expect(suffixIdx).toBeGreaterThan(probeIdx);
+  });
+});
