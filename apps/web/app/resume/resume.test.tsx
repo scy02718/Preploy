@@ -12,6 +12,38 @@ const mockResumes = [
     filename: "my_resume.pdf",
     content: "John Doe\nSoftware Engineer\n5 years experience",
     createdAt: "2026-01-15T00:00:00Z",
+    structuredData: null,
+  },
+];
+
+const mockResumesWithStructured = [
+  {
+    id: "resume-2",
+    filename: "structured_resume.pdf",
+    content: "John Doe\nSoftware Engineer at Acme Corp",
+    createdAt: "2026-01-15T00:00:00Z",
+    structuredData: {
+      roles: [
+        {
+          company: "Acme Corp",
+          title: "Senior Engineer",
+          dates: "2020-2023",
+          bullets: [
+            {
+              text: "Led migration of monolith to microservices, reducing latency by 40%",
+              impact_score: 9,
+              has_quantified_metric: true,
+            },
+            {
+              text: "Participated in team meetings",
+              impact_score: 2,
+              has_quantified_metric: false,
+            },
+          ],
+        },
+      ],
+      skills: ["TypeScript", "Node.js"],
+    },
   },
 ];
 
@@ -108,5 +140,34 @@ describe("ResumePage", () => {
     // Skeleton should show while loading
     const pulseElements = document.querySelectorAll(".animate-pulse");
     expect(pulseElements.length).toBeGreaterThan(0);
+  });
+
+  it("renders Structured View card when structuredData is present", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ resumes: mockResumesWithStructured }),
+    }) as unknown as typeof fetch;
+
+    render(<ResumePage />);
+    await vi.waitFor(() => {
+      expect(screen.getAllByText("Structured View").length).toBeGreaterThanOrEqual(1);
+    });
+    // Role name should be visible inside the structured view
+    expect(screen.getAllByText("Acme Corp").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not render Structured View card when structuredData is null (plaintext-only fallback)", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ resumes: mockResumes }),
+    }) as unknown as typeof fetch;
+
+    render(<ResumePage />);
+    await vi.waitFor(() => {
+      // The resume list should render
+      expect(screen.getAllByText("my_resume.pdf").length).toBeGreaterThanOrEqual(1);
+    });
+    // Structured View card should NOT be present
+    expect(screen.queryByText("Structured View")).toBeNull();
   });
 });

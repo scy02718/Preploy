@@ -19,6 +19,7 @@ export async function GET() {
       id: userResumes.id,
       filename: userResumes.filename,
       content: userResumes.content,
+      structuredData: userResumes.structuredData,
       createdAt: userResumes.createdAt,
     })
     .from(userResumes)

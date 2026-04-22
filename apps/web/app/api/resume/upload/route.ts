@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { userResumes } from "@/lib/schema";
 import { createRequestLogger } from "@/lib/logger";
+import { parseResume } from "@/lib/resume-parser";
 import OpenAI from "openai";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -124,16 +125,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Parse structured data — failure is non-fatal; we still store the resume
+  let structuredData = null;
+  try {
+    structuredData = await parseResume(content);
+  } catch (err) {
+    log.warn({ err }, "parseResume threw unexpectedly; proceeding with structuredData: null");
+  }
+
   const [resume] = await db
     .insert(userResumes)
     .values({
       userId: session.user.id,
       filename,
       content,
+      structuredData,
     })
     .returning();
 
-  log.info({ resumeId: resume.id, filename }, "Resume uploaded");
+  log.info({ resumeId: resume.id, filename, hasStructuredData: structuredData !== null }, "Resume uploaded");
 
   return NextResponse.json(resume, { status: 201 });
 }

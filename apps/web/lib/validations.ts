@@ -143,3 +143,19 @@ export const gazeSamplesBodySchema = z.object({
   samples: z.array(gazeSampleSchema).min(1).max(3600),
 });
 export type GazeSamplesBody = z.infer<typeof gazeSamplesBodySchema>;
+
+// ---- Resume bullet rewrite schemas ----
+
+export const rewriteBulletSchema = z.object({
+  resumeId: z.uuid(),
+  bullet: z.string().min(1).max(800),
+  roleTitle: z.string().max(200).optional(),
+  roleCompany: z.string().max(200).optional(),
+});
+export type RewriteBulletInput = z.infer<typeof rewriteBulletSchema>;
+
+export const patchResumeBulletSchema = z.object({
+  oldBullet: z.string().min(1).max(800),
+  newBullet: z.string().min(1).max(800),
+});
+export type PatchResumeBulletInput = z.infer<typeof patchResumeBulletSchema>;
