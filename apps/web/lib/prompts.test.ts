@@ -213,4 +213,47 @@ describe("buildBehavioralSystemPrompt", () => {
     const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
     expect(prompt).toContain("Do NOT answer your own question");
   });
+
+  // ---- #178: probe_depth / follow-up pressure ----
+
+  it("probe_depth > 0 injects the follow-up directive", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      probe_depth: 2,
+    });
+    expect(prompt).toContain("Follow-up depth for this session: 2");
+    expect(prompt).toContain("business impact");
+  });
+
+  it("probe_depth: 0 omits the follow-up directive", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      probe_depth: 0,
+    });
+    expect(prompt).not.toContain("Follow-up depth for this session");
+  });
+
+  it("missing probe_depth omits the follow-up directive", () => {
+    const prompt = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    expect(prompt).not.toContain("Follow-up depth for this session");
+  });
+
+  it("probe_depth: 3 uses N=3 in the directive", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      probe_depth: 3,
+    });
+    expect(prompt).toContain("Follow-up depth for this session: 3");
+  });
+
+  it("probe_depth directive overrides the 'ask one follow-up' default", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      probe_depth: 2,
+    });
+    // The interview flow block contains the "ask one follow-up" line
+    expect(prompt).toContain("ask one follow-up");
+    // The probe_depth block explicitly overrides it
+    expect(prompt).toContain("This directive overrides any earlier");
+  });
 });

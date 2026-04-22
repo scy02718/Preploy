@@ -25,7 +25,10 @@ export type FeatureKey =
   | "planner"
   /** Resume upload + resume-tailored question generation (/resume, and the
    *  resume-selector dropdowns in the behavioral + technical setup pages). */
-  | "resume";
+  | "resume"
+  /** Interviewer follow-up pressure — probes up to 3 layers deep per question.
+   *  See #178. */
+  | "follow_up_probing";
 
 /**
  * Which plan tiers grant access to each feature. A feature is unlocked iff
@@ -34,6 +37,7 @@ export type FeatureKey =
 export const FEATURE_MATRIX: Record<FeatureKey, readonly Plan[]> = {
   planner: ["pro"],
   resume: ["pro"],
+  follow_up_probing: ["pro"],
 };
 
 /**
@@ -84,6 +88,17 @@ export const FEATURE_META: Record<
       "PDF + plain-text resume ingestion",
       "Company-specific questions referencing your real projects",
       "Attach the resume to any behavioral or technical session setup",
+    ],
+  },
+  follow_up_probing: {
+    label: "Follow-up pressure",
+    href: "/pricing#follow_up_probing",
+    tagline:
+      "Get an interviewer that probes up to three layers deep — impact, reasoning, counterfactual — just like a real panel.",
+    benefits: [
+      "Interviewer asks follow-ups per question before moving on",
+      "Gentle / Standard / Intense — pick how hard you want to be pushed",
+      "Trains you to go past surface-level STAR answers",
     ],
   },
 };

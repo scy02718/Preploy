@@ -9,6 +9,7 @@ export const behavioralConfigSchema = z.object({
     .optional(),
   interview_style: z.number().min(0).max(1),
   difficulty: z.number().min(0).max(1),
+  probe_depth: z.number().int().min(0).max(3).optional(),
 });
 
 export const technicalConfigSchema = z.object({
