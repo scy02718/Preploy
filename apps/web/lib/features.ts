@@ -31,7 +31,11 @@ export type FeatureKey =
   | "follow_up_probing"
   /** Behavioral interviewer personas — Amazon LP, Google STAR, hostile panel,
    *  warm peer, or the default Alex. See #179. */
-  | "interviewer_personas";
+  | "interviewer_personas"
+  /** Custom topic practice — free-text directive that steers the interviewer
+   *  toward a specific topic or competency in behavioral + technical sessions.
+   *  See #183. */
+  | "custom_topic";
 
 /**
  * Which plan tiers grant access to each feature. A feature is unlocked iff
@@ -42,6 +46,7 @@ export const FEATURE_MATRIX: Record<FeatureKey, readonly Plan[]> = {
   resume: ["pro"],
   follow_up_probing: ["pro"],
   interviewer_personas: ["pro"],
+  custom_topic: ["pro"],
 };
 
 /**
@@ -114,6 +119,17 @@ export const FEATURE_META: Record<
       "Five behavioral interviewer personas to pick from",
       "Amazon Leadership Principles, Google STAR discipline, hostile panel, warm peer, or the default friendly Alex",
       "Matches the interviewer texture to the companies you're targeting",
+    ],
+  },
+  custom_topic: {
+    label: "Custom Topic Practice",
+    href: "/pricing#custom_topic",
+    tagline:
+      "Narrow the interviewer to a specific topic or competency — leadership, conflict resolution, system design, anything you need to drill.",
+    benefits: [
+      "Free-text directive steers every question toward your chosen topic",
+      "Works for both behavioral and technical sessions",
+      "Isolate weak areas and build depth where it counts",
     ],
   },
 };

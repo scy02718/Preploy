@@ -204,6 +204,18 @@ export async function POST(request: NextRequest) {
     if (gated) return gated;
   }
 
+  // Resolve focus_directive for both behavioral and technical sessions (#183).
+  // Normalize to a trimmed string; empty/whitespace counts as absent.
+  // Non-empty requires Pro; empty is allowed for free users and keeps the
+  // persisted config clean (no "" vs undefined drift).
+  const rawFocus = (config as Record<string, unknown>)?.focus_directive;
+  const focusDirective =
+    typeof rawFocus === "string" ? rawFocus.trim() : "";
+  if (focusDirective.length > 0) {
+    const gated = await requireProFeature(session.user.id, "custom_topic");
+    if (gated) return gated;
+  }
+
   // Resolve probe_depth for behavioral sessions. Technical sessions are
   // explicitly untouched — follow-up pressure applies only to behavioral
   // sessions. See #178.
@@ -268,6 +280,18 @@ export async function POST(request: NextRequest) {
         ),
       };
     }
+  }
+
+  // Write focus_directive into resolvedConfig when non-empty; strip the key
+  // entirely when empty/whitespace to avoid "" vs undefined drift in persisted JSONB.
+  // parsedConfigData may already contain focus_directive (Zod accepts ""), so we
+  // always delete it first and then re-add only when non-empty. See #183.
+  if (focusDirective.length > 0) {
+    resolvedConfig = { ...resolvedConfig, focus_directive: focusDirective };
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { focus_directive: _fd, ...withoutFocus } = resolvedConfig as Record<string, unknown>;
+    resolvedConfig = withoutFocus;
   }
 
   // Capture once so the transaction callback closure has a narrowed string
