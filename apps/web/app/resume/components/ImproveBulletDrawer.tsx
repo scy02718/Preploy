@@ -91,7 +91,7 @@ export function ImproveBulletDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-lg overflow-y-auto"
+        className="w-full sm:max-w-lg overflow-y-auto px-6"
       >
         <SheetHeader className="mb-4">
           <SheetTitle className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export function ImproveBulletDrawer({
                   variant="outline"
                   disabled={isAccepting}
                   onClick={() => handleAccept(variant)}
-                  className="gap-1.5 min-h-[44px]"
+                  className="gap-1.5"
                 >
                   <Check className="h-3.5 w-3.5" aria-hidden="true" />
                   Accept
