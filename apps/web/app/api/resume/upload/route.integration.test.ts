@@ -7,8 +7,12 @@ import {
 } from "../../../../tests/setup-db";
 import { users, userResumes } from "@/lib/schema";
 
-// Mock auth
-const mockAuth = vi.fn();
+// Use vi.hoisted so mockParseResume is available when vi.mock factories run
+const { mockAuth, mockParseResume } = vi.hoisted(() => ({
+  mockAuth: vi.fn(),
+  mockParseResume: vi.fn(),
+}));
+
 vi.mock("@/lib/auth", () => ({
   auth: () => mockAuth(),
 }));
@@ -18,6 +22,11 @@ vi.mock("@/lib/db", () => ({
   get db() {
     return getTestDb();
   },
+}));
+
+// Mock the resume parser
+vi.mock("@/lib/resume-parser", () => ({
+  parseResume: mockParseResume,
 }));
 
 import { POST } from "./route";
@@ -51,6 +60,18 @@ function makeUploadRequest(content: string | null, filename: string, mimeType: s
   return req;
 }
 
+const MOCK_STRUCTURED = {
+  roles: [
+    {
+      company: "Acme Corp",
+      title: "Engineer",
+      dates: "2020-2023",
+      bullets: [{ text: "Did stuff", impact_score: 5, has_quantified_metric: false }],
+    },
+  ],
+  skills: ["TypeScript"],
+};
+
 describe("API POST /api/resume/upload (integration)", () => {
   beforeAll(async () => {
     const db = getTestDb();
@@ -58,6 +79,8 @@ describe("API POST /api/resume/upload (integration)", () => {
   });
 
   beforeEach(async () => {
+    vi.clearAllMocks();
+    mockParseResume.mockResolvedValue(MOCK_STRUCTURED);
     const db = getTestDb();
     await db.delete(userResumes);
   });
@@ -71,6 +94,33 @@ describe("API POST /api/resume/upload (integration)", () => {
     mockAuth.mockResolvedValue(null);
     const res = await POST(makeUploadRequest("resume text", "resume.txt", "text/plain"));
     expect(res.status).toBe(401);
+  });
+
+  it("populates structured_data in DB when parser succeeds", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    mockParseResume.mockResolvedValue(MOCK_STRUCTURED);
+    const content = "John Doe\nSoftware Engineer\n5 years experience";
+    const res = await POST(makeUploadRequest(content, "resume.txt", "text/plain"));
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.structuredData).not.toBeNull();
+    expect(data.structuredData.roles[0].company).toBe("Acme Corp");
+
+    // Verify persisted in DB
+    const db = getTestDb();
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db.select().from(userResumes).where(eq(userResumes.id, data.id));
+    expect(row.structuredData).not.toBeNull();
+  });
+
+  it("succeeds with structured_data: null when parser throws", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    mockParseResume.mockRejectedValue(new Error("Parse failure"));
+    const content = "John Doe\nEngineer";
+    const res = await POST(makeUploadRequest(content, "resume2.txt", "text/plain"));
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.structuredData).toBeNull();
   });
 
   it("returns 400 when no file is provided", async () => {

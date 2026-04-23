@@ -228,6 +228,7 @@ export const userResumes = pgTable("user_resumes", {
     .references(() => users.id, { onDelete: "cascade" }),
   filename: text("filename").notNull(),
   content: text("content").notNull(),
+  structuredData: jsonb("structured_data"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

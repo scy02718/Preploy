@@ -16,13 +16,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Upload, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { FileText, Upload, Loader2, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { StructuredResumeView } from "./components/StructuredResumeView";
+import { ImproveBulletDrawer } from "./components/ImproveBulletDrawer";
+import type { StructuredResume } from "@/lib/resume-parser";
 
 interface Resume {
   id: string;
   filename: string;
   content: string;
+  structuredData?: StructuredResume | null;
   createdAt: string;
+}
+
+interface UndoEntry {
+  oldBullet: string;
+  newBullet: string;
+}
+
+interface DrawerState {
+  open: boolean;
+  bullet: string;
+  roleTitle: string;
+  roleCompany: string;
 }
 
 interface GeneratedQuestion {
@@ -48,6 +64,16 @@ export default function ResumePage() {
   // Delete state
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Structured view: bullet rewrite drawer + session-local undo stack
+  const [drawerState, setDrawerState] = useState<DrawerState>({
+    open: false,
+    bullet: "",
+    roleTitle: "",
+    roleCompany: "",
+  });
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const [improvingBullet, setImprovingBullet] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -169,6 +195,60 @@ export default function ResumePage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleImprove = (bullet: string, roleTitle: string, roleCompany: string) => {
+    setImprovingBullet(bullet);
+    setDrawerState({ open: true, bullet, roleTitle, roleCompany });
+  };
+
+  const handleDrawerOpenChange = (open: boolean) => {
+    setDrawerState((prev) => ({ ...prev, open }));
+    if (!open) setImprovingBullet(null);
+  };
+
+  /**
+   * Accept a bullet variant — PATCH the resume, update local state, push undo entry.
+   */
+  const handleAcceptVariant = async (oldBullet: string, newBullet: string) => {
+    if (!selectedResumeId) return;
+    const res = await fetch(`/api/resume/${selectedResumeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oldBullet, newBullet }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showMessage("error", (err as { error?: string }).error ?? "Failed to update bullet");
+      return;
+    }
+    const updated = await res.json() as Resume;
+    setResumes((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    setUndoStack((prev) => [{ oldBullet, newBullet }, ...prev]);
+    setImprovingBullet(null);
+    showMessage("success", "Bullet updated. Use Undo to revert.");
+  };
+
+  /**
+   * Undo the last rewrite — issues a reverse PATCH (new→old).
+   * In-memory only; dies on navigation (per spec).
+   */
+  const handleUndo = async () => {
+    if (undoStack.length === 0 || !selectedResumeId) return;
+    const [{ oldBullet, newBullet }, ...rest] = undoStack;
+    const res = await fetch(`/api/resume/${selectedResumeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oldBullet: newBullet, newBullet: oldBullet }),
+    });
+    if (!res.ok) {
+      showMessage("error", "Failed to undo rewrite");
+      return;
+    }
+    const updated = await res.json() as Resume;
+    setResumes((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    setUndoStack(rest);
+    showMessage("success", "Rewrite undone.");
   };
 
   const handleGenerateQuestions = async () => {
@@ -435,6 +515,36 @@ export default function ResumePage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Structured view — only when structuredData present */}
+          {selectedResume?.structuredData && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Structured View</CardTitle>
+                  {undoStack.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUndo}
+                      className="gap-1.5 text-sm"
+                    >
+                      <Undo2 className="h-4 w-4" aria-hidden="true" />
+                      Undo last rewrite
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <StructuredResumeView
+                  structuredData={selectedResume.structuredData}
+                  resumeId={selectedResume.id}
+                  onImprove={handleImprove}
+                  improvingBullet={improvingBullet}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right column — Generate Questions */}
@@ -578,6 +688,19 @@ export default function ResumePage() {
           )}
         </div>
       </div>
+
+      {/* Improve bullet drawer — right sheet on desktop, bottom on mobile */}
+      {selectedResume && (
+        <ImproveBulletDrawer
+          open={drawerState.open}
+          onOpenChange={handleDrawerOpenChange}
+          bullet={drawerState.bullet}
+          roleTitle={drawerState.roleTitle}
+          roleCompany={drawerState.roleCompany}
+          resumeId={selectedResume.id}
+          onAccept={handleAcceptVariant}
+        />
+      )}
     </div>
   );
 }
