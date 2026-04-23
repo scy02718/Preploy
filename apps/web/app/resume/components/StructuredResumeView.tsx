@@ -114,7 +114,7 @@ export function StructuredResumeView({
                                 onClick={() =>
                                   onImprove(bullet.text, selectedRole.title, selectedRole.company)
                                 }
-                                className="h-8 min-h-[44px] gap-1.5 motion-safe:transition-opacity"
+                                className="h-8 gap-1.5 motion-safe:transition-opacity"
                               >
                                 <Sparkles
                                   className="h-4 w-4 text-[color:var(--primary)]"

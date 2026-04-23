@@ -516,35 +516,6 @@ export default function ResumePage() {
             </Card>
           )}
 
-          {/* Structured view — only when structuredData present */}
-          {selectedResume?.structuredData && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Structured View</CardTitle>
-                  {undoStack.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleUndo}
-                      className="gap-1.5 text-sm"
-                    >
-                      <Undo2 className="h-4 w-4" aria-hidden="true" />
-                      Undo last rewrite
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <StructuredResumeView
-                  structuredData={selectedResume.structuredData}
-                  resumeId={selectedResume.id}
-                  onImprove={handleImprove}
-                  improvingBullet={improvingBullet}
-                />
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Right column — Generate Questions */}
@@ -683,6 +654,36 @@ export default function ResumePage() {
                     Use in Behavioral Setup
                   </Button>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Structured view — only when structuredData present */}
+          {selectedResume?.structuredData && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Structured View</CardTitle>
+                  {undoStack.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUndo}
+                      className="gap-1.5 text-sm"
+                    >
+                      <Undo2 className="h-4 w-4" aria-hidden="true" />
+                      Undo last rewrite
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <StructuredResumeView
+                  structuredData={selectedResume.structuredData}
+                  resumeId={selectedResume.id}
+                  onImprove={handleImprove}
+                  improvingBullet={improvingBullet}
+                />
               </CardContent>
             </Card>
           )}
