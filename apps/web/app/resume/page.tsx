@@ -344,7 +344,7 @@ export default function ResumePage() {
         <div
           className={`mb-6 rounded-md border px-4 py-3 text-sm ${
             message.type === "success"
-              ? "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400"
+              ? "border-[color:var(--chart-1)]/50 bg-[color:var(--chart-1)]/10 text-[color:var(--chart-1)]"
               : "border-destructive/50 bg-destructive/10 text-destructive"
           }`}
         >
