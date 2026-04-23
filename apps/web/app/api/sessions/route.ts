@@ -204,16 +204,18 @@ export async function POST(request: NextRequest) {
     if (gated) return gated;
   }
 
-  // Resolve focus_directive for both behavioral and technical sessions (#183).
+  // Resolve focus_directive for behavioral sessions only (#183).
   // Normalize to a trimmed string; empty/whitespace counts as absent.
   // Non-empty requires Pro; empty is allowed for free users and keeps the
   // persisted config clean (no "" vs undefined drift).
-  const rawFocus = (config as Record<string, unknown>)?.focus_directive;
-  const focusDirective =
-    typeof rawFocus === "string" ? rawFocus.trim() : "";
-  if (focusDirective.length > 0) {
-    const gated = await requireProFeature(session.user.id, "custom_topic");
-    if (gated) return gated;
+  let focusDirective = "";
+  if (type === "behavioral") {
+    const rawFocus = (config as Record<string, unknown>)?.focus_directive;
+    focusDirective = typeof rawFocus === "string" ? rawFocus.trim() : "";
+    if (focusDirective.length > 0) {
+      const gated = await requireProFeature(session.user.id, "custom_topic");
+      if (gated) return gated;
+    }
   }
 
   // Resolve probe_depth for behavioral sessions. Technical sessions are
@@ -286,9 +288,17 @@ export async function POST(request: NextRequest) {
   // entirely when empty/whitespace to avoid "" vs undefined drift in persisted JSONB.
   // parsedConfigData may already contain focus_directive (Zod accepts ""), so we
   // always delete it first and then re-add only when non-empty. See #183.
-  if (focusDirective.length > 0) {
-    resolvedConfig = { ...resolvedConfig, focus_directive: focusDirective };
+  // For technical sessions, focus_directive is not a supported field — always strip it.
+  if (type === "behavioral") {
+    if (focusDirective.length > 0) {
+      resolvedConfig = { ...resolvedConfig, focus_directive: focusDirective };
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { focus_directive: _fd, ...withoutFocus } = resolvedConfig as Record<string, unknown>;
+      resolvedConfig = withoutFocus;
+    }
   } else {
+    // Strip focus_directive from technical sessions (not supported)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { focus_directive: _fd, ...withoutFocus } = resolvedConfig as Record<string, unknown>;
     resolvedConfig = withoutFocus;
