@@ -416,6 +416,12 @@ export default function TechnicalSessionPage() {
     </>
   );
 
+  // Session is initialized once the problem has been fetched and rendered
+  // (not still loading). While problemLoading is true or problem is null,
+  // the End Session button stays disabled so users can't land on the feedback
+  // page with an empty session — which would cause an infinite loading spinner.
+  const sessionInitialized = !problemLoading && problem !== null;
+
   return (
     <TechnicalSessionLayout
       problemPanel={problemPanel}
@@ -426,6 +432,7 @@ export default function TechnicalSessionPage() {
       onEndSession={handleEndSession}
       isProcessing={isProcessing}
       processingStep={processingStep}
+      sessionInitialized={sessionInitialized}
       hintButton={
         <>
           <HintButton

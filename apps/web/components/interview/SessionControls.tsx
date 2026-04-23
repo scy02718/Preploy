@@ -9,6 +9,14 @@ interface SessionControlsProps {
   onMute: () => void;
   onUnmute: () => void;
   onEndSession: () => void;
+  /**
+   * Whether the session has fully initialized (first interviewer turn delivered).
+   * Defaults to true for backward compatibility. When false, the End Session
+   * button is visually disabled with "Starting session…" microcopy so users
+   * can't end before the interview kicks off (which would produce an empty
+   * transcript and infinite-load on the feedback page).
+   */
+  sessionInitialized?: boolean;
 }
 
 export function SessionControls({
@@ -17,6 +25,7 @@ export function SessionControls({
   onMute,
   onUnmute,
   onEndSession,
+  sessionInitialized = true,
 }: SessionControlsProps) {
   const [elapsed, setElapsed] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -101,6 +110,18 @@ export function SessionControls({
               Cancel
             </Button>
           </div>
+        ) : !sessionInitialized ? (
+          /* Disabled state — session still initializing. Rendered as a styled
+             span (not a button) so the browser never fires a click event, but
+             with aria-disabled + role="button" so screen readers still announce
+             it as a disabled button. min-h/min-w keep the 44×44 touch target. */
+          <span
+            role="button"
+            aria-disabled="true"
+            className="inline-flex min-h-[44px] min-w-[44px] cursor-not-allowed items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 text-sm font-medium text-destructive/50 opacity-60 motion-safe:transition-opacity motion-safe:duration-[var(--duration-base)]"
+          >
+            Starting session…
+          </span>
         ) : (
           <Button variant="destructive" size="sm" onClick={handleEndClick}>
             End Session
