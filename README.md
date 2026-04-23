@@ -8,18 +8,20 @@ Practice mock interviews with AI. Get scored, track progress, get hired.
 - **Behavioral interviews** — Voice-to-voice mock sessions with real-time AI conversation, STAR-method coaching, and scored feedback on structure and delivery (3 sessions/month)
 - **Technical interviews** — Split-panel coding sessions with Monaco editor, problem statements, mic recording for verbal explanations, AI feedback on correctness and approach, and 1 LLM hint per session
 - **Progress tracking** — Per-session feedback, trend charts, and a coaching hub that breaks down weak areas across behavioral, technical, and communication dimensions
-- **STAR practice** — Standalone STAR-method story builder for structuring behavioral answers
+- **STAR practice builder** — Standalone STAR-method story builder for structuring behavioral answers
+- **Interview prep planner** — AI-generated day-by-day schedule from today to your interview date, balanced across behavioral, technical, and STAR practice
+- **Resume tools** — PDF/plain-text resume upload, structured parse, and AI bullet rewrite (available to all signed-in users; generating interview questions from your resume during session setup is a Pro feature)
 - **Achievements** — Progress milestones to keep motivation high
-- **Optional gaze tracking** — MediaPipe Face Landmarker measures eye contact and presence during behavioral sessions (opt-in; all processing runs locally in-browser, nothing is sent to a server)
+- **Gaze tracking (opt-in)** — MediaPipe Face Landmarker measures eye contact and presence during behavioral sessions; all processing runs locally in-browser, nothing is sent to a server
+- **1 AI hint per technical session**
 
 ### Pro tier ($15/month or $120/year)
 - **Higher session cap** — 40 sessions per month (up from 3)
-- **Resume tools** — PDF/plain-text resume upload, structured parse, AI bullet rewrite, and resume-tailored question generation for behavioral and technical sessions
-- **Interview prep planner** — AI-generated day-by-day schedule from today to your interview date, balanced across behavioral, technical, and STAR practice
+- **Resume-tailored question generation** — During session setup, Pro users can generate interview questions drawn directly from their uploaded resume experience
+- **3 AI hints per technical session** — Up from 1 on Free
 - **Follow-up probing** — Interviewer probes up to 3 layers deep per question (impact, reasoning, counterfactual), with configurable intensity
 - **Interviewer personas** — Five behavioral interviewer styles: Amazon LP, Google STAR, hostile panel, warm peer, or the default friendly Alex
 - **Custom topic focus** — Free-text directive that steers every question toward a specific competency or topic
-- **More hints** — 3 AI hints per technical session (up from 1)
 - **Pro analysis** — 10 deep-analysis runs per billing period with extended feedback and session summaries
 
 ## Tech stack

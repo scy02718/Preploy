@@ -1,7 +1,7 @@
 import type React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mic, Code, BarChart2, Award, Lightbulb, Users, Target, FileText, CalendarDays } from "lucide-react";
+import { Mic, Code, BarChart2, Award, Lightbulb, Users, Target, FileText, CalendarDays, GitBranch } from "lucide-react";
 
 const features: {
   icon: React.ElementType;
@@ -37,15 +37,13 @@ const features: {
     icon: FileText,
     title: "Resume tools",
     description:
-      "Upload your resume once — Preploy parses it, rewrites weak bullets, and generates questions drawn from your actual experience.",
-    pro: true,
+      "Upload your resume — Preploy parses it and rewrites weak bullets. Free for all users. Pro users can also generate interview questions drawn directly from their experience.",
   },
   {
     icon: CalendarDays,
     title: "Day-by-day prep plan",
     description:
-      "Enter your interview date and role; Preploy builds a structured practice schedule leading up to the day.",
-    pro: true,
+      "Enter your interview date and role; Preploy builds a structured practice schedule leading up to the day. Free for all signed-in users.",
   },
   {
     icon: Users,
@@ -59,6 +57,13 @@ const features: {
     title: "Custom topic focus",
     description:
       "Narrow the interviewer to a specific competency — leadership, conflict, system design — so you drill where it counts.",
+    pro: true,
+  },
+  {
+    icon: GitBranch,
+    title: "Follow-up probing",
+    description:
+      "The interviewer probes up to 3 layers deep — impact, reasoning, counterfactual — so you can't coast on a surface-level answer.",
     pro: true,
   },
   {
