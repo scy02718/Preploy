@@ -27,7 +27,7 @@ export function FocusDirectiveField({ value, onChange }: FocusDirectiveFieldProp
     return (
       <a
         href="/pricing#custom_topic"
-        className="block rounded-lg border border-[color:var(--primary)]/30 bg-[color:var(--primary)]/5 px-4 py-3 transition-colors hover:bg-[color:var(--primary)]/10"
+        className="block rounded-lg border border-[color:var(--primary)]/30 bg-[color:var(--primary)]/5 px-4 py-3 motion-safe:transition-colors motion-safe:hover:bg-[color:var(--primary)]/10"
       >
         <div className="flex items-center gap-2">
           <Sparkles
