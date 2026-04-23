@@ -100,6 +100,35 @@ docker compose --profile test up -d test-db
 
 Detailed test docs: [`apps/web/README.md`](apps/web/README.md).
 
+## Lighthouse (Performance / Accessibility / SEO)
+
+Lighthouse CI runs on every PR and gates merges on these thresholds (each must pass on all 5 public routes):
+
+| Category       | Threshold | Gate   |
+|----------------|-----------|--------|
+| Performance    | ≥ 90      | error  |
+| Accessibility  | ≥ 95      | error  |
+| SEO            | ≥ 95      | error  |
+| Best Practices | —         | warn   |
+
+**Run locally** (requires a production build and a running DB):
+
+```bash
+# 1. Build the app
+cd apps/web && npm run build
+
+# 2. Start the production server in the background
+npx next start -p 3000 &
+
+# 3. Run lhci against the 5 public routes (from the repo root)
+cd ../..
+npx lhci autorun --config lighthouserc.json
+```
+
+HTML reports are written to `.lighthouseci/`. When the workflow fails in CI,
+the report is uploaded as a GitHub Actions artifact (`lighthouse-report`)
+so you can inspect the regression without re-running locally.
+
 ## Project structure
 
 ```
