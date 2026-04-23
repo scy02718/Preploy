@@ -45,7 +45,11 @@ export function HintPanel({ hints, isHintLoading, onClose }: HintPanelProps) {
       </div>
 
       {/* Hints list */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+        aria-live="polite"
+        aria-atomic="false"
+      >
         {hints.map((hint, index) => (
           <div
             key={index}

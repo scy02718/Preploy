@@ -41,6 +41,7 @@ export default function TechnicalSessionPage() {
   const [hintsUsed, setHintsUsed] = useState(0);
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [showHintPanel, setShowHintPanel] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
 
   // Regeneration: users can regenerate the question up to 5 times per
   // session so they don't get stuck on a duplicate or an unfamiliar topic.
@@ -191,6 +192,7 @@ export default function TechnicalSessionPage() {
     if (!sessionId || !problem || isHintLoading) return;
     setIsHintLoading(true);
     setShowHintPanel(true);
+    setHintError(null);
     try {
       const res = await fetch(`/api/sessions/${sessionId}/hints`, {
         method: "POST",
@@ -206,9 +208,16 @@ export default function TechnicalSessionPage() {
         const data = await res.json();
         setHints((prev) => [...prev, data.hint]);
         setHintsUsed(data.hintsUsed);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (typeof data.hintsUsed === "number") {
+          setHintsUsed(data.hintsUsed);
+        }
+        setHintError(data.error ?? "Failed to get hint. Please try again.");
       }
     } catch (err) {
       console.error("Failed to request hint:", err);
+      setHintError("Failed to get hint. Please try again.");
     } finally {
       setIsHintLoading(false);
     }
@@ -418,13 +427,24 @@ export default function TechnicalSessionPage() {
       isProcessing={isProcessing}
       processingStep={processingStep}
       hintButton={
-        <HintButton
-          hintsUsed={hintsUsed}
-          hintsLimit={hintsLimit}
-          isLoading={isHintLoading}
-          onClick={handleRequestHint}
-          plan={resolvedPlan}
-        />
+        <>
+          <HintButton
+            hintsUsed={hintsUsed}
+            hintsLimit={hintsLimit}
+            isLoading={isHintLoading}
+            onClick={handleRequestHint}
+            plan={resolvedPlan}
+          />
+          {hintError && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-xs text-destructive"
+            >
+              {hintError}
+            </p>
+          )}
+        </>
       }
       hintPanel={
         showHintPanel ? (

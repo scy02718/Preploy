@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PRO_HINTS_PER_SESSION, FREE_HINTS_PER_SESSION } from "@/lib/plans";
 import type { Plan } from "@/lib/plans";
 
 interface HintButtonProps {
@@ -60,7 +61,7 @@ export function HintButton({
           href="/pricing"
           className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline motion-safe:transition-colors"
         >
-          Upgrade for {2} more hints
+          Upgrade for {PRO_HINTS_PER_SESSION - FREE_HINTS_PER_SESSION} more hints
         </Link>
       )}
     </div>
