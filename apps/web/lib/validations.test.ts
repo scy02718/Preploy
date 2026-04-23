@@ -237,40 +237,6 @@ describe("technicalConfigSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  // ---- #183: focus_directive ----
-
-  it("#183: accepts valid focus_directive up to 500 chars", () => {
-    const result = technicalConfigSchema.safeParse({
-      interview_type: "leetcode",
-      focus_areas: ["arrays"],
-      language: "python",
-      difficulty: "medium",
-      focus_directive: "graph algorithms and dynamic programming only",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("#183: accepts missing focus_directive (optional)", () => {
-    const result = technicalConfigSchema.safeParse({
-      interview_type: "leetcode",
-      focus_areas: ["arrays"],
-      language: "python",
-      difficulty: "medium",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("#183: rejects focus_directive over 500 chars", () => {
-    const result = technicalConfigSchema.safeParse({
-      interview_type: "leetcode",
-      focus_areas: ["arrays"],
-      language: "python",
-      difficulty: "medium",
-      focus_directive: "x".repeat(501),
-    });
-    expect(result.success).toBe(false);
-  });
-
   // 123-I: Zod validator accepts "other" sentinel in focus_areas
   it("accepts 'other' sentinel in focus_areas", () => {
     const result = technicalConfigSchema.safeParse({

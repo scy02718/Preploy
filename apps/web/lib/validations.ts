@@ -20,7 +20,6 @@ export const technicalConfigSchema = z.object({
   language: z.string().min(1),
   difficulty: z.enum(["easy", "medium", "hard"]),
   additional_instructions: z.string().max(1000).optional(),
-  focus_directive: z.string().max(500).optional(),
 });
 
 export const problemExampleSchema = z.object({

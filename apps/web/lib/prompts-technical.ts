@@ -63,16 +63,6 @@ export function buildProblemGenerationPrompt(
     );
   }
 
-  // Custom topic directive (#183) — Pro-only. Injected AFTER additional_instructions
-  // and BEFORE the JSON schema instruction. When focus_directive is absent or
-  // whitespace-only this section is omitted entirely so Free-tier output is
-  // byte-identical to baseline.
-  if (config.focus_directive?.trim()) {
-    sections.push(
-      `Focus your questions specifically on: ${config.focus_directive.trim()}. Do not ask questions outside this scope unless the candidate invites it.`
-    );
-  }
-
   sections.push(
     "Respond ONLY with valid JSON matching this exact schema:\n" +
       '{ "title": string, "difficulty": "Easy" | "Medium" | "Hard", "description": string, ' +

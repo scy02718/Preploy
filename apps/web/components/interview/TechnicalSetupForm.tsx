@@ -21,7 +21,7 @@ import { TemplateControls } from "./TemplateControls";
 import { ResumeSelector } from "./ResumeSelector";
 import { UpgradePromptDialog } from "@/components/billing/UpgradePromptDialog";
 import { ProAnalysisToggle } from "./ProAnalysisToggle";
-import { FocusDirectiveField } from "./FocusDirectiveField";
+
 import {
   SUPPORTED_LANGUAGES,
   FOCUS_AREAS_BY_TYPE,
@@ -348,10 +348,7 @@ export function TechnicalSetupForm() {
               <p className="text-xs text-muted-foreground">
                 {(techConfig.additional_instructions ?? "").length}/1000
               </p>
-              <FocusDirectiveField
-                value={techConfig.focus_directive ?? ""}
-                onChange={(v) => setConfig({ focus_directive: v || undefined })}
-              />
+
             </CardContent>
           </Card>
         </div>

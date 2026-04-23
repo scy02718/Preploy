@@ -69,10 +69,6 @@ export interface TechnicalSessionConfig {
   additional_instructions?: string;
   resume_id?: string;
   resume_text?: string;
-  // Pro-only. Free-text directive that steers the problem generator toward a
-  // specific topic or competency (e.g. "graph algorithms only").
-  // Max 500 chars. Empty/whitespace treated as absent. See #183.
-  focus_directive?: string;
 }
 
 export type SessionConfig = BehavioralSessionConfig | TechnicalSessionConfig;
