@@ -38,8 +38,7 @@ export async function PATCH(
 
   const { oldBullet, newBullet } = parsed.data;
 
-  let existing;
-  [existing] = await db
+  const [existing] = await db
     .select()
     .from(userResumes)
     .where(eq(userResumes.id, id));
