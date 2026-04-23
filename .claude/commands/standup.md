@@ -17,17 +17,39 @@ Announce every auto-advance in one line (e.g. `Auto-advancing: plan is
 low-risk and maps 1:1 to the story's "prove it works" scenarios`) so the
 user can interrupt if they disagree.
 
-There are 5 roles, each implemented as a subagent in `.claude/agents/`:
+There are 7 subagents in this loop, in `.claude/agents/`:
 
-| # | Role           | Subagent              | Output                                  |
-|---|----------------|-----------------------|-----------------------------------------|
-| 1 | Product Manager| `pm-proposer`         | 1–3 proposed stories with acceptance criteria |
-| 2 | Tech Lead      | `tech-lead-planner`   | Step-by-step implementation plan        |
-| 3 | Developer      | `feature-implementer` | Code + tests on a feature branch        |
-| 4 | QA Tester      | `qa-tester`           | Test report (lint/typecheck/unit/integration/UI) |
-| 5 | Code Reviewer  | `pr-reviewer`         | Diff review + draft PR description      |
+| # | Role               | Subagent              | Output                                  |
+|---|--------------------|-----------------------|-----------------------------------------|
+| 0 | Branch pre-flight  | `branch-prep`         | GO / STOP verdict on current branch     |
+| 1 | Product Manager    | `pm-proposer`         | 1–3 proposed stories with acceptance criteria |
+| 2 | Tech Lead          | `tech-lead-planner`   | Step-by-step implementation plan        |
+| 3 | Developer          | `feature-implementer` | Code + tests on a feature branch        |
+| 4 | QA Tester          | `qa-tester`           | Test report (lint/typecheck/unit/integration/UI) |
+| 5a| Code Reviewer      | `pr-reviewer`         | Diff review + draft PR description      |
+| 5b| Design Reviewer    | `design-reviewer`     | UI design audit (parallel with 5a)      |
+
+Gate 5 launches `pr-reviewer` and `design-reviewer` **in parallel** (a single
+turn with two Agent tool calls); the orchestrator merges their verdicts.
 
 ## The loop
+
+### Gate 0 — Branch pre-flight (automated gate, not a user gate)
+
+Before any other gate runs, launch the `branch-prep` subagent. It verifies:
+
+- Working tree is clean (ignoring `.claude/settings.local.json`).
+- Current branch is not `main`.
+- Current branch's PR is not already merged or closed in `scy02718/preploy`.
+- Current branch is not behind `origin/main` (warning only).
+
+**Auto-advance** when the verdict is `GO`. Print one line:
+`Branch pre-flight: GO (<branch> clean, no merged/closed PR for this head)`.
+
+**Stop and ask** when the verdict is `STOP`. Show the user the failing
+checks and the recommended remediation (usually: create a fresh branch off
+`main`). Do not proceed to Gate 1 until the user confirms — refusing a
+dead branch here is the whole point of this gate.
 
 ### Gate 1 — Product Manager (soft gate)
 
@@ -166,30 +188,57 @@ guidance to retry.
 This is the only place in the loop where a hard failure surfaces to the
 user mid-story. Do not silently keep retrying.
 
-### Gate 5 — Code Reviewer (soft gate)
+### Gate 5 — Code Reviewer + Design Reviewer (soft gate, run in parallel)
 
-Once QA passes, launch the `pr-reviewer` subagent. It reads the diff against
-`main`, checks it against the per-app `CLAUDE.md` rules, and returns a
-verdict: `APPROVE`, `REQUEST CHANGES`, or `BLOCK`, plus a drafted PR title
-and body.
+Once QA passes, launch `pr-reviewer` AND `design-reviewer` in PARALLEL — a
+single turn with two Agent tool calls, not sequential. They each read the
+same diff against `main` independently and return verdicts.
 
-**Auto-advance** when the verdict is `APPROVE`:
+- `pr-reviewer` — checks conventions, coverage, scope, schema/migration
+  hygiene. Always runs.
+- `design-reviewer` — audits the diff against Preploy's editorial coaching
+  studio design system. Skips itself with verdict `N/A — no UI changes` when
+  the diff doesn't touch `apps/web/app/`, `apps/web/components/`,
+  `apps/web/app/globals.css`, or tailwind config.
+
+#### Merging the two verdicts
+
+The combined verdict = the worst of the two:
+
+| pr-reviewer       | design-reviewer       | Combined        |
+|-------------------|-----------------------|-----------------|
+| APPROVE           | APPROVE / N/A         | APPROVE         |
+| APPROVE           | REQUEST CHANGES       | REQUEST CHANGES |
+| APPROVE           | BLOCK                 | BLOCK           |
+| REQUEST CHANGES   | any                   | REQUEST CHANGES |
+| BLOCK             | any                   | BLOCK           |
+
+**Auto-advance** when the combined verdict is `APPROVE`:
 
 1. Push the current feature branch to `origin` if it is not already pushed
    (or is behind its upstream).
-2. Call `mcp__github__create_pull_request` with the drafted title and body,
-   base `main`, head = current branch.
-3. Print a one-line summary to the user: `Opened PR #<n>: <title> → <url>`.
+2. Call `mcp__github__create_pull_request` with `pr-reviewer`'s drafted
+   title and body, base `main`, head = current branch. If `design-reviewer`
+   returned a non-empty "Pattern snapshot", append it to the PR body under a
+   `## Design notes` heading.
+3. Print a one-line summary to the user:
+   `Opened PR #<n>: <title> → <url>`.
 
 Never push to `main` directly. Never force-push. Never merge the PR — the
 user still reviews and merges it themselves.
 
-**Stop and ask** when the verdict is `REQUEST CHANGES` or `BLOCK`:
+**Stop and ask** when the combined verdict is `REQUEST CHANGES` or `BLOCK`:
 
 ```
 Reviewer verdict: <REQUEST CHANGES | BLOCK> on <story title>
+  pr-reviewer:      <APPROVE | REQUEST CHANGES | BLOCK>
+  design-reviewer:  <APPROVE | REQUEST CHANGES | BLOCK | N/A>
 
-Issues found:
+Code issues:
+  - <severity>: <file:line> — <issue>
+  - ...
+
+Design issues:
   - <severity>: <file:line> — <issue>
   - ...
 
@@ -199,15 +248,15 @@ Draft PR (not yet opened):
     <pr body preview>
 
 Options:
-  1. "fix" — send the issues back to the implementer as a fix-list (one pass)
+  1. "fix" — send the combined issues back to the implementer as a fix-list (one pass)
   2. "open anyway" — open the PR as-is (you'll address the issues in the PR)
   3. "hold" — stop here, do not open a PR
 ```
 
-Wait for the user. On `fix`, re-launch the `feature-implementer` with the
-reviewer's issues as its task (same pattern as the QA fix-up loop, **max 1
-attempt**), then re-run QA end-to-end and re-run the reviewer. On `open
-anyway`, proceed with the auto-advance steps above. On `hold`, stop.
+Wait for the user. On `fix`, re-launch `feature-implementer` with the
+combined issue list as its task (same pattern as the QA fix-up loop, **max 1
+attempt**), then re-run QA end-to-end and re-run BOTH reviewers in parallel.
+On `open anyway`, proceed with the auto-advance steps above. On `hold`, stop.
 
 ## Hard rules
 
