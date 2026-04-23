@@ -102,14 +102,16 @@ Detailed test docs: [`apps/web/README.md`](apps/web/README.md).
 
 ## Lighthouse (Performance / Accessibility / SEO)
 
-Lighthouse CI runs on every PR and gates merges on these thresholds (each must pass on all 5 public routes):
+Lighthouse CI runs on every PR using the **desktop preset** and gates merges on these thresholds:
 
-| Category       | Threshold | Gate   |
-|----------------|-----------|--------|
-| Performance    | ≥ 90      | error  |
-| Accessibility  | ≥ 95      | error  |
-| SEO            | ≥ 95      | error  |
-| Best Practices | —         | warn   |
+| Category       | Threshold | Gate  | Routes                              |
+|----------------|-----------|-------|-------------------------------------|
+| Performance    | ≥ 90      | error | all 5                               |
+| Accessibility  | ≥ 95      | error | all 5                               |
+| SEO            | ≥ 95      | error | `/`, `/pricing`, `/login` only      |
+| Best Practices | —         | warn  | all 5                               |
+
+`/privacy` and `/terms` are excluded from the SEO gate — both pages intentionally set `robots: { index: false }` (draft legal docs, per issue #32), which caps the SEO category at ~0.69.
 
 **Run locally** (requires a production build and a running DB):
 
