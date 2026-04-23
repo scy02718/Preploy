@@ -111,14 +111,11 @@ export function SessionControls({
             </Button>
           </div>
         ) : !sessionInitialized ? (
-          /* Disabled state — session still initializing. Rendered as a styled
-             span (not a button) so the browser never fires a click event, but
-             with aria-disabled + role="button" so screen readers still announce
-             it as a disabled button. min-h/min-w keep the 44×44 touch target. */
+          // Styled to match Button size="sm" so the control doesn't visibly shrink when the session finishes initializing.
           <span
             role="button"
             aria-disabled="true"
-            className="inline-flex min-h-[44px] min-w-[44px] cursor-not-allowed items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 text-sm font-medium text-destructive/50 opacity-60 motion-safe:transition-opacity motion-safe:duration-[var(--duration-base)]"
+            className="inline-flex h-7 cursor-not-allowed items-center gap-1 rounded-[min(var(--radius-md),12px)] border border-destructive/30 bg-destructive/5 px-2.5 text-[0.8rem] font-medium text-destructive/50 opacity-60 motion-safe:transition-opacity motion-safe:duration-[var(--duration-base)]"
           >
             Starting session…
           </span>
