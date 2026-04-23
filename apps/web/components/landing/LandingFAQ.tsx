@@ -8,7 +8,7 @@ const faqs = [
   {
     question: "How much does Preploy cost?",
     answer:
-      "Preploy has a free tier — 3 mock interviews a month, behavioral and technical, with full scored feedback, STAR prep, resume upload, and the interview-day planner. Pro is $15/month (or $120/year — roughly $10/month billed annually) and lifts the cap to 40 sessions a month, plus priority during high-traffic periods. Full breakdown on the pricing page.",
+      "Preploy has a free tier — 3 mock interviews a month, behavioral and technical, with full scored feedback, STAR prep, 1 AI hint per technical session, a progress dashboard, the interview-day prep planner, and resume upload with AI bullet improvement. Pro is $15/month (or $120/year — roughly $10/month billed annually) and lifts the cap to 40 sessions a month, adds resume-tailored question generation for sessions, follow-up probing, interviewer personas, custom topic focus, and 3 hints per technical session. Full breakdown on the pricing page.",
   },
   {
     question: "Does Preploy store my audio or transcripts?",
@@ -28,7 +28,7 @@ const faqs = [
   {
     question: "Can I practice for a specific company or role?",
     answer:
-      "Yes. The behavioral setup lets you enter a target company and role, and Preploy tailors the question set accordingly. You can also upload your resume so questions reference your actual experience.",
+      "Yes. The behavioral setup lets you enter a target company and role, and Preploy tailors the question set accordingly. All users can upload their resume so Preploy can rewrite weak bullets and improve it. Pro users can also generate interview questions drawn directly from their resume experience, and use custom topic focus to drill a specific competency.",
   },
   {
     question: "How do I get started?",

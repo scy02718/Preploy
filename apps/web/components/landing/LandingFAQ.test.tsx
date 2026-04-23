@@ -55,9 +55,9 @@ describe("LandingFAQ", () => {
     fireEvent.click(triggers[0]);
     // Copy changed when the Pro tier shipped; previously said "free while in
     // beta", now describes both tiers and points at the /pricing page.
-    expect(screen.getByText(/free tier/i)).toBeTruthy();
-    expect(screen.getByText(/Pro/)).toBeTruthy();
-    expect(screen.getByText(/\$15\/month/)).toBeTruthy();
+    expect(screen.getAllByText(/free tier/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Pro/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/\$15\/month/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("privacy answer explains audio handling", () => {

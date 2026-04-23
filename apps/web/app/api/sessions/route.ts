@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
     ((config as Record<string, unknown>).resume_text ||
       (config as Record<string, unknown>).resume_id)
   ) {
-    const gated = await requireProFeature(session.user.id, "resume");
+    const gated = await requireProFeature(session.user.id, "resume_tailored_questions");
     if (gated) return gated;
   }
 

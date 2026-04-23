@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { PointerEventsCheckLevel } from "@testing-library/user-event";
 import { BEHAVIORAL_PERSONAS } from "@/lib/personas";
 
 // ---------------------------------------------------------------------------
@@ -57,21 +57,22 @@ describe("PersonaPicker", () => {
     expect(locked.length).toBe(0);
   });
 
-  it("plan='free': the default option is selectable and calls onChange('default')", async () => {
-    mockUsePlan.mockReturnValue({ plan: "free" });
+  it("plan='free': the default option is NOT locked and IS clickable", async () => {
     const onChange = vi.fn();
+    mockUsePlan.mockReturnValue({ plan: "free" });
     render(<PersonaPicker value="amazon-lp" onChange={onChange} />);
+
+    const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     // Open the select
     const trigger = screen.getByRole("combobox");
-    await userEvent.click(trigger);
+    await user.click(trigger);
 
-    // Find the default option and click it
+    // Click the "Alex (default)" option — it is not Pro-locked so onValueChange
+    // should fire and call onChange with "default".
     const defaultOptions = screen.getAllByText("Alex (default)");
-    // Click the last one (the option in the dropdown, not the trigger display value)
-    await userEvent.click(defaultOptions[defaultOptions.length - 1]);
+    await user.click(defaultOptions[defaultOptions.length - 1]);
 
-    // onChange called with "default"
     expect(onChange).toHaveBeenCalledWith("default");
   });
 
@@ -94,20 +95,22 @@ describe("PersonaPicker", () => {
   });
 
   it("clicking a locked Pro item does NOT call onChange (free user)", async () => {
-    const user = userEvent.setup();
     const onChange = vi.fn();
     mockUsePlan.mockReturnValue({ plan: "free" });
 
     render(<PersonaPicker value="default" onChange={onChange} />);
+
+    const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     // Open the select trigger
     const trigger = screen.getByRole("combobox");
     await user.click(trigger);
 
     // Click a Pro-locked option — "Amazon LP"
-    // The item has aria-disabled="true" which shadcn/base-ui SelectItem honours
-    // by intercepting pointer events so the underlying select value never changes,
-    // meaning onChange is never invoked.
+    // The item has aria-disabled="true" and disabled=true which means shadcn's
+    // SelectItem will not call onValueChange. PointerEventsCheckLevel.Never
+    // bypasses jsdom's pointer-events: none rejection while still exercising
+    // the full userEvent click semantics (hover, pointer down, pointer up, focus).
     const lockedItem = screen.getAllByText(/Amazon LP/i);
     await user.click(lockedItem[lockedItem.length - 1]);
 

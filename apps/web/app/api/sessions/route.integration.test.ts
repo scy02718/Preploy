@@ -1079,7 +1079,7 @@ describe("API /api/sessions (integration)", () => {
       const data = await res.json();
       expect(data).toEqual({
         error: "pro_plan_required",
-        feature: "resume",
+        feature: "resume_tailored_questions",
         currentPlan: "free",
       });
     });

@@ -14,7 +14,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
 export const metadata: Metadata = {
   title: "Pricing — Preploy",
   description:
-    "Practice mock interviews with AI feedback. Free tier with 3 sessions per month, or upgrade to Pro for more.",
+    "Practice mock interviews with AI feedback. Free tier with 3 sessions per month, resume tools, and prep planner. Upgrade to Pro for more sessions, follow-up probing, interviewer personas, and custom topic focus.",
   alternates: { canonical: `${BASE_URL}/pricing` },
   robots: { index: true, follow: true },
 };
@@ -31,13 +31,20 @@ const FREE_FEATURES = [
   "Scored feedback on every session",
   "STAR story prep with AI analysis",
   "Interview-day planner with AI schedule",
-  "Resume upload + resume-tailored questions",
+  "Resume upload, analysis, and AI bullet improvement",
   "Coaching guides & progress dashboard",
+  `${PLAN_DEFINITIONS.free.limits.hintsPerSession} AI hint per technical session`,
 ];
 
 const PRO_FEATURES = [
   "Everything in Free, plus:",
   `${PLAN_DEFINITIONS.pro.limits.monthlyInterviews} mock interviews per month (up from ${FREE_PLAN_MONTHLY_INTERVIEW_LIMIT})`,
+  "Resume-tailored question generation for sessions",
+  `${PLAN_DEFINITIONS.pro.limits.hintsPerSession} AI hints per technical session (up from ${PLAN_DEFINITIONS.free.limits.hintsPerSession})`,
+  "Follow-up probing — up to 3 layers deep per question",
+  "Interviewer personas — Amazon LP, Google STAR, hostile panel, and more",
+  "Custom topic focus — steer the interviewer to any competency",
+  `${PLAN_DEFINITIONS.pro.limits.proAnalysisMonthly} deep-analysis runs per month`,
   "Priority during high-traffic periods",
 ];
 
