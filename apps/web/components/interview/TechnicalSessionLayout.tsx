@@ -16,6 +16,10 @@ interface TechnicalSessionLayoutProps {
   isProcessing: boolean;
   /** Current processing step label (e.g., "Transcribing audio...") */
   processingStep?: string;
+  /** Optional hint request button — placed in the bottom bar left cluster */
+  hintButton?: ReactNode;
+  /** Optional hint panel overlay — rendered inside the right (editor) panel */
+  hintPanel?: ReactNode;
 }
 
 export function TechnicalSessionLayout({
@@ -25,6 +29,8 @@ export function TechnicalSessionLayout({
   onEndSession,
   isProcessing,
   processingStep,
+  hintButton,
+  hintPanel,
 }: TechnicalSessionLayoutProps) {
   const [elapsed, setElapsed] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -65,18 +71,22 @@ export function TechnicalSessionLayout({
         {/* Left panel — Problem description (40%) */}
         <div className="w-[40%] overflow-y-auto border-r">{problemPanel}</div>
 
-        {/* Right panel — Editor (60%) */}
-        <div className="flex w-[60%] flex-col">{editorPanel}</div>
+        {/* Right panel — Editor (60%); relative so the hint overlay positions correctly */}
+        <div className="relative flex w-[60%] flex-col">
+          {editorPanel}
+          {hintPanel}
+        </div>
       </div>
 
       {/* Bottom bar — Timer + Mic + End Session */}
       <div className="flex items-center justify-between border-t bg-background px-6 py-3">
-        {/* Timer + Mic indicator */}
+        {/* Timer + Mic indicator + Hint button */}
         <div className="flex items-center gap-4">
           <span className="font-mono text-lg font-medium tabular-nums">
             {formatTime(elapsed)}
           </span>
           {micIndicator}
+          {hintButton}
         </div>
 
         {/* End Session */}

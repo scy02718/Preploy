@@ -142,6 +142,8 @@ export const interviewSessions = pgTable("interview_sessions", {
     { onDelete: "set null" }
   ),
   useProAnalysis: boolean("use_pro_analysis").notNull().default(false),
+  hintsUsed: integer("hints_used").notNull().default(0),
+  hintsGiven: jsonb("hints_given").$type<Array<{ text: string }>>().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

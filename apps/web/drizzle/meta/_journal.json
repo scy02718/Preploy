@@ -141,6 +141,13 @@
       "when": 1776900010028,
       "tag": "0019_public_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1776931874212,
+      "tag": "0020_outgoing_apocalypse",
+      "breakpoints": true
     }
   ]
 }
