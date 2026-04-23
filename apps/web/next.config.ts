@@ -35,6 +35,18 @@ const nextConfig: NextConfig = {
   // only `.next/standalone`, `.next/static`, and `public` — see
   // apps/web/Dockerfile.
   output: "standalone",
+  // Allow next/image to optimise Google profile avatars server-side so the
+  // browser only ever makes first-party requests to /_next/image — this
+  // prevents Lighthouse from flagging lh3.googleusercontent.com as a
+  // third-party cookie source.
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+    ],
+  },
   // In a monorepo, tell Next to trace files from the repo root so
   // `packages/shared` is picked up by the standalone output.
   outputFileTracingRoot: path.join(__dirname, "../../"),

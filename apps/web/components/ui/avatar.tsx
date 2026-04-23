@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import NextImage from "next/image"
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 
 import { cn } from "@/lib/utils"
@@ -48,6 +49,49 @@ function AvatarFallback({
       className={cn(
         "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
         className
+      )}
+      {...props}
+    />
+  )
+}
+
+/**
+ * NextAvatarImage — drop-in replacement for AvatarImage that routes the src
+ * through the Next.js image optimizer (/_next/image). This keeps profile
+ * avatar requests first-party so the browser never sets Google CDN cookies,
+ * which Lighthouse would flag as "Uses third-party cookies".
+ *
+ * Use this wherever the src may be a remote URL (e.g. Google OAuth avatars).
+ * The plain AvatarImage is still fine for local/data-URI sources.
+ */
+function NextAvatarImage({
+  src,
+  alt,
+  className,
+  width = 40,
+  height = 40,
+  ...props
+}: {
+  src: string
+  alt?: string
+  className?: string
+  width?: number
+  height?: number
+} & Omit<AvatarPrimitive.Image.Props, "src" | "alt" | "render">) {
+  return (
+    <AvatarPrimitive.Image
+      data-slot="avatar-image"
+      src={src}
+      alt={alt}
+      render={(renderProps) => (
+        <NextImage
+          {...renderProps}
+          src={src}
+          alt={alt ?? ""}
+          width={width}
+          height={height}
+          className={cn("aspect-square size-full rounded-full object-cover", className)}
+        />
       )}
       {...props}
     />
@@ -102,6 +146,7 @@ function AvatarGroupCount({
 export {
   Avatar,
   AvatarImage,
+  NextAvatarImage,
   AvatarFallback,
   AvatarGroup,
   AvatarGroupCount,
