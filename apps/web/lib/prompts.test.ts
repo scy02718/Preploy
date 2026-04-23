@@ -338,3 +338,58 @@ describe("buildBehavioralSystemPrompt — personas (#179)", () => {
     expect(suffixIdx).toBeGreaterThan(probeIdx);
   });
 });
+
+// ---- #183: focus_directive ----
+
+describe("buildBehavioralSystemPrompt — focus_directive (#183)", () => {
+  it("present → contains the verbatim focus directive sentence", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      focus_directive: "leadership and conflict resolution",
+    });
+    expect(prompt).toContain(
+      "Focus your questions specifically on: leadership and conflict resolution. Do not ask questions outside this scope unless the candidate invites it."
+    );
+  });
+
+  it("absent (undefined) → byte-identical to baseline", () => {
+    const baseline = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    const withUndefined = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      focus_directive: undefined,
+    });
+    expect(withUndefined).toBe(baseline);
+  });
+
+  it("empty string '' → byte-identical to baseline", () => {
+    const baseline = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    const withEmpty = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      focus_directive: "",
+    });
+    expect(withEmpty).toBe(baseline);
+  });
+
+  it("whitespace-only '   ' → byte-identical to baseline", () => {
+    const baseline = buildBehavioralSystemPrompt(DEFAULT_CONFIG);
+    const withWhitespace = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      focus_directive: "   ",
+    });
+    expect(withWhitespace).toBe(baseline);
+  });
+
+  it("ordering: directive appears after persona suffix and before Conciseness section", () => {
+    const prompt = buildBehavioralSystemPrompt({
+      ...DEFAULT_CONFIG,
+      persona: "google-star",
+      focus_directive: "leadership and conflict resolution",
+    });
+    const suffixIdx = prompt.indexOf("STAR discipline");
+    const directiveIdx = prompt.indexOf("Focus your questions specifically on:");
+    const concisenessIdx = prompt.indexOf("3 sentences for questions");
+    expect(suffixIdx).toBeGreaterThan(-1);
+    expect(directiveIdx).toBeGreaterThan(suffixIdx);
+    expect(concisenessIdx).toBeGreaterThan(directiveIdx);
+  });
+});

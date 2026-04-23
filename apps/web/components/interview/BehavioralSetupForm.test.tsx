@@ -219,6 +219,14 @@ describe("BehavioralSetupForm", () => {
     expect(mockSetConfig).toHaveBeenCalledWith({ resume_id: "resume-123" });
   });
 
+  // ---- #183: FocusDirectiveField Pro lock pill ----
+  it("#183: free-plan shows 'Available on Pro' lock pill for FocusDirectiveField", () => {
+    // usePlan is mocked to "free" at the top of this file
+    render(<BehavioralSetupForm />);
+    // The FocusDirectiveField renders the free-tier link pill with this text
+    expect(screen.getAllByText(/available on pro/i).length).toBeGreaterThanOrEqual(1);
+  });
+
   it("no prefill: setConfig is NOT called on mount (empty prefill path)", () => {
     mockPrefillRef.current = null;
     render(<BehavioralSetupForm />);

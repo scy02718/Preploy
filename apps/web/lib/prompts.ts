@@ -121,6 +121,15 @@ export function buildBehavioralSystemPrompt(
     sections.push(persona.systemPromptSuffix);
   }
 
+  // Custom topic directive (#183) — Pro-only. Injected AFTER persona suffix and
+  // BEFORE Conciseness. When focus_directive is absent or whitespace-only this
+  // section is omitted entirely so Free-tier output is byte-identical to baseline.
+  if (config.focus_directive?.trim()) {
+    sections.push(
+      `Focus your questions specifically on: ${config.focus_directive.trim()}. Do not ask questions outside this scope unless the candidate invites it.`
+    );
+  }
+
   // Conciseness — replaces the old "2-3 sentences maximum" constraint (108-D)
   sections.push(
     "Be conversational, not essayistic. Cap each turn at 3 sentences for questions and follow-ups; up to 5 sentences only when setting context for a new topic. This is a voice conversation — long monologues feel unnatural."

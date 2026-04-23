@@ -1304,6 +1304,236 @@ describe("API /api/sessions (integration)", () => {
       expect(cfg.persona).toBe("amazon-lp");
     });
 
+    // ---- #183: focus_directive gating ----
+
+    describe("focus_directive gating (#183)", () => {
+      it("Free + behavioral + focus_directive 'X' → 402 pro_plan_required for custom_topic", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+        // Plan is "free" by beforeEach default
+
+        const res = await POST(
+          makePostRequest({
+            type: "behavioral",
+            config: {
+              interview_style: 0.5,
+              difficulty: 0.5,
+              focus_directive: "X",
+            },
+          })
+        );
+        expect(res.status).toBe(402);
+        const data = await res.json();
+        expect(data).toEqual({
+          error: "pro_plan_required",
+          feature: "custom_topic",
+          currentPlan: "free",
+        });
+      });
+
+      it("Pro + behavioral + focus_directive 'X' → 201 and persisted in DB", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+        const db = getTestDb();
+        const { eq } = await import("drizzle-orm");
+        await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+        const res = await POST(
+          makePostRequest({
+            type: "behavioral",
+            config: {
+              interview_style: 0.5,
+              difficulty: 0.5,
+              focus_directive: "X",
+            },
+          })
+        );
+        expect(res.status).toBe(201);
+        const data = await res.json();
+
+        const { interviewSessions } = await import("@/lib/schema");
+        const [row] = await db
+          .select()
+          .from(interviewSessions)
+          .where(eq(interviewSessions.id, data.id));
+        expect((row.config as Record<string, unknown>).focus_directive).toBe("X");
+      });
+
+      it("Free + technical + focus_directive 'X' → 402 pro_plan_required for custom_topic", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+        // Plan is "free" by beforeEach default
+
+        const res = await POST(
+          makePostRequest({
+            type: "technical",
+            config: {
+              interview_type: "leetcode",
+              focus_areas: ["arrays"],
+              language: "python",
+              difficulty: "medium",
+              focus_directive: "X",
+            },
+          })
+        );
+        expect(res.status).toBe(402);
+        const data = await res.json();
+        expect(data).toEqual({
+          error: "pro_plan_required",
+          feature: "custom_topic",
+          currentPlan: "free",
+        });
+      });
+
+      it("Pro + technical + focus_directive 'X' → 201 and persisted in DB", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+        const db = getTestDb();
+        const { eq } = await import("drizzle-orm");
+        await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+        const res = await POST(
+          makePostRequest({
+            type: "technical",
+            config: {
+              interview_type: "leetcode",
+              focus_areas: ["arrays"],
+              language: "python",
+              difficulty: "medium",
+              focus_directive: "X",
+            },
+          })
+        );
+        expect(res.status).toBe(201);
+        const data = await res.json();
+
+        const { interviewSessions } = await import("@/lib/schema");
+        const [row] = await db
+          .select()
+          .from(interviewSessions)
+          .where(eq(interviewSessions.id, data.id));
+        expect((row.config as Record<string, unknown>).focus_directive).toBe("X");
+      });
+
+      it("Free + focus_directive '' (empty) → 201, key stripped from persisted config", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+        // Plan is "free" by beforeEach default
+
+        const res = await POST(
+          makePostRequest({
+            type: "behavioral",
+            config: {
+              interview_style: 0.5,
+              difficulty: 0.5,
+              focus_directive: "",
+            },
+          })
+        );
+        expect(res.status).toBe(201);
+        const data = await res.json();
+
+        const db = getTestDb();
+        const { interviewSessions } = await import("@/lib/schema");
+        const { eq } = await import("drizzle-orm");
+        const [row] = await db
+          .select()
+          .from(interviewSessions)
+          .where(eq(interviewSessions.id, data.id));
+        expect((row.config as Record<string, unknown>).focus_directive).toBeUndefined();
+      });
+
+      it("Free + focus_directive '   ' (whitespace-only) → 201, key stripped from persisted config", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+        // Plan is "free" by beforeEach default
+
+        const res = await POST(
+          makePostRequest({
+            type: "behavioral",
+            config: {
+              interview_style: 0.5,
+              difficulty: 0.5,
+              focus_directive: "   ",
+            },
+          })
+        );
+        expect(res.status).toBe(201);
+        const data = await res.json();
+
+        const db = getTestDb();
+        const { interviewSessions } = await import("@/lib/schema");
+        const { eq } = await import("drizzle-orm");
+        const [row] = await db
+          .select()
+          .from(interviewSessions)
+          .where(eq(interviewSessions.id, data.id));
+        expect((row.config as Record<string, unknown>).focus_directive).toBeUndefined();
+      });
+
+      it("Pro + focus_directive '  Leadership only  ' → 201, persisted value is trimmed 'Leadership only'", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+        const db = getTestDb();
+        const { eq } = await import("drizzle-orm");
+        await db.update(users).set({ plan: "pro" }).where(eq(users.id, TEST_USER.id));
+
+        const res = await POST(
+          makePostRequest({
+            type: "behavioral",
+            config: {
+              interview_style: 0.5,
+              difficulty: 0.5,
+              focus_directive: "  Leadership only  ",
+            },
+          })
+        );
+        expect(res.status).toBe(201);
+        const data = await res.json();
+
+        const { interviewSessions } = await import("@/lib/schema");
+        const [row] = await db
+          .select()
+          .from(interviewSessions)
+          .where(eq(interviewSessions.id, data.id));
+        expect((row.config as Record<string, unknown>).focus_directive).toBe("Leadership only");
+      });
+
+      it("focus_directive >500 chars → 400 for behavioral", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+        const res = await POST(
+          makePostRequest({
+            type: "behavioral",
+            config: {
+              interview_style: 0.5,
+              difficulty: 0.5,
+              focus_directive: "x".repeat(501),
+            },
+          })
+        );
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.error).toContain("Invalid session config");
+      });
+
+      it("focus_directive >500 chars → 400 for technical", async () => {
+        mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+        const res = await POST(
+          makePostRequest({
+            type: "technical",
+            config: {
+              interview_type: "leetcode",
+              focus_areas: ["arrays"],
+              language: "python",
+              difficulty: "medium",
+              focus_directive: "x".repeat(501),
+            },
+          })
+        );
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.error).toContain("Invalid session config");
+      });
+    });
+
     it("Technical session with config.persona set is stripped — persona NOT persisted", async () => {
       mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 

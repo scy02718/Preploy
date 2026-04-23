@@ -245,4 +245,12 @@ describe("TechnicalSetupForm", () => {
     render(<TechnicalSetupForm />);
     expect(mockClearPrefill).not.toHaveBeenCalled();
   });
+
+  // ---- #183: FocusDirectiveField Pro lock pill ----
+  it("#183: free-plan shows 'Available on Pro' lock pill for FocusDirectiveField", () => {
+    // usePlan is mocked to "free" at the top of this file
+    render(<TechnicalSetupForm />);
+    // The FocusDirectiveField renders the free-tier link pill with this text
+    expect(screen.getAllByText(/available on pro/i).length).toBeGreaterThanOrEqual(1);
+  });
 });

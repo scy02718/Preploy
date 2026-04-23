@@ -19,6 +19,7 @@ import { ProAnalysisToggle } from "./ProAnalysisToggle";
 import { usePlan } from "@/hooks/usePlan";
 import { ProbeDepthControl } from "./ProbeDepthControl";
 import { PersonaPicker } from "./PersonaPicker";
+import { FocusDirectiveField } from "./FocusDirectiveField";
 import type { BehavioralSessionConfig } from "@preploy/shared";
 
 interface CompanyQuestion {
@@ -355,6 +356,11 @@ export function BehavioralSetupForm() {
               <ProbeDepthControl
                 value={behavioralConfig.probe_depth ?? (plan === "pro" ? 2 : 0)}
                 onChange={(n) => setConfig({ probe_depth: n })}
+              />
+
+              <FocusDirectiveField
+                value={behavioralConfig.focus_directive ?? ""}
+                onChange={(v) => setConfig({ focus_directive: v || undefined })}
               />
             </CardContent>
           </Card>

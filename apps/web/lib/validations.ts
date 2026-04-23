@@ -11,6 +11,7 @@ export const behavioralConfigSchema = z.object({
   difficulty: z.number().min(0).max(1),
   probe_depth: z.number().int().min(0).max(3).optional(),
   persona: z.string().min(1).max(64).optional(),
+  focus_directive: z.string().max(500).optional(),
 });
 
 export const technicalConfigSchema = z.object({
@@ -19,6 +20,7 @@ export const technicalConfigSchema = z.object({
   language: z.string().min(1),
   difficulty: z.enum(["easy", "medium", "hard"]),
   additional_instructions: z.string().max(1000).optional(),
+  focus_directive: z.string().max(500).optional(),
 });
 
 export const problemExampleSchema = z.object({
