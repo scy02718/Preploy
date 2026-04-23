@@ -198,7 +198,7 @@ export function BehavioralSetupForm() {
         }}
       />
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Left column — Company Details + Expected Questions */}
+        {/* Left column — Company Details + Expected Questions + Company-Specific Questions */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -289,81 +289,6 @@ export function BehavioralSetupForm() {
               </p>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Right column — Interview Settings + Resume + Company Questions */}
-        <div className="space-y-6">
-          <ResumeSelector
-            selectedResumeId={behavioralConfig.resume_id ?? null}
-            onSelect={(resumeId, resumeContent) => {
-              setConfig({
-                resume_id: resumeId ?? undefined,
-                resume_text: resumeContent ?? undefined,
-              });
-            }}
-          />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Interview Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <Label>Interview Style</Label>
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {styleLabel(interviewStyle)}
-                  </span>
-                </div>
-                <Slider
-                  value={[interviewStyle * 100]}
-                  onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
-                  min={0}
-                  max={100}
-                  step={1}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Strict & Formal</span>
-                  <span>Casual & Conversational</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <Label>Difficulty</Label>
-                  <span className="text-xs tabular-nums text-muted-foreground">
-                    {difficultyLabel(difficulty)}
-                  </span>
-                </div>
-                <Slider
-                  value={[difficulty * 100]}
-                  onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
-                  min={0}
-                  max={100}
-                  step={1}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Entry-level</span>
-                  <span>Senior / Staff</span>
-                </div>
-              </div>
-
-              <PersonaPicker
-                value={behavioralConfig.persona ?? "default"}
-                onChange={(id) => setConfig({ persona: id })}
-              />
-
-              <ProbeDepthControl
-                value={behavioralConfig.probe_depth ?? (plan === "pro" ? 2 : 0)}
-                onChange={(n) => setConfig({ probe_depth: n })}
-              />
-
-              <FocusDirectiveField
-                value={behavioralConfig.focus_directive ?? ""}
-                onChange={(v) => setConfig({ focus_directive: v || undefined })}
-              />
-            </CardContent>
-          </Card>
 
           {/* Company-Specific Questions Widget */}
           <Card>
@@ -441,6 +366,82 @@ export function BehavioralSetupForm() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Right column — Interview Settings + Resume */}
+        <div className="space-y-6">
+          <ResumeSelector
+            selectedResumeId={behavioralConfig.resume_id ?? null}
+            onSelect={(resumeId, resumeContent) => {
+              setConfig({
+                resume_id: resumeId ?? undefined,
+                resume_text: resumeContent ?? undefined,
+              });
+            }}
+          />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Interview Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <Label>Interview Style</Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {styleLabel(interviewStyle)}
+                  </span>
+                </div>
+                <Slider
+                  value={[interviewStyle * 100]}
+                  onValueChange={(val) => setConfig({ interview_style: val[0] / 100 })}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Strict & Formal</span>
+                  <span>Casual & Conversational</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <Label>Difficulty</Label>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {difficultyLabel(difficulty)}
+                  </span>
+                </div>
+                <Slider
+                  value={[difficulty * 100]}
+                  onValueChange={(val) => setConfig({ difficulty: val[0] / 100 })}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Entry-level</span>
+                  <span>Senior / Staff</span>
+                </div>
+              </div>
+
+              <PersonaPicker
+                value={behavioralConfig.persona ?? "default"}
+                onChange={(id) => setConfig({ persona: id })}
+              />
+
+              <ProbeDepthControl
+                value={behavioralConfig.probe_depth ?? (plan === "pro" ? 2 : 0)}
+                onChange={(n) => setConfig({ probe_depth: n })}
+              />
+
+              <FocusDirectiveField
+                value={behavioralConfig.focus_directive ?? ""}
+                onChange={(v) => setConfig({ focus_directive: v || undefined })}
+              />
+            </CardContent>
+          </Card>
+
         </div>
       </div>
 
