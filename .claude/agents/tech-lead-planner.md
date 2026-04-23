@@ -51,6 +51,16 @@ opportunities** — places where this new feature can **produce data for**,
 Before drafting the plan, walk through the following and write down
 anything relevant:
 
+**Run the survey in parallel.** The four axes below are independent reads
+of the codebase, and reading them sequentially is the slowest part of
+planning. Launch the discovery in parallel by spawning the `Explore`
+subagent (model: haiku) with multiple Agent tool calls in the same turn —
+one per axis: inbound surfaces, outbound surfaces, shared data, cross-feature
+triggers. Each subagent gets a tight prompt ("find every place in the
+codebase that could launch into a new <story> page", etc.) and returns a
+short structured list. Synthesize their reports into the survey below
+yourself — do not delegate the synthesis.
+
 1. **Inbound surfaces** — what existing pages, components, or routes could
    launch into the new feature? (e.g. a new "practice this question" button
    in a list that already exists; a new action in a sidebar card; a deep
