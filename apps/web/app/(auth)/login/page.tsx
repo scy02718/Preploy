@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
 
 export const metadata: Metadata = {
-  title: "Sign In",
+  title: "Sign In — Preploy",
   description: "Sign in to Preploy to access your AI mock interview sessions and track your progress.",
   alternates: {
     canonical: `${BASE_URL}/login`,

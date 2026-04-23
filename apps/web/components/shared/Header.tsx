@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, NextAvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Menu, Sun, Moon } from "lucide-react";
@@ -63,7 +64,7 @@ export function Header() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.svg" alt="Preploy" className="h-7 w-7" />
+          <Image src="/logo.svg" alt="Preploy" width={28} height={28} className="h-7 w-7" />
           <span className="font-semibold text-lg tracking-tight">Preploy</span>
         </Link>
 
@@ -123,7 +124,9 @@ export function Header() {
               <DropdownMenuTrigger className="rounded-full">
                 <Avatar className="h-8 w-8">
                   {user.image && (
-                    <AvatarImage src={user.image} alt={user.name ?? ""} />
+                    // NextAvatarImage proxies the src through /_next/image so
+                    // Google CDN cookies are never sent from the browser.
+                    <NextAvatarImage src={user.image} alt={user.name ?? ""} />
                   )}
                   <AvatarFallback className="text-xs">
                     {user.name?.charAt(0).toUpperCase() ?? "U"}

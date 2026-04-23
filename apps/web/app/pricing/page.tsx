@@ -14,7 +14,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://preploy.tech";
 export const metadata: Metadata = {
   title: "Pricing — Preploy",
   description:
-    "Practice mock interviews with AI feedback. Free tier with 3 sessions per month, resume tools, and prep planner. Upgrade to Pro for more sessions, follow-up probing, interviewer personas, and custom topic focus.",
+    "Scored AI mock interviews. Free: 3 sessions/month, resume tools, planner. Pro ($15/mo): 40 sessions, follow-up probing, personas, custom topic focus.",
   alternates: { canonical: `${BASE_URL}/pricing` },
   robots: { index: true, follow: true },
 };
