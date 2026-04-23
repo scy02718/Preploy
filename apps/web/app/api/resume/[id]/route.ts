@@ -39,14 +39,10 @@ export async function PATCH(
   const { oldBullet, newBullet } = parsed.data;
 
   let existing;
-  try {
-    [existing] = await db
-      .select()
-      .from(userResumes)
-      .where(eq(userResumes.id, id));
-  } catch {
-    return NextResponse.json({ error: "Resume not found" }, { status: 404 });
-  }
+  [existing] = await db
+    .select()
+    .from(userResumes)
+    .where(eq(userResumes.id, id));
 
   if (!existing) {
     return NextResponse.json({ error: "Resume not found" }, { status: 404 });

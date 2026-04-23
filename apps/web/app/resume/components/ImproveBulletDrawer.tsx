@@ -157,7 +157,7 @@ export function ImproveBulletDrawer({
                   variant="outline"
                   disabled={isAccepting}
                   onClick={() => handleAccept(variant)}
-                  className="gap-1.5"
+                  className="gap-1.5 min-h-[44px]"
                 >
                   <Check className="h-3.5 w-3.5" aria-hidden="true" />
                   Accept
