@@ -312,6 +312,7 @@ export default function BehavioralSessionPage() {
         onMute={voice.mute}
         onUnmute={voice.unmute}
         onEndSession={handleEndSession}
+        sessionInitialized={voice.transcript.length > 0}
       />
     </div>
   );

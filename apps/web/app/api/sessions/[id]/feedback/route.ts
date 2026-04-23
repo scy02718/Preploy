@@ -126,10 +126,13 @@ export async function POST(
     .where(eq(transcripts.sessionId, id));
 
   if (!transcript || !Array.isArray(transcript.entries) || transcript.entries.length === 0) {
-    return NextResponse.json(
-      { error: "No transcript found for this session" },
-      { status: 400 }
-    );
+    // Session ended before any transcript was recorded (e.g. user hit End Session
+    // before the interviewer's first turn). Return a 200 "empty" sentinel so:
+    //   1. The feedback page polling loop can break on a 200 (it only retries on 404).
+    //   2. The client renders a friendly "nothing to score" card rather than spinning.
+    // A 400 would be semantically wrong here — the session just never started.
+    log.info({ sessionId: id }, "session has no transcript entries — returning empty sentinel");
+    return NextResponse.json({ status: "empty" }, { status: 200 });
   }
 
   // For technical sessions, also fetch code snapshots

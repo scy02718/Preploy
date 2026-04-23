@@ -6,7 +6,8 @@ import { FeedbackDashboard } from "@/components/feedback/FeedbackDashboard";
 import type { TimelineEvent } from "@/components/feedback/TimelineView";
 import type { GazeDistribution, GazeTimelineBucket } from "@/lib/gaze-metrics";
 import Link from "next/link";
-import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, MessageSquareOff } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface DriftAnalysis {
   added: string[];
@@ -51,6 +52,10 @@ export default function FeedbackPage() {
   const [persona, setPersona] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // True when the server reports { status: "empty" } — session ended before
+  // any transcript was recorded. Renders a friendly empty-state card rather
+  // than the infinite loading spinner.
+  const [emptySession, setEmptySession] = useState(false);
   // Retry nonce — bumped by the Retry button to re-arm the polling effect
   // without a full page reload (which would drop scroll position and any
   // in-progress UI state).
@@ -98,6 +103,15 @@ export default function FeedbackPage() {
 
         const data = await res.json();
         if (cancelled) return;
+
+        // Server signals that the session ended before any transcript was
+        // recorded (e.g. End Session hit before the interviewer's first turn).
+        // Stop polling and show the empty-state card instead of spinning.
+        if (data.status === "empty") {
+          setIsLoading(false);
+          setEmptySession(true);
+          return;
+        }
 
         // Set sessionType and feedback in the same event handler so React 19
         // batches them into a single commit. This guarantees CodeQualityCard
@@ -233,6 +247,38 @@ export default function FeedbackPage() {
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
           Try again
         </button>
+      </div>
+    );
+  }
+
+  if (emptySession) {
+    return (
+      <div className="mx-auto max-w-md py-24">
+        <Card className="text-center">
+          <CardContent className="flex flex-col items-center gap-4 pt-10 pb-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+              <MessageSquareOff
+                className="h-7 w-7 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <h2 className="text-lg font-semibold text-foreground">
+                Session never started
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                The session ended before any conversation was recorded — there&rsquo;s
+                nothing to score.
+              </p>
+            </div>
+            <Link
+              href="/dashboard"
+              className="mt-2 inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground motion-safe:transition-colors motion-safe:duration-[var(--duration-base)] hover:bg-primary/90"
+            >
+              Back to Dashboard
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     );
   }

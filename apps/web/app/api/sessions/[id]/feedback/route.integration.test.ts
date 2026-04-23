@@ -305,10 +305,10 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
     expect(res.status).toBe(404);
   });
 
-  it("POST returns 400 when no transcript exists", async () => {
+  it("POST returns 200 { status: 'empty' } when no transcript exists", async () => {
     mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
 
-    // Create a session without a transcript
+    // Create a session without a transcript — simulates ending before init
     const db = getTestDb();
     const [noTranscriptSession] = await db
       .insert(interviewSessions)
@@ -319,9 +319,37 @@ describe("API /api/sessions/[id]/feedback (integration)", () => {
       makePostRequest(noTranscriptSession.id),
       makeParams(noTranscriptSession.id)
     );
-    expect(res.status).toBe(400);
+    // Returns 200 "empty" sentinel so the client polling loop can break and
+    // render a friendly "nothing to score" card instead of spinning forever.
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toMatch(/transcript/i);
+    expect(body.status).toBe("empty");
+  });
+
+  it("POST returns 200 { status: 'empty' } when transcript row has empty entries array", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+
+    // Create a session with a transcript row but with zero entries —
+    // this can happen if the transcript row was inserted before any speech
+    // was captured (e.g. via a race condition or partial save).
+    const db = getTestDb();
+    const [emptyEntriesSession] = await db
+      .insert(interviewSessions)
+      .values({ userId: TEST_USER.id, type: "behavioral", config: {} })
+      .returning();
+
+    await db.insert(transcripts).values({
+      sessionId: emptyEntriesSession.id,
+      entries: [],
+    });
+
+    const res = await POST(
+      makePostRequest(emptyEntriesSession.id),
+      makeParams(emptyEntriesSession.id)
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("empty");
   });
 
   it("POST returns existing feedback if already generated (idempotency)", async () => {
