@@ -125,7 +125,7 @@ export async function POST(
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
       ],
-      max_tokens: 300,
+      max_completion_tokens: 300,
       temperature: 0.4,
     });
     hintText = completion.choices[0]?.message?.content ?? "";
