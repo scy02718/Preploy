@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
+import userEvent, { PointerEventsCheckLevel } from "@testing-library/user-event";
 import { BEHAVIORAL_PERSONAS } from "@/lib/personas";
 
 // ---------------------------------------------------------------------------
@@ -57,28 +57,23 @@ describe("PersonaPicker", () => {
     expect(locked.length).toBe(0);
   });
 
-  it("plan='free': the default option is NOT locked (not data-pro-locked, not aria-disabled)", async () => {
+  it("plan='free': the default option is NOT locked and IS clickable", async () => {
+    const onChange = vi.fn();
     mockUsePlan.mockReturnValue({ plan: "free" });
-    render(<PersonaPicker value="amazon-lp" onChange={() => {}} />);
+    render(<PersonaPicker value="amazon-lp" onChange={onChange} />);
+
+    const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
 
     // Open the select
     const trigger = screen.getByRole("combobox");
-    await userEvent.click(trigger);
+    await user.click(trigger);
 
-    // The "Alex (default)" label should appear (in the dropdown) and the
-    // element with data-pro-locked should NOT include the default option.
-    // Verify by checking that no element with text "Alex (default)" has data-pro-locked.
-    const defaultTextEls = screen.getAllByText("Alex (default)");
-    const anyLocked = defaultTextEls.some((el) => {
-      // Walk up to find the nearest SelectItem (has data-pro-locked)
-      let node: Element | null = el;
-      while (node) {
-        if (node.getAttribute("data-pro-locked") === "true") return true;
-        node = node.parentElement;
-      }
-      return false;
-    });
-    expect(anyLocked).toBe(false);
+    // Click the "Alex (default)" option — it is not Pro-locked so onValueChange
+    // should fire and call onChange with "default".
+    const defaultOptions = screen.getAllByText("Alex (default)");
+    await user.click(defaultOptions[defaultOptions.length - 1]);
+
+    expect(onChange).toHaveBeenCalledWith("default");
   });
 
   it("plan='free': locked Pro items render with data-pro-locked='true' and aria-disabled='true'", async () => {
@@ -105,16 +100,19 @@ describe("PersonaPicker", () => {
 
     render(<PersonaPicker value="default" onChange={onChange} />);
 
+    const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never });
+
     // Open the select trigger
     const trigger = screen.getByRole("combobox");
-    await userEvent.click(trigger);
+    await user.click(trigger);
 
     // Click a Pro-locked option — "Amazon LP"
     // The item has aria-disabled="true" and disabled=true which means shadcn's
-    // SelectItem will not call onValueChange. Use fireEvent to bypass jsdom's
-    // pointer-events: none check while still verifying the disabled logic.
+    // SelectItem will not call onValueChange. PointerEventsCheckLevel.Never
+    // bypasses jsdom's pointer-events: none rejection while still exercising
+    // the full userEvent click semantics (hover, pointer down, pointer up, focus).
     const lockedItem = screen.getAllByText(/Amazon LP/i);
-    fireEvent.click(lockedItem[lockedItem.length - 1]);
+    await user.click(lockedItem[lockedItem.length - 1]);
 
     expect(onChange).not.toHaveBeenCalled();
   });

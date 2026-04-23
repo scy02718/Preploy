@@ -181,7 +181,7 @@ describe("POST /api/questions/smart-generate (integration)", () => {
       const data = await res.json();
       expect(data).toEqual({
         error: "pro_plan_required",
-        feature: "resume",
+        feature: "resume_tailored_questions",
         currentPlan: "free",
       });
       // GPT must not be invoked — gate fires before OpenAI.

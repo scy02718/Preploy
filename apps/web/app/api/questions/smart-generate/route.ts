@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   // attack path where a free user posts their own `resume_id` here to
   // get resume-tailored output without paying.
   if (resume_id) {
-    const gated = await requireProFeature(session.user.id, "resume");
+    const gated = await requireProFeature(session.user.id, "resume_tailored_questions");
     if (gated) return gated;
   }
 

@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import { hasFeature, FEATURE_MATRIX, FEATURE_META, type FeatureKey } from "./features";
 
 describe("hasFeature", () => {
-  it("free plan does NOT have planner", () => {
-    expect(hasFeature("free", "planner")).toBe(false);
+  it("free plan HAS planner (planner is a Free feature)", () => {
+    expect(hasFeature("free", "planner")).toBe(true);
   });
 
-  it("free plan does NOT have resume", () => {
-    expect(hasFeature("free", "resume")).toBe(false);
+  it("free plan HAS resume (plain resume tooling is a Free feature)", () => {
+    expect(hasFeature("free", "resume")).toBe(true);
   });
 
   it("pro plan HAS planner", () => {
@@ -16,6 +16,14 @@ describe("hasFeature", () => {
 
   it("pro plan HAS resume", () => {
     expect(hasFeature("pro", "resume")).toBe(true);
+  });
+
+  it("free plan does NOT have resume_tailored_questions", () => {
+    expect(hasFeature("free", "resume_tailored_questions")).toBe(false);
+  });
+
+  it("pro plan HAS resume_tailored_questions", () => {
+    expect(hasFeature("pro", "resume_tailored_questions")).toBe(true);
   });
 });
 
@@ -29,10 +37,19 @@ describe("FEATURE_MATRIX", () => {
     }
   });
 
-  it("every gated feature is Pro-only in the current policy", () => {
-    // If this test fails, the product decision changed — re-read
-    // dev_logs/pricing-model.md before loosening it.
-    for (const key of Object.keys(FEATURE_MATRIX) as FeatureKey[]) {
+  it("planner and resume are available to free users", () => {
+    expect(FEATURE_MATRIX["planner"]).toContain("free");
+    expect(FEATURE_MATRIX["resume"]).toContain("free");
+  });
+
+  it("resume_tailored_questions, follow_up_probing, interviewer_personas, and custom_topic are Pro-only", () => {
+    const proOnlyKeys: FeatureKey[] = [
+      "resume_tailored_questions",
+      "follow_up_probing",
+      "interviewer_personas",
+      "custom_topic",
+    ];
+    for (const key of proOnlyKeys) {
       expect(FEATURE_MATRIX[key]).toEqual(["pro"]);
     }
   });

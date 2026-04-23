@@ -8,8 +8,8 @@
  * moving a feature between tiers is a one-line change here, not a ripple
  * across every caller.
  *
- * Full rationale (why Planner + Resume are Pro-only, grandfathering policy,
- * what this does NOT gate) lives in `dev_logs/pricing-model.md`.
+ * Full rationale (grandfathering policy, what this does NOT gate) lives in
+ * `dev_logs/pricing-model.md`.
  */
 
 import type { Plan } from "./plans";
@@ -21,10 +21,13 @@ import type { Plan } from "./plans";
  * `Record<FeatureKey, ...>` type will fail compilation if you forget.
  */
 export type FeatureKey =
-  /** Day-by-day interview prep planner (/planner). */
+  /** Day-by-day interview prep planner (/planner). Available to all signed-in
+   *  users (Free + Pro). */
   | "planner"
-  /** Resume upload + resume-tailored question generation (/resume, and the
-   *  resume-selector dropdowns in the behavioral + technical setup pages). */
+  /** Resume upload, parse, and AI bullet improvement (/resume). Plain resume
+   *  tooling is available to all signed-in users (Free + Pro). For the
+   *  Pro-only behaviour of generating questions grounded in a stored resume
+   *  during session setup, see `resume_tailored_questions`. */
   | "resume"
   /** Interviewer follow-up pressure — probes up to 3 layers deep per question.
    *  See #178. */
@@ -35,18 +38,24 @@ export type FeatureKey =
   /** Custom topic practice — free-text directive that steers the interviewer
    *  toward a specific topic or competency in behavioral + technical sessions.
    *  See #183. */
-  | "custom_topic";
+  | "custom_topic"
+  /** Resume-tailored question generation during session setup — uses a stored
+   *  resume to ground the generated questions in the candidate's real experience.
+   *  Plain resume upload, parse, and AI bullet improvement remain Free; only
+   *  the session-time tailoring is Pro. */
+  | "resume_tailored_questions";
 
 /**
  * Which plan tiers grant access to each feature. A feature is unlocked iff
  * the user's current plan appears in the array.
  */
 export const FEATURE_MATRIX: Record<FeatureKey, readonly Plan[]> = {
-  planner: ["pro"],
-  resume: ["pro"],
+  planner: ["free", "pro"],
+  resume: ["free", "pro"],
   follow_up_probing: ["pro"],
   interviewer_personas: ["pro"],
   custom_topic: ["pro"],
+  resume_tailored_questions: ["pro"],
 };
 
 /**
@@ -130,6 +139,17 @@ export const FEATURE_META: Record<
       "Free-text directive steers every question toward your chosen topic",
       "Works for both behavioral and technical sessions",
       "Isolate weak areas and build depth where it counts",
+    ],
+  },
+  resume_tailored_questions: {
+    label: "Resume-tailored interview questions",
+    href: "/pricing",
+    tagline:
+      "Attach your resume to a session and have the interviewer ask about your actual projects, companies, and impact.",
+    benefits: [
+      "Questions drawn directly from your resume's experience entries",
+      "Works for both behavioral and technical sessions",
+      "Pairs with interviewer personas and custom topic focus for truly bespoke practice",
     ],
   },
 };

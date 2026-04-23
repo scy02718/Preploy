@@ -73,31 +73,31 @@ describe("requireProFeature", () => {
 
   it("returns null when the user is on Pro", async () => {
     mockGetCurrentUserPlan.mockResolvedValue("pro");
-    const result = await requireProFeature("user-pro", "planner");
+    const result = await requireProFeature("user-pro", "resume_tailored_questions");
     expect(result).toBeNull();
   });
 
   it("returns a 402 Response when the user is on Free", async () => {
     mockGetCurrentUserPlan.mockResolvedValue("free");
-    const result = await requireProFeature("user-free", "planner");
+    const result = await requireProFeature("user-free", "resume_tailored_questions");
     expect(result).not.toBeNull();
     expect(result!.status).toBe(402);
   });
 
   it("402 body carries error code, feature key, and currentPlan", async () => {
     mockGetCurrentUserPlan.mockResolvedValue("free");
-    const result = await requireProFeature("user-free", "resume");
+    const result = await requireProFeature("user-free", "resume_tailored_questions");
     const body = await result!.json();
     expect(body).toEqual({
       error: "pro_plan_required",
-      feature: "resume",
+      feature: "resume_tailored_questions",
       currentPlan: "free",
     });
   });
 
   it("passes the userId through to the plan lookup", async () => {
     mockGetCurrentUserPlan.mockResolvedValue("free");
-    await requireProFeature("user-abc", "planner");
+    await requireProFeature("user-abc", "resume_tailored_questions");
     expect(mockGetCurrentUserPlan).toHaveBeenCalledWith("user-abc");
   });
 });
