@@ -5,6 +5,7 @@ import { userResumes } from "@/lib/schema";
 import { and, eq } from "drizzle-orm";
 import { createRequestLogger } from "@/lib/logger";
 import { buildResumeQuestionsPrompt } from "@/lib/resume-prompt-builder";
+import { structuredResumeSchema } from "@/lib/resume-parser";
 import OpenAI from "openai";
 import { z } from "zod/v4";
 
@@ -47,7 +48,11 @@ export async function POST(request: NextRequest) {
 
   // Fetch resume — scoped to the current user (prevents accessing other users' resumes)
   const [resume] = await db
-    .select({ id: userResumes.id, content: userResumes.content })
+    .select({
+      id: userResumes.id,
+      content: userResumes.content,
+      structuredData: userResumes.structuredData,
+    })
     .from(userResumes)
     .where(and(eq(userResumes.id, resume_id), eq(userResumes.userId, session.user.id)));
 
@@ -55,11 +60,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Resume not found" }, { status: 404 });
   }
 
+  const parsedStructured = structuredResumeSchema.safeParse(resume.structuredData);
   const prompt = buildResumeQuestionsPrompt({
     resumeText: resume.content,
     questionType: question_type,
     company,
     role,
+    structuredData: parsedStructured.success ? parsedStructured.data : null,
   });
 
   try {

@@ -1,8 +1,11 @@
+import type { StructuredResume } from "@/lib/resume-parser";
+
 export interface ResumeQuestionOptions {
   resumeText: string;
   questionType: "behavioral" | "technical";
   company?: string;
   role?: string;
+  structuredData?: StructuredResume | null;
 }
 
 /**
@@ -10,7 +13,7 @@ export interface ResumeQuestionOptions {
  * candidate's resume content.  Different prompts for behavioral vs technical.
  */
 export function buildResumeQuestionsPrompt(options: ResumeQuestionOptions): string {
-  const { resumeText, questionType, company, role } = options;
+  const { resumeText, questionType, company, role, structuredData } = options;
 
   const sections: string[] = [];
 
@@ -25,6 +28,29 @@ export function buildResumeQuestionsPrompt(options: ResumeQuestionOptions): stri
   }
   if (role?.trim()) {
     sections.push(`The target role is: ${role.trim()}.`);
+  }
+
+  // Structured background block (only when available)
+  if (structuredData) {
+    const roleLines = structuredData.roles.map((r, i) => {
+      const highImpactBullets = r.bullets.filter((b) => b.impact_score >= 6);
+      const bulletLines = highImpactBullets
+        .map((b) => `     - ${b.text}   [impact: ${b.impact_score}]`)
+        .join("\n");
+      return `  ${i + 1}. ${r.title} at ${r.company} (${r.dates})${bulletLines ? `\n     Key achievements:\n${bulletLines}` : ""}`;
+    });
+
+    const topSkills = structuredData.skills.slice(0, 10).join(", ");
+
+    sections.push(
+      [
+        "--- Candidate background (structured) ---",
+        "Roles:",
+        roleLines.join("\n"),
+        `Top skills: ${topSkills}`,
+        "--- End structured background ---",
+      ].join("\n")
+    );
   }
 
   // Resume content

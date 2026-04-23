@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildResumeQuestionsPrompt } from "./resume-prompt-builder";
+import type { StructuredResume } from "./resume-parser";
 
 const SAMPLE_RESUME = `John Doe
 Software Engineer at Acme Corp
@@ -125,5 +126,91 @@ describe("buildResumeQuestionsPrompt", () => {
     });
     expect(result).toContain("Jane Smith");
     expect(result).toContain("technical interview questions");
+  });
+
+  // --- structuredData tests ---
+
+  const SAMPLE_STRUCTURED: StructuredResume = {
+    roles: [
+      {
+        company: "Acme Corp",
+        title: "Senior Engineer",
+        dates: "2021–2024",
+        bullets: [
+          { text: "Led migration of monolith to microservices", impact_score: 8, has_quantified_metric: false },
+          { text: "Reduced latency by 40%", impact_score: 9, has_quantified_metric: true },
+          { text: "Attended daily standups", impact_score: 2, has_quantified_metric: false },
+        ],
+      },
+      {
+        company: "Beta Inc",
+        title: "Junior Engineer",
+        dates: "2019–2021",
+        bullets: [
+          { text: "Fixed bugs in legacy codebase", impact_score: 4, has_quantified_metric: false },
+          { text: "Shipped payment module saving $200k/yr", impact_score: 7, has_quantified_metric: true },
+        ],
+      },
+    ],
+    skills: ["TypeScript", "Python", "AWS", "Kubernetes", "Kafka", "Flink", "React", "Postgres", "Redis", "Go", "Rust"],
+  };
+
+  it("includes structured role context when structuredData is provided", () => {
+    const result = buildResumeQuestionsPrompt({
+      resumeText: SAMPLE_RESUME,
+      questionType: "behavioral",
+      structuredData: SAMPLE_STRUCTURED,
+    });
+    expect(result).toContain("--- Candidate background (structured) ---");
+    expect(result).toContain("Senior Engineer at Acme Corp (2021–2024)");
+    expect(result).toContain("Junior Engineer at Beta Inc (2019–2021)");
+    expect(result).toContain("--- End structured background ---");
+    // Top 10 skills
+    expect(result).toContain("TypeScript");
+    expect(result).toContain("Top skills:");
+    // Rust is the 11th skill, should be excluded
+    expect(result).not.toContain("Rust");
+  });
+
+  it("only includes bullets with impact_score >= 6", () => {
+    const result = buildResumeQuestionsPrompt({
+      resumeText: SAMPLE_RESUME,
+      questionType: "behavioral",
+      structuredData: SAMPLE_STRUCTURED,
+    });
+    // High-impact bullets should appear
+    expect(result).toContain("Led migration of monolith to microservices");
+    expect(result).toContain("Reduced latency by 40%");
+    expect(result).toContain("Shipped payment module saving $200k/yr");
+    // Low-impact bullets should not appear in structured section
+    expect(result).not.toContain("[impact: 2]");
+    expect(result).not.toContain("[impact: 4]");
+    // Scores for high-impact bullets should be annotated
+    expect(result).toContain("[impact: 8]");
+    expect(result).toContain("[impact: 9]");
+    expect(result).toContain("[impact: 7]");
+  });
+
+  it("falls back to plaintext-only when structuredData is null", () => {
+    const result = buildResumeQuestionsPrompt({
+      resumeText: SAMPLE_RESUME,
+      questionType: "behavioral",
+      structuredData: null,
+    });
+    expect(result).not.toContain("--- Candidate background (structured) ---");
+    expect(result).not.toContain("Top skills:");
+    // Resume text still present
+    expect(result).toContain("Acme Corp");
+  });
+
+  it("falls back to plaintext-only when structuredData is omitted", () => {
+    const result = buildResumeQuestionsPrompt({
+      resumeText: SAMPLE_RESUME,
+      questionType: "technical",
+    });
+    expect(result).not.toContain("--- Candidate background (structured) ---");
+    expect(result).not.toContain("Top skills:");
+    // Resume text still present
+    expect(result).toContain("reducing latency by 40%");
   });
 });

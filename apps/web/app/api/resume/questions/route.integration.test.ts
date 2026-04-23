@@ -52,6 +52,7 @@ const OTHER_USER = {
 };
 
 let testResumeId: string;
+let structuredResumeId: string;
 
 function makeRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost:3000/api/resume/questions", {
@@ -89,6 +90,30 @@ describe("API POST /api/resume/questions (integration)", () => {
       })
       .returning();
     testResumeId = resume.id;
+
+    const [structuredResume] = await db
+      .insert(userResumes)
+      .values({
+        userId: TEST_USER.id,
+        filename: "structured.txt",
+        content: "Jane Smith\nStaff Engineer at TechCorp\nBuilt distributed caching layer reducing DB load by 60%",
+        structuredData: {
+          roles: [
+            {
+              company: "TechCorp",
+              title: "Staff Engineer",
+              dates: "2022–2024",
+              bullets: [
+                { text: "Built distributed caching layer reducing DB load by 60%", impact_score: 9, has_quantified_metric: true },
+                { text: "Attended weekly syncs", impact_score: 3, has_quantified_metric: false },
+              ],
+            },
+          ],
+          skills: ["Go", "Redis", "Kubernetes", "Postgres"],
+        },
+      })
+      .returning();
+    structuredResumeId = structuredResume.id;
   });
 
   beforeEach(() => {
@@ -202,6 +227,39 @@ describe("API POST /api/resume/questions (integration)", () => {
     const promptContent = callArgs.messages[0].content;
     expect(promptContent).toContain("Google");
     expect(promptContent).toContain("Senior SWE");
+  });
+
+  it("includes structured context in prompt when resume has structuredData", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await POST(
+      makeRequest({ resume_id: structuredResumeId, question_type: "behavioral" })
+    );
+    expect(res.status).toBe(200);
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const callArgs = mockCreate.mock.calls[0][0];
+    const promptContent = callArgs.messages[0].content as string;
+    expect(promptContent).toContain("--- Candidate background (structured) ---");
+    expect(promptContent).toContain("Staff Engineer at TechCorp");
+    expect(promptContent).toContain("Built distributed caching layer");
+    expect(promptContent).toContain("Top skills:");
+    expect(promptContent).toContain("Go");
+  });
+
+  it("returns non-empty question list when structuredData is null (regression)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: TEST_USER.id } });
+    const res = await POST(
+      makeRequest({ resume_id: testResumeId, question_type: "technical" })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data.questions)).toBe(true);
+    expect(data.questions.length).toBeGreaterThan(0);
+
+    // Prompt should NOT contain structured block for plain resume
+    const callArgs = mockCreate.mock.calls[0][0];
+    const promptContent = callArgs.messages[0].content as string;
+    expect(promptContent).not.toContain("--- Candidate background (structured) ---");
   });
 
   it("handles GPT error gracefully", async () => {
