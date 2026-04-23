@@ -61,6 +61,8 @@ export interface PlanLimits {
   dailySessions: number;
   /** Maximum Pro-tier analysis runs per billing period. 0 = not available on this plan. */
   proAnalysisMonthly: number;
+  /** Maximum LLM-generated hints per technical session. */
+  hintsPerSession: number;
 }
 
 export interface PlanDefinition {
@@ -83,6 +85,16 @@ export const FREE_PLAN_MONTHLY_INTERVIEW_LIMIT = 3;
 export const PRO_PLAN_MONTHLY_INTERVIEW_LIMIT = 40;
 export const PRO_ANALYSIS_MONTHLY_LIMIT = 10;
 
+export const FREE_HINTS_PER_SESSION = 1;
+export const PRO_HINTS_PER_SESSION = 3;
+
+/**
+ * Returns the number of LLM-generated hints allowed per technical session for the given plan.
+ */
+export function getHintLimit(plan: Plan): number {
+  return plan === "pro" ? PRO_HINTS_PER_SESSION : FREE_HINTS_PER_SESSION;
+}
+
 export const PLAN_DEFINITIONS: Record<Plan, PlanDefinition> = {
   free: {
     id: "free",
@@ -96,6 +108,7 @@ export const PLAN_DEFINITIONS: Record<Plan, PlanDefinition> = {
       monthlyInterviews: FREE_PLAN_MONTHLY_INTERVIEW_LIMIT,
       dailySessions: 3,
       proAnalysisMonthly: 0,
+      hintsPerSession: FREE_HINTS_PER_SESSION,
     },
   },
   pro: {
@@ -114,6 +127,7 @@ export const PLAN_DEFINITIONS: Record<Plan, PlanDefinition> = {
       monthlyInterviews: PRO_PLAN_MONTHLY_INTERVIEW_LIMIT,
       dailySessions: 40,
       proAnalysisMonthly: PRO_ANALYSIS_MONTHLY_LIMIT,
+      hintsPerSession: PRO_HINTS_PER_SESSION,
     },
   },
 };

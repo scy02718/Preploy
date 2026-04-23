@@ -1,0 +1,2 @@
+ALTER TABLE "interview_sessions" ADD COLUMN "hints_used" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "interview_sessions" ADD COLUMN "hints_given" jsonb DEFAULT '[]'::jsonb NOT NULL;

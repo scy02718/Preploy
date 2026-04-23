@@ -15,12 +15,18 @@ import { CodeEditor } from "@/components/editor/CodeEditor";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { MicIndicator } from "@/components/interview/MicIndicator";
 import { RefreshCw, Loader2 } from "lucide-react";
+import { HintButton } from "@/components/interview/HintButton";
+import { HintPanel } from "@/components/interview/HintPanel";
+import { usePlan } from "@/hooks/usePlan";
+import { getHintLimit } from "@/lib/plans";
 
 export default function TechnicalSessionPage() {
   const router = useRouter();
 
   const { sessionId, config, type, status, startSession, endSession } =
     useInterviewStore();
+
+  const { plan } = usePlan();
 
   const techConfig = config as TechnicalSessionConfig;
 
@@ -29,6 +35,13 @@ export default function TechnicalSessionPage() {
   const [problemError, setProblemError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState("");
+
+  // Hint state
+  const [hints, setHints] = useState<string[]>([]);
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [isHintLoading, setIsHintLoading] = useState(false);
+  const [showHintPanel, setShowHintPanel] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
 
   // Regeneration: users can regenerate the question up to 5 times per
   // session so they don't get stuck on a duplicate or an unfamiliar topic.
@@ -174,6 +187,42 @@ export default function TechnicalSessionPage() {
     }
   }, [regenerationsLeft, isRegenerating, problem, previousProblems, techConfig]);
 
+  // Hint request handler
+  const handleRequestHint = useCallback(async () => {
+    if (!sessionId || !problem || isHintLoading) return;
+    setIsHintLoading(true);
+    setShowHintPanel(true);
+    setHintError(null);
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/hints`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          problemTitle: problem.title,
+          problemDescription: problem.description,
+          code,
+          language,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHints((prev) => [...prev, data.hint]);
+        setHintsUsed(data.hintsUsed);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (typeof data.hintsUsed === "number") {
+          setHintsUsed(data.hintsUsed);
+        }
+        setHintError(data.error ?? "Failed to get hint. Please try again.");
+      }
+    } catch (err) {
+      console.error("Failed to request hint:", err);
+      setHintError("Failed to get hint. Please try again.");
+    } finally {
+      setIsHintLoading(false);
+    }
+  }, [sessionId, problem, isHintLoading, code, language]);
+
   // End session handler
   const handleEndSession = useCallback(async () => {
     if (!sessionId) return;
@@ -272,6 +321,10 @@ export default function TechnicalSessionPage() {
 
   // Don't render until we have a session
   if (!sessionId || type !== "technical") return null;
+
+  // Derive hint limit from plan (undefined plan → free limit)
+  const resolvedPlan = plan ?? "free";
+  const hintsLimit = getHintLimit(resolvedPlan);
 
   // Problem panel content
   const problemPanel = problemLoading ? (
@@ -373,6 +426,35 @@ export default function TechnicalSessionPage() {
       onEndSession={handleEndSession}
       isProcessing={isProcessing}
       processingStep={processingStep}
+      hintButton={
+        <>
+          <HintButton
+            hintsUsed={hintsUsed}
+            hintsLimit={hintsLimit}
+            isLoading={isHintLoading}
+            onClick={handleRequestHint}
+            plan={resolvedPlan}
+          />
+          {hintError && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-xs text-destructive"
+            >
+              {hintError}
+            </p>
+          )}
+        </>
+      }
+      hintPanel={
+        showHintPanel ? (
+          <HintPanel
+            hints={hints}
+            isHintLoading={isHintLoading}
+            onClose={() => setShowHintPanel(false)}
+          />
+        ) : undefined
+      }
     />
   );
 }
